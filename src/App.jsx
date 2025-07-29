@@ -75,8 +75,8 @@ function App() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <BeforeAfter 
-            originalImage="public/dni-blanco-negro.png"
-            processedImage="public/dni.png"
+            originalImage="/dni-blanco-negro.png"
+            processedImage="/dni.png"
           />
         </div>
       </section>
