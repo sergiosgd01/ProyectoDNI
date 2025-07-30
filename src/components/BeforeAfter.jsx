@@ -22,6 +22,25 @@ function BeforeAfter({ originalImage, processedImage }) {
     setSliderPosition(Math.max(0, Math.min(100, percentage)));
   };
 
+  // Eventos táctiles para móviles
+  const handleTouchStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
+    const percentage = (x / rect.width) * 100;
+    setSliderPosition(Math.max(0, Math.min(100, percentage)));
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto">
       {/* Título */}
@@ -32,10 +51,12 @@ function BeforeAfter({ originalImage, processedImage }) {
 
       {/* Contenedor principal */}
       <div 
-        className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden shadow-xl cursor-ew-resize"
+        className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden shadow-xl cursor-ew-resize touch-none"
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Imagen original (fondo) */}
         <div className="absolute inset-0">
@@ -75,8 +96,9 @@ function BeforeAfter({ originalImage, processedImage }) {
         >
           {/* Handle del slider */}
           <div 
-            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-300 cursor-ew-resize flex items-center justify-center"
+            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-8 h-8 bg-white rounded-full shadow-lg border-2 border-gray-300 cursor-ew-resize flex items-center justify-center touch-none"
             onMouseDown={handleMouseDown}
+            onTouchStart={handleTouchStart}
           >
             <div className="flex space-x-0.5">
               <div className="w-0.5 h-4 bg-gray-400"></div>
@@ -85,10 +107,11 @@ function BeforeAfter({ originalImage, processedImage }) {
           </div>
         </div>
 
-        {/* Overlay para capturar eventos de mouse */}
+        {/* Overlay para capturar eventos de mouse y touch */}
         <div 
-          className="absolute inset-0 z-20"
+          className="absolute inset-0 z-20 touch-none"
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
         ></div>
       </div>
 

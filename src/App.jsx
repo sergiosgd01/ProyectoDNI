@@ -7,19 +7,41 @@ import BeforeAfter from './components/BeforeAfter';
 import SecuritySection from './components/SecuritySection';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
+import ImageCropper from './components/ImageCropper';
 import './index.css'; 
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [croppedImageUrl, setCroppedImageUrl] = useState(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   const handleFileSelect = (file) => {
     setSelectedFile(file);
     // Crear una URL para previsualizar la imagen
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
+    setCroppedImageUrl(null);
+    setShowCropper(true); // Mostrar el recortador automáticamente
     console.log('Archivo seleccionado:', file.name);
-    // Aquí es donde en el futuro procesaríamos el DNI
+  };
+
+  const handleCropComplete = (croppedUrl) => {
+    setCroppedImageUrl(croppedUrl);
+    setShowCropper(false);
+  };
+
+  const handleCropCancel = () => {
+    setShowCropper(false);
+    // Si cancela y no hay imagen recortada, volver a la selección de archivo
+    if (!croppedImageUrl) {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+    }
+  };
+
+  const handleRecropImage = () => {
+    setShowCropper(true);
   };
 
   return (
@@ -43,17 +65,46 @@ function App() {
                 <FileUploadZone onFileSelect={handleFileSelect} />
               ) : (
                 <div className="w-full h-80 flex items-center justify-center border border-gray-300 rounded-lg overflow-hidden relative">
-                  <img src={previewUrl} alt="Previsualización del DNI" className="max-w-full max-h-full object-contain" />
-                  <button
-                    onClick={() => {
-                      setSelectedFile(null);
-                      setPreviewUrl(null);
-                    }}
-                    className="absolute top-3 right-3 bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full p-2 transition-all duration-200 hover:scale-110"
-                    title="Eliminar imagen"
-                  >
-                    <img src="/cancel-icon.svg" alt="Cerrar" className="w-4 h-4" />
-                  </button>
+                  <img 
+                    src={croppedImageUrl || previewUrl} 
+                    alt="Previsualización del DNI" 
+                    className="max-w-full max-h-full object-contain" 
+                  />
+                  
+                  {/* Botones de acción sobre la imagen */}
+                  <div className="absolute top-3 right-3 flex gap-2">
+                    {croppedImageUrl && (
+                      <button
+                        onClick={handleRecropImage}
+                        className="bg-blue-600 bg-opacity-80 hover:bg-opacity-100 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200"
+                        title="Recortar de nuevo"
+                      >
+                        ✂️ Recortar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setPreviewUrl(null);
+                        setCroppedImageUrl(null);
+                      }}
+                      className="bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full p-2 transition-all duration-200 hover:scale-110"
+                      title="Eliminar imagen"
+                    >
+                      <img src="/cancel-icon.svg" alt="Cerrar" className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  {!croppedImageUrl && (
+                    <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
+                      <button
+                        onClick={handleRecropImage}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
+                        ✂️ Recortar DNI
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -84,6 +135,15 @@ function App() {
       <SecuritySection />
       <FAQ />
       <Footer />
+      
+      {/* Componente de recorte modal */}
+      {showCropper && previewUrl && (
+        <ImageCropper
+          imageUrl={previewUrl}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
     </div>
   );
 }
