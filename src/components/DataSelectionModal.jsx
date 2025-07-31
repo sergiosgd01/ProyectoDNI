@@ -1,0 +1,161 @@
+// src/components/DataSelectionModal.jsx
+import React, { useState } from 'react';
+
+function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
+  const [checkedItems, setCheckedItems] = useState({
+    nombre: true,
+    apellidos: true,
+    dni: true,
+    fechaNacimiento: true,
+    lugarNacimiento: true,
+    sexo: true,
+    nacionalidad: true,
+    fechaExpedicion: true,
+    fechaCaducidad: true,
+    equipo: true,
+    numeroSoporte: true,
+  });
+
+  const handleCheckboxChange = (field) => {
+    setCheckedItems(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const handleApply = () => {
+    onApply(checkedItems);
+    onClose();
+  };
+
+  const dataFields = [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'apellidos', label: 'Apellidos' },
+    { key: 'dni', label: 'DNI' },
+    { key: 'fechaNacimiento', label: 'Fecha de Nacimiento' },
+    { key: 'lugarNacimiento', label: 'Lugar de Nacimiento' },
+    { key: 'sexo', label: 'Sexo' },
+    { key: 'nacionalidad', label: 'Nacionalidad' },
+    { key: 'fechaExpedicion', label: 'Fecha de Expedición' },
+    { key: 'fechaCaducidad', label: 'Fecha de Caducidad' },
+    { key: 'equipo', label: 'Equipo' },
+    { key: 'numeroSoporte', label: 'Número de Soporte' },
+  ];
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-2xl max-w-6xl w-full mx-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="flex">
+          {/* Lado izquierdo - Imagen */}
+          <div className="flex-1 p-6 bg-gray-50">
+            <div className="sticky top-0">
+              <div className="bg-white rounded-xl p-4 shadow-sm">
+                <img 
+                  src={imageUrl} 
+                  alt="Previsualización del DNI" 
+                  className="w-full h-auto object-contain rounded-lg" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Lado derecho - Controles */}
+          <div className="flex-1 p-6">
+            {/* Header */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  Personaliza tu protección
+                </h3>
+                <p className="text-gray-600">
+                  Selecciona qué datos quieres mantener visibles en tu DNI
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold ml-4"
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Grid de checkboxes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              {dataFields.map((field) => (
+                <label 
+                  key={field.key}
+                  className={`
+                    group flex items-center cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02]
+                    ${checkedItems[field.key] 
+                      ? 'border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md' 
+                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                    }
+                  `}
+                >
+                  {/* Checkbox personalizado */}
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={checkedItems[field.key]}
+                      onChange={() => handleCheckboxChange(field.key)}
+                      className="sr-only"
+                    />
+                    <div className={`
+                      w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300
+                      ${checkedItems[field.key] 
+                        ? 'border-blue-500 bg-blue-500 shadow-lg' 
+                        : 'border-gray-300 bg-white group-hover:border-blue-400'
+                      }
+                    `}>
+                      {checkedItems[field.key] && (
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Texto del campo */}
+                  <span className={`
+                    ml-4 font-medium transition-colors duration-300
+                    ${checkedItems[field.key] ? 'text-blue-800' : 'text-gray-700 group-hover:text-blue-600'}
+                  `}>
+                    {field.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            
+            {/* Botones de marcar/desmarcar */}
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={() => setCheckedItems(Object.fromEntries(dataFields.map(field => [field.key, true])))}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                ✓ Marcar todos
+              </button>
+              <button
+                onClick={() => setCheckedItems(Object.fromEntries(dataFields.map(field => [field.key, false])))}
+                className="flex-1 px-4 py-2 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+              >
+                ✗ Desmarcar todos
+              </button>
+            </div>
+
+            {/* Botón final */}
+            <button
+              onClick={handleApply}
+              className="w-full px-6 py-4 bg-blue-600 text-white font-bold rounded-xl text-lg hover:bg-blue-700 transition-colors shadow-lg"
+            >
+              Descargar DNI Editado
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default DataSelectionModal;

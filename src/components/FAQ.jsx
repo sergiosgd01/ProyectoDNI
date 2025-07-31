@@ -5,7 +5,11 @@ function FAQ() {
   const faqs = [
     {
       question: "¿Es seguro subir mi DNI?",
-      answer: "Completamente seguro. Tu DNI nunca sale de tu dispositivo, todo el procesamiento es local en tu navegador."
+      answer: "Completamente seguro. Tu DNI nunca sale de tu dispositivo, todo el procesamiento es local en tu navegador. Las imágenes no se envían a ningún servidor externo."
+    },
+    {
+      question: "¿Qué datos se guardan de mi DNI?",
+      answer: "Solo guardamos el número de DNI codificado de forma anónima para estadísticas de uso de la web (cuántas veces se utiliza la herramienta). No se almacena ninguna imagen, ni datos personales, ni información sensible. El resto de datos del DNI no se procesan ni guardan en absoluto."
     },
     {
       question: "¿Qué formatos de imagen son compatibles?",

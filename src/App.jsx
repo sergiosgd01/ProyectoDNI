@@ -1,8 +1,9 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
+import ProjectInfo from './components/ProjectInfo';
 import FileUploadZone from './components/FileUploadZone';
-import DataCheckboxes from './components/DataCheckboxes';
+import DataSelectionModal from './components/DataSelectionModal';
 import BeforeAfter from './components/BeforeAfter';
 import SecuritySection from './components/SecuritySection';
 import FAQ from './components/FAQ';
@@ -15,6 +16,7 @@ function App() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
+  const [showDataModal, setShowDataModal] = useState(false);
 
   const handleFileSelect = (file) => {
     setSelectedFile(file);
@@ -29,6 +31,8 @@ function App() {
   const handleCropComplete = (croppedUrl) => {
     setCroppedImageUrl(croppedUrl);
     setShowCropper(false);
+    // Automáticamente abrir el modal de selección de datos después del recorte
+    setShowDataModal(true);
   };
 
   const handleCropCancel = () => {
@@ -44,9 +48,33 @@ function App() {
     setShowCropper(true);
   };
 
+  const handleDataModalApply = (selections) => {
+    console.log('Datos seleccionados:', selections);
+    // Aquí puedes procesar la selección y generar la descarga
+  };
+
+  const handleOpenDataModal = () => {
+    setShowDataModal(true);
+  };
+
+  // Efecto para bloquear el scroll cuando hay modales abiertos
+  useEffect(() => {
+    if (showCropper || showDataModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    // Cleanup al desmontar el componente
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showCropper, showDataModal]);
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header />
+      <ProjectInfo />
       
       {/* Sección principal - Aplicación */}
       <section className="py-16 flex flex-col items-center justify-center p-4">
@@ -109,13 +137,20 @@ function App() {
               )}
             </div>
 
-            {/* Lado derecho: Checkboxes (solo aparece cuando hay imagen) */}
-            {selectedFile && (
-              <div className="flex-1 flex flex-col justify-start border-l-0 md:border-l border-gray-200 pl-0 md:pl-8 transform transition-all duration-500 ease-in-out">
-                <DataCheckboxes />
-                <button className="mt-6 w-full px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow hover:bg-blue-700 transition-colors">
-                  Descargar DNI Editado
-                </button>
+            {/* Lado derecho: Botones de acción (solo aparece cuando hay imagen recortada) */}
+            {selectedFile && croppedImageUrl && (
+              <div className="flex-1 flex flex-col justify-center items-center border-l-0 md:border-l border-gray-200 pl-0 md:pl-8 transform transition-all duration-500 ease-in-out">
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-gray-800 mb-4">¡DNI listo para personalizar!</h3>
+                  <p className="text-gray-600 mb-6">Tu imagen está recortada. Ahora configura qué datos quieres mostrar.</p>
+                  
+                  <button 
+                    onClick={handleOpenDataModal}
+                    className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-lg"
+                  >
+                    🛡️ Configurar Protección
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -142,6 +177,16 @@ function App() {
           imageUrl={previewUrl}
           onCropComplete={handleCropComplete}
           onCancel={handleCropCancel}
+        />
+      )}
+      
+      {/* Modal de selección de datos */}
+      {showDataModal && croppedImageUrl && (
+        <DataSelectionModal
+          isOpen={showDataModal}
+          onClose={() => setShowDataModal(false)}
+          onApply={handleDataModalApply}
+          imageUrl={croppedImageUrl}
         />
       )}
     </div>
