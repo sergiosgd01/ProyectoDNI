@@ -82,10 +82,10 @@ function BeforeAfter({ originalImage, processedImage }) {
         </div>
 
         {/* Etiquetas fijas - fuera del clipPath */}
-        <div className="absolute top-4 left-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
+        <div className="absolute top-4 left-4 bg-primary-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
           ANTES
         </div>
-        <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
+        <div className="absolute top-4 right-4 bg-secondary-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
           DESPUÉS
         </div>
 
@@ -100,10 +100,7 @@ function BeforeAfter({ originalImage, processedImage }) {
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}
           >
-            <div className="flex space-x-0.5">
-              <div className="w-0.5 h-4 bg-gray-400"></div>
-              <div className="w-0.5 h-4 bg-gray-400"></div>
-            </div>
+            <i className="bi bi-arrows-expand-vertical text-gray-400 text-sm"></i>
           </div>
         </div>
 
@@ -125,7 +122,8 @@ function BeforeAfter({ originalImage, processedImage }) {
       {/* Instrucciones */}
       <div className="text-center mt-4">
         <p className="text-sm text-gray-500">
-          💡 Arrastra el control deslizante para comparar las imágenes
+          <i className="bi bi-lightbulb text-gray-500 mr-1"></i>
+          Arrastra el control deslizante para comparar las imágenes
         </p>
       </div>
     </div>

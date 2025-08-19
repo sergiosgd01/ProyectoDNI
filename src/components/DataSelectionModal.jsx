@@ -25,7 +25,32 @@ function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
 
   const handleApply = () => {
     onApply(checkedItems);
+    
+    // Descargar la imagen
+    handleDownloadImage();
+    
     onClose();
+  };
+
+  const handleDownloadImage = () => {
+    try {
+      // Crear un enlace temporal para descargar
+      const link = document.createElement('a');
+      link.href = imageUrl;
+      link.download = `dni-editado-${Date.now()}.jpg`;
+      
+      // Simular clic para iniciar descarga
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Mostrar mensaje de confirmación
+      alert('✅ ¡DNI descargado exitosamente!\n\nTu DNI editado se ha guardado en tu dispositivo.');
+      
+    } catch (error) {
+      console.error('Error al descargar:', error);
+      alert('❌ Error al descargar el archivo.\n\nPor favor, inténtalo de nuevo.');
+    }
   };
 
   const dataFields = [
@@ -89,8 +114,8 @@ function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
                   className={`
                     group flex items-center cursor-pointer p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02]
                     ${checkedItems[field.key] 
-                      ? 'border-blue-400 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-md' 
-                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                      ? 'border-primary-400 bg-gradient-to-r from-primary-50 to-secondary-50 shadow-md' 
+                      : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-md'
                     }
                   `}
                 >
@@ -105,14 +130,12 @@ function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
                     <div className={`
                       w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300
                       ${checkedItems[field.key] 
-                        ? 'border-blue-500 bg-blue-500 shadow-lg' 
-                        : 'border-gray-300 bg-white group-hover:border-blue-400'
+                        ? 'border-primary-500 bg-primary-500 shadow-lg' 
+                        : 'border-gray-300 bg-white group-hover:border-primary-400'
                       }
                     `}>
                       {checkedItems[field.key] && (
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                        </svg>
+                        <i className="bi bi-check text-white"></i>
                       )}
                     </div>
                   </div>
@@ -120,7 +143,7 @@ function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
                   {/* Texto del campo */}
                   <span className={`
                     ml-4 font-medium transition-colors duration-300
-                    ${checkedItems[field.key] ? 'text-blue-800' : 'text-gray-700 group-hover:text-blue-600'}
+                    ${checkedItems[field.key] ? 'text-primary-800' : 'text-gray-700 group-hover:text-primary-600'}
                   `}>
                     {field.label}
                   </span>
@@ -132,22 +155,24 @@ function DataSelectionModal({ isOpen, onClose, onApply, imageUrl }) {
             <div className="flex gap-3 mb-6">
               <button
                 onClick={() => setCheckedItems(Object.fromEntries(dataFields.map(field => [field.key, true])))}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex-1 px-4 py-2 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center space-x-2"
               >
-                ✓ Marcar todos
+                <i className="bi bi-check-all"></i>
+                <span>Marcar todos</span>
               </button>
               <button
                 onClick={() => setCheckedItems(Object.fromEntries(dataFields.map(field => [field.key, false])))}
-                className="flex-1 px-4 py-2 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
+                className="flex-1 px-4 py-2 bg-white text-gray-700 font-semibold border-2 border-gray-300 rounded-lg hover:border-gray-400 transition-colors flex items-center justify-center space-x-2"
               >
-                ✗ Desmarcar todos
+                <i className="bi bi-x-lg"></i>
+                <span>Desmarcar todos</span>
               </button>
             </div>
 
             {/* Botón final */}
             <button
               onClick={handleApply}
-              className="w-full px-6 py-4 bg-blue-600 text-white font-bold rounded-xl text-lg hover:bg-blue-700 transition-colors shadow-lg"
+              className="w-full px-6 py-4 bg-secondary-600 text-white font-bold rounded-xl text-lg hover:bg-secondary-700 transition-colors shadow-lg"
             >
               Descargar DNI Editado
             </button>

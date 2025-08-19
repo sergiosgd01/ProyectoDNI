@@ -1,7 +1,7 @@
 // src/components/ImageCropper.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
-function ImageCropper({ imageUrl, onCropComplete, onCancel }) {
+function ImageCropper({ imageUrl, onCropComplete, onCancel, onRetakePhoto }) {
   const canvasRef = useRef(null);
   const [points, setPoints] = useState([]);
   const [dragIndex, setDragIndex] = useState(-1);
@@ -324,34 +324,47 @@ function ImageCropper({ imageUrl, onCropComplete, onCancel }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-full overflow-auto">
+      <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-full overflow-auto relative">
+        {/* Botón Cancelar en esquina superior derecha */}
+        <button
+          onClick={onCancel}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl z-10 bg-white rounded-full p-1 shadow-lg hover:shadow-xl transition-all"
+          title="Cancelar"
+        >
+          <i className="bi bi-x"></i>
+        </button>
+        
         <h3 className="text-xl font-bold mb-4 text-center">Recortar DNI</h3>
         
         {/* Tutorial con imagen de ejemplo */}
-        <div className="mb-6 bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <div className="mb-6 bg-primary-50 rounded-lg p-4 border border-primary-200">
           <div className="flex flex-col lg:flex-row gap-4 items-center">
             <div className="flex-1">
-              <h4 className="font-semibold text-blue-800 mb-2">📋 Tutorial de recorte</h4>
-              <p className="text-blue-700 text-sm mb-2">
+              <h4 className="font-semibold text-primary-800 mb-2">
+                <i className="bi bi-clipboard-check text-primary-800 mr-2"></i>
+                Tutorial de recorte
+              </h4>
+              <p className="text-primary-700 text-sm mb-2">
                 Haz clic en las 4 esquinas del DNI siguiendo este orden:
               </p>
-              <ol className="text-blue-700 text-sm space-y-1">
+              <ol className="text-primary-700 text-sm space-y-1">
                 <li><span className="font-semibold">1.</span> Esquina superior izquierda</li>
                 <li><span className="font-semibold">2.</span> Esquina superior derecha</li>
                 <li><span className="font-semibold">3.</span> Esquina inferior derecha</li>
                 <li><span className="font-semibold">4.</span> Esquina inferior izquierda</li>
               </ol>
-              <p className="text-blue-600 text-xs mt-2">
-                💡 Puedes arrastrar los puntos para ajustarlos después de colocarlos
+              <p className="text-primary-600 text-xs mt-2">
+                <i className="bi bi-lightbulb text-primary-600 mr-1"></i>
+                Puedes arrastrar los puntos para ajustarlos después de colocarlos
               </p>
             </div>
             <div className="flex-shrink-0">
               <img 
                 src="/dni.png" 
                 alt="Ejemplo de DNI para recortar" 
-                className="w-48 h-auto rounded-lg shadow-md border-2 border-blue-300"
+                className="w-48 h-auto rounded-lg shadow-md border-2 border-primary-300"
               />
-              <p className="text-xs text-blue-600 text-center mt-1">Ejemplo de DNI</p>
+              <p className="text-xs text-primary-600 text-center mt-1">Ejemplo de DNI</p>
             </div>
           </div>
         </div>
@@ -359,7 +372,7 @@ function ImageCropper({ imageUrl, onCropComplete, onCancel }) {
         <p className="text-gray-600 mb-2 text-center">
           Selecciona las 4 esquinas de tu DNI en el orden indicado arriba
         </p>
-        <p className="text-sm text-blue-600 mb-4 text-center font-medium">
+        <p className="text-sm text-primary-600 mb-4 text-center font-medium">
           Puntos seleccionados: {points.length}/4
         </p>
         
@@ -377,24 +390,24 @@ function ImageCropper({ imageUrl, onCropComplete, onCancel }) {
         <div className="flex justify-center gap-4">
           <button
             onClick={handleReset}
-            className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
+            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 min-w-[160px] justify-center"
           >
-            🔄 Reiniciar
+            <i className="bi bi-arrow-clockwise text-white"></i>
+            Reiniciar
           </button>
           <button
-            onClick={onCancel}
-            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+            onClick={onRetakePhoto}
+            className="px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors flex items-center gap-2 min-w-[160px] justify-center"
           >
-            ❌ Cancelar
+            <i className="bi bi-camera text-white"></i>
+            Volver a hacer foto
           </button>
           <button
             onClick={handleCrop}
             disabled={points.length !== 4}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium"
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium min-w-[160px] justify-center"
           >
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM5 8a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm0 3a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z"/>
-            </svg>
+            <i className="bi bi-crop text-white"></i>
             Recortar DNI ({points.length}/4)
           </button>
         </div>

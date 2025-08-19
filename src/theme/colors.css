@@ -1,0 +1,88 @@
+/* 🎨 SISTEMA DE COLORES SIMPLIFICADO - Variables CSS */
+
+:root {
+  /* 🔥 COLORES PRINCIPALES */
+  --color-primary: #eaaf0f;
+  --color-secondary: #00b28c;
+  
+  /* 🌫️ NEUTRALES */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* ⚠️ ESTADOS */
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  
+  /* 🎯 USOS SEMÁNTICOS */
+  --color-success: var(--color-secondary);
+  --color-text-primary: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-600);
+  --color-text-muted: var(--color-gray-500);
+  --color-border: var(--color-gray-200);
+  --color-border-focus: var(--color-primary);
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: var(--color-gray-50);
+  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* 🎨 SOMBRAS */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* 🛠️ CLASES DE UTILIDAD PERSONALIZADAS */
+
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+}
+
+.bg-gradient-primary-light {
+  background: linear-gradient(135deg, #fef3c7, #d1fae5);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.border-gradient {
+  background: linear-gradient(var(--color-bg-primary), var(--color-bg-primary)) padding-box,
+              linear-gradient(135deg, var(--color-primary), var(--color-secondary)) border-box;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+}
+
+/* 🎯 ESTADOS DE INTERACCIÓN */
+.btn-primary {
+  background-color: var(--color-primary);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  filter: brightness(0.9);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: var(--color-secondary);
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  filter: brightness(0.9);
+  transform: translateY(-1px);
+}
