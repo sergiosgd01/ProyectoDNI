@@ -6,6 +6,7 @@ function ImageCropper({ imageUrl, onCropComplete, onCancel, onRetakePhoto }) {
   const [points, setPoints] = useState([]);
   const [dragIndex, setDragIndex] = useState(-1);
   const [image, setImage] = useState(null);
+  const [isTutorialExpanded, setIsTutorialExpanded] = useState(false);
 
   useEffect(() => {
     const img = new Image();
@@ -323,93 +324,119 @@ function ImageCropper({ imageUrl, onCropComplete, onCancel, onRetakePhoto }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg p-6 max-w-6xl w-full max-h-full overflow-auto relative">
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg p-3 sm:p-6 w-full h-full sm:max-w-7xl sm:max-h-[95vh] overflow-y-auto relative flex flex-col">
         {/* Botón Cancelar en esquina superior derecha */}
         <button
           onClick={onCancel}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl z-10 bg-white rounded-full p-1 shadow-lg hover:shadow-xl transition-all"
+          className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 text-2xl z-10 bg-white rounded-full p-1 shadow-lg hover:shadow-xl transition-all"
           title="Cancelar"
         >
           <i className="bi bi-x"></i>
         </button>
         
-        <h3 className="text-xl font-bold mb-4 text-center">Recortar DNI</h3>
+        {/* Contenido principal que crece */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <h3 className="text-lg sm:text-xl font-bold mb-2 sm:mb-4 text-center">Recortar DNI</h3>
         
-        {/* Tutorial con imagen de ejemplo */}
-        <div className="mb-6 bg-primary-50 rounded-lg p-4 border border-primary-200">
-          <div className="flex flex-col lg:flex-row gap-4 items-center">
-            <div className="flex-1">
-              <h4 className="font-semibold text-primary-800 mb-2">
-                <i className="bi bi-clipboard-check text-primary-800 mr-2"></i>
-                Tutorial de recorte
-              </h4>
-              <p className="text-primary-700 text-sm mb-2">
-                Haz clic en las 4 esquinas del DNI siguiendo este orden:
-              </p>
-              <ol className="text-primary-700 text-sm space-y-1">
-                <li><span className="font-semibold">1.</span> Esquina superior izquierda</li>
-                <li><span className="font-semibold">2.</span> Esquina superior derecha</li>
-                <li><span className="font-semibold">3.</span> Esquina inferior derecha</li>
-                <li><span className="font-semibold">4.</span> Esquina inferior izquierda</li>
-              </ol>
-              <p className="text-primary-600 text-xs mt-2">
-                <i className="bi bi-lightbulb text-primary-600 mr-1"></i>
-                Puedes arrastrar los puntos para ajustarlos después de colocarlos
-              </p>
+          {/* Tutorial con imagen de ejemplo */}
+          <div className="mb-4 sm:mb-6 bg-primary-50 rounded-lg border border-primary-200 flex-shrink-0">
+            {/* Header del tutorial - siempre visible en móvil */}
+            <div className="p-3 sm:p-4">
+              <div className="flex items-center justify-between lg:hidden">
+                <h4 className="font-semibold text-primary-800 text-sm sm:text-base">
+                  <i className="bi bi-clipboard-check text-primary-800 mr-2"></i>
+                  Tutorial de recorte
+                </h4>
+                <button
+                  onClick={() => setIsTutorialExpanded(!isTutorialExpanded)}
+                  className="text-primary-600 hover:text-primary-800 transition-colors"
+                >
+                  <i className={`bi ${isTutorialExpanded ? 'bi-chevron-up' : 'bi-chevron-down'} text-lg`}></i>
+                </button>
+              </div>
+              
+              {/* Contenido del tutorial */}
+              <div className={`${isTutorialExpanded ? 'block' : 'hidden'} lg:block`}>
+                <div className="flex flex-col lg:flex-row gap-4 items-center pt-4 lg:pt-0">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-primary-800 mb-2 hidden lg:block">
+                      <i className="bi bi-clipboard-check text-primary-800 mr-2"></i>
+                      Tutorial de recorte
+                    </h4>
+                    <p className="text-primary-700 text-sm mb-2">
+                      Haz clic en las 4 esquinas del DNI siguiendo este orden:
+                    </p>
+                    <ol className="text-primary-700 text-sm space-y-1">
+                      <li><span className="font-semibold">1.</span> Esquina superior izquierda</li>
+                      <li><span className="font-semibold">2.</span> Esquina superior derecha</li>
+                      <li><span className="font-semibold">3.</span> Esquina inferior derecha</li>
+                      <li><span className="font-semibold">4.</span> Esquina inferior izquierda</li>
+                    </ol>
+                    <p className="text-primary-600 text-xs mt-2">
+                      <i className="bi bi-lightbulb text-primary-600 mr-1"></i>
+                      Puedes arrastrar los puntos para ajustarlos después de colocarlos
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <img 
+                      src="/dni.png" 
+                      alt="Ejemplo de DNI para recortar" 
+                      className="w-32 sm:w-48 h-auto rounded-lg shadow-md border-2 border-primary-300"
+                    />
+                    <p className="text-xs text-primary-600 text-center mt-1">Ejemplo de DNI</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex-shrink-0">
-              <img 
-                src="/dni.png" 
-                alt="Ejemplo de DNI para recortar" 
-                className="w-48 h-auto rounded-lg shadow-md border-2 border-primary-300"
-              />
-              <p className="text-xs text-primary-600 text-center mt-1">Ejemplo de DNI</p>
-            </div>
+          </div>
+          
+          <p className="text-gray-600 mb-1 sm:mb-2 text-center text-sm sm:text-base">
+            Selecciona las 4 esquinas de tu DNI en el orden indicado arriba
+          </p>
+          <p className="text-sm text-primary-600 mb-2 sm:mb-4 text-center font-medium">
+            Puntos seleccionados: {points.length}/4
+          </p>
+          
+          {/* Canvas que crece y se ajusta */}
+          <div className="flex-1 flex justify-center items-center min-h-0 mb-4">
+            <canvas
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              className="border border-gray-300 cursor-crosshair max-w-full max-h-full rounded-lg shadow-sm"
+              style={{ maxHeight: 'calc(100% - 2rem)' }}
+            />
           </div>
         </div>
         
-        <p className="text-gray-600 mb-2 text-center">
-          Selecciona las 4 esquinas de tu DNI en el orden indicado arriba
-        </p>
-        <p className="text-sm text-primary-600 mb-4 text-center font-medium">
-          Puntos seleccionados: {points.length}/4
-        </p>
-        
-        <div className="flex justify-center mb-4">
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            className="border border-gray-300 cursor-crosshair max-w-full h-auto rounded-lg shadow-sm"
-            style={{ maxHeight: '50vh' }}
-          />
-        </div>
-        
-        <div className="flex justify-center gap-4">
-          <button
-            onClick={handleReset}
-            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 min-w-[160px] justify-center"
-          >
-            <i className="bi bi-arrow-clockwise text-white"></i>
-            Reiniciar
-          </button>
-          <button
-            onClick={onRetakePhoto}
-            className="px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors flex items-center gap-2 min-w-[160px] justify-center"
-          >
-            <i className="bi bi-camera text-white"></i>
-            Volver a hacer foto
-          </button>
-          <button
-            onClick={handleCrop}
-            disabled={points.length !== 4}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium min-w-[160px] justify-center"
-          >
-            <i className="bi bi-crop text-white"></i>
-            Recortar DNI ({points.length}/4)
-          </button>
+        {/* Botones fijos en la parte inferior */}
+        <div className="flex-shrink-0 pt-2 sm:pt-4 border-t bg-white">
+          <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-4">
+            <button
+              onClick={handleReset}
+              className="px-4 sm:px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2 justify-center text-sm sm:text-base"
+            >
+              <i className="bi bi-arrow-clockwise text-white"></i>
+              Reiniciar
+            </button>
+            <button
+              onClick={onRetakePhoto}
+              className="px-4 sm:px-6 py-2 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors flex items-center gap-2 justify-center text-sm sm:text-base"
+            >
+              <i className="bi bi-camera text-white"></i>
+              Volver a hacer foto
+            </button>
+            <button
+              onClick={handleCrop}
+              disabled={points.length !== 4}
+              className="px-4 sm:px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2 font-medium justify-center text-sm sm:text-base"
+            >
+              <i className="bi bi-crop text-white"></i>
+              Recortar DNI ({points.length}/4)
+            </button>
+          </div>
         </div>
       </div>
     </div>
