@@ -288,17 +288,6 @@ function CameraCapture({ onCapture, onClose }) {
                     <i className="bi bi-camera text-xl"></i>
                     <span>Capturar Foto</span>
                   </button>
-
-                  {/* Botón cambiar cámara - Solo en dispositivos móviles */}
-                  {isMobile && devices.length > 1 && (
-                    <button
-                      onClick={switchCamera}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                    >
-                      <i className="bi bi-arrow-repeat"></i>
-                      <span>Cambiar</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* Selector de dispositivos (si hay múltiples cámaras en PC) */}
