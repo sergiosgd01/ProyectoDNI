@@ -9,6 +9,7 @@ import SecuritySection from './components/SecuritySection';
 import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import ImageCropper from './components/ImageCropper';
+import Statistics from './components/Statistics';
 import './index.css'; 
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
+  const [currentView, setCurrentView] = useState('home'); // 'home' o 'statistics'
 
   const handleFileSelect = (file) => {
     setSelectedFile(file);
@@ -70,6 +72,14 @@ function App() {
     setShowDataModal(true);
   };
 
+  const handleShowStatistics = () => {
+    setCurrentView('statistics');
+  };
+
+  const handleShowHome = () => {
+    setCurrentView('home');
+  };
+
   // Efecto para bloquear el scroll cuando hay modales abiertos
   useEffect(() => {
     if (showCropper || showDataModal) {
@@ -86,33 +96,44 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <Header />
-      <ProjectInfo />
-      
-      {/* Sección principal - Aplicación */}
-      <MainSection
-        selectedFile={selectedFile}
-        previewUrl={previewUrl}
-        croppedImageUrl={croppedImageUrl}
-        onFileSelect={handleFileSelect}
-        onRecropImage={handleRecropImage}
-        onClearImage={handleClearImage}
-        onOpenDataModal={handleOpenDataModal}
+      <Header 
+        onShowStatistics={handleShowStatistics}
+        onShowHome={handleShowHome}
+        currentView={currentView}
       />
-
-      {/* Sección Antes y Después */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <BeforeAfter 
-            originalImage="/dni-blanco-negro.png"
-            processedImage="/dni.png"
+      
+      {currentView === 'home' ? (
+        <>
+          <ProjectInfo />
+          
+          {/* Sección principal - Aplicación */}
+          <MainSection
+            selectedFile={selectedFile}
+            previewUrl={previewUrl}
+            croppedImageUrl={croppedImageUrl}
+            onFileSelect={handleFileSelect}
+            onRecropImage={handleRecropImage}
+            onClearImage={handleClearImage}
+            onOpenDataModal={handleOpenDataModal}
           />
-        </div>
-      </section>
 
-      <SecuritySection />
-      <FAQ />
-      <Footer />
+          {/* Sección Antes y Después */}
+          <section className="py-16 bg-gray-50">
+            <div className="container mx-auto px-4">
+              <BeforeAfter 
+                originalImage="/dni-blanco-negro.png"
+                processedImage="/dni.png"
+              />
+            </div>
+          </section>
+
+          <SecuritySection />
+          <FAQ />
+          <Footer />
+        </>
+      ) : (
+        <Statistics onBackHome={handleShowHome} />
+      )}
       
       {/* Componente de recorte modal */}
       {showCropper && previewUrl && (
