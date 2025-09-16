@@ -10,6 +10,8 @@ import FAQ from './components/FAQ';
 import Footer from './components/Footer';
 import ImageCropper from './components/ImageCropper';
 import Statistics from './components/Statistics';
+import DNIProcessor from './components/DNIProcessor';
+import DNIEditor from './components/DNIEditor';
 import './index.css'; 
 
 function App() {
@@ -18,7 +20,8 @@ function App() {
   const [croppedImageUrl, setCroppedImageUrl] = useState(null);
   const [showCropper, setShowCropper] = useState(false);
   const [showDataModal, setShowDataModal] = useState(false);
-  const [currentView, setCurrentView] = useState('home'); // 'home' o 'statistics'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'statistics', 'extract', 'editor'
+  const [extractedData, setExtractedData] = useState(null);
 
   const handleFileSelect = (file) => {
     setSelectedFile(file);
@@ -33,8 +36,8 @@ function App() {
   const handleCropComplete = (croppedUrl) => {
     setCroppedImageUrl(croppedUrl);
     setShowCropper(false);
-    // Automáticamente abrir el modal de selección de datos después del recorte
-    setShowDataModal(true);
+    // Después del recorte, ir directamente a la extracción de datos
+    setCurrentView('extract');
   };
 
   const handleCropCancel = () => {
@@ -50,6 +53,8 @@ function App() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setCroppedImageUrl(null);
+    setExtractedData(null);
+    setCurrentView('home');
   };
 
   const handleRecropImage = () => {
@@ -61,6 +66,8 @@ function App() {
     setSelectedFile(null);
     setPreviewUrl(null);
     setCroppedImageUrl(null);
+    setExtractedData(null);
+    setCurrentView('home');
   };
 
   const handleDataModalApply = (selections) => {
@@ -80,6 +87,20 @@ function App() {
     setCurrentView('home');
   };
 
+  // Nuevas funciones para el flujo de extracción
+  const handleBackToUpload = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setCroppedImageUrl(null);
+    setExtractedData(null);
+    setCurrentView('home');
+  };
+
+  const handleContinueToEditor = (data) => {
+    setExtractedData(data);
+    setCurrentView('editor');
+  };
+
   // Efecto para bloquear el scroll cuando hay modales abiertos
   useEffect(() => {
     if (showCropper || showDataModal) {
@@ -94,6 +115,82 @@ function App() {
     };
   }, [showCropper, showDataModal]);
 
+  const renderContent = () => {
+    switch (currentView) {
+      case 'home':
+        return (
+          <>
+            <ProjectInfo />
+            
+            {/* Sección principal - Aplicación */}
+            <MainSection
+              selectedFile={selectedFile}
+              previewUrl={previewUrl}
+              croppedImageUrl={croppedImageUrl}
+              onFileSelect={handleFileSelect}
+              onRecropImage={handleRecropImage}
+              onClearImage={handleClearImage}
+              onOpenDataModal={handleOpenDataModal}
+            />
+
+            {/* Sección Antes y Después */}
+            <section className="py-16 bg-gray-50">
+              <div className="container mx-auto px-4">
+                <BeforeAfter 
+                  originalImage="/dni-blanco-negro.png"
+                  processedImage="/dni.png"
+                />
+              </div>
+            </section>
+
+            <SecuritySection />
+            <FAQ />
+            <Footer />
+          </>
+        );
+      
+      case 'extract':
+        return (
+          <DNIProcessor
+            selectedFile={croppedImageUrl || selectedFile}
+            onBack={handleBackToUpload}
+            onContinue={handleContinueToEditor}
+          />
+        );
+      
+      case 'editor':
+        return (
+          <DNIEditor
+            selectedFile={croppedImageUrl || selectedFile}
+            extractedData={extractedData}
+            onBack={handleBackToUpload}
+          />
+        );
+      
+      case 'statistics':
+        return <Statistics onBackHome={handleShowHome} />;
+      
+      default:
+        return (
+          <>
+            <ProjectInfo />
+            <MainSection
+              selectedFile={selectedFile}
+              previewUrl={previewUrl}
+              croppedImageUrl={croppedImageUrl}
+              onFileSelect={handleFileSelect}
+              onRecropImage={handleRecropImage}
+              onClearImage={handleClearImage}
+              onOpenDataModal={handleOpenDataModal}
+            />
+            <SecuritySection />
+            <FAQ />
+            <Footer />
+          </>
+        );
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header 
@@ -102,38 +199,7 @@ function App() {
         currentView={currentView}
       />
       
-      {currentView === 'home' ? (
-        <>
-          <ProjectInfo />
-          
-          {/* Sección principal - Aplicación */}
-          <MainSection
-            selectedFile={selectedFile}
-            previewUrl={previewUrl}
-            croppedImageUrl={croppedImageUrl}
-            onFileSelect={handleFileSelect}
-            onRecropImage={handleRecropImage}
-            onClearImage={handleClearImage}
-            onOpenDataModal={handleOpenDataModal}
-          />
-
-          {/* Sección Antes y Después */}
-          <section className="py-16 bg-gray-50">
-            <div className="container mx-auto px-4">
-              <BeforeAfter 
-                originalImage="/dni-blanco-negro.png"
-                processedImage="/dni.png"
-              />
-            </div>
-          </section>
-
-          <SecuritySection />
-          <FAQ />
-          <Footer />
-        </>
-      ) : (
-        <Statistics onBackHome={handleShowHome} />
-      )}
+      {renderContent()}
       
       {/* Componente de recorte modal */}
       {showCropper && previewUrl && (
@@ -145,7 +211,7 @@ function App() {
         />
       )}
       
-      {/* Modal de selección de datos */}
+      {/* Modal de selección de datos - Mantenemos por compatibilidad */}
       {showDataModal && croppedImageUrl && (
         <DataSelectionModal
           isOpen={showDataModal}
