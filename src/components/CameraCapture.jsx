@@ -33,14 +33,6 @@ function CameraCapture({ onCapture, onClose }) {
     }
   };
 
-  const handleGoBack = () => {
-    // Limpiar el error y resetear estados para permitir seleccionar otra cámara
-    setError(null);
-    setSelectedDeviceId(null);
-    setIsLoading(false);
-    stopCamera();
-  };
-
   const initializeCamera = async () => {
     try {
       setIsLoading(true);
@@ -222,7 +214,10 @@ function CameraCapture({ onCapture, onClose }) {
                   Intentar de nuevo
                 </button>
                 <button
-                  onClick={handleGoBack}
+                  onClick={() => {
+                    stopCamera();
+                    onClose();
+                  }}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
                 >
                   <i className="bi bi-arrow-left mr-2"></i>

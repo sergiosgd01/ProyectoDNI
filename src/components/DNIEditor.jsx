@@ -1,28 +1,51 @@
 import React, { useState } from 'react';
 
-export default function DNIEditor({ selectedFile, extractedData, onBack }) {
+export default function DNIEditor({ frontFile, backFile, onBack, onBackToStep }) {
+  // Datos mock que simularían lo que extraería el OCR de ambas partes
+  const mockExtractedData = {
+    // Datos de la parte delantera
+    nombre: 'JUAN CARLOS',
+    apellidos: 'GARCÍA LÓPEZ',
+    dni: '12345678A',
+    fechaNacimiento: '01/01/1990',
+    sexo: 'M',
+    nacionalidad: 'ESP',
+    // Datos de la parte trasera
+    fechaExpedicion: '01/01/2020',
+    fechaCaducidad: '01/01/2030',
+    equipoExpedidor: 'MADRID',
+    numeroSoporte: 'MAD123456789',
+    direccion: 'CALLE EJEMPLO 123, MADRID',
+    codigoPostal: '28001'
+  };
+
   const [selectedFields, setSelectedFields] = useState(() => {
     // Por defecto, todos los campos están seleccionados
     const initialFields = {};
-    if (extractedData) {
-      Object.keys(extractedData).forEach(key => {
-        initialFields[key] = true;
-      });
-    }
+    Object.keys(mockExtractedData).forEach(key => {
+      initialFields[key] = true;
+    });
     return initialFields;
   });
 
   const handleDownload = () => {
-    // Aquí implementarás la lógica de descarga de la imagen
-    console.log('Descargando DNI con campos seleccionados:', selectedFields);
-    console.log('Datos disponibles:', extractedData);
+    // Obtener solo los campos seleccionados
+    const selectedData = Object.entries(mockExtractedData)
+      .filter(([key]) => selectedFields[key])
+      .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+
+    console.log('Descargando DNI con campos seleccionados:', selectedData);
+    console.log('Archivos disponibles:', { frontFile, backFile });
     
-    // Por ahora simulamos la descarga de la imagen
-    // En el futuro aquí procesarás la imagen con los campos seleccionados
+    // Crear un ZIP con ambas imágenes procesadas (simulado)
     const link = document.createElement('a');
-    link.href = selectedFile instanceof File ? URL.createObjectURL(selectedFile) : selectedFile;
-    link.download = 'dni_editado.png';
+    
+    // Por ahora descargamos la imagen frontal (en el futuro procesarás ambas)
+    link.href = frontFile instanceof File ? URL.createObjectURL(frontFile) : frontFile;
+    link.download = `dni_completo_${Object.values(selectedFields).filter(Boolean).length}_campos.jpg`;
     link.click();
+    
+    // En el futuro aquí procesarías ambas imágenes con los campos seleccionados
   };
 
   const handleFieldToggle = (fieldName) => {
@@ -47,33 +70,58 @@ export default function DNIEditor({ selectedFile, extractedData, onBack }) {
             ✏️ Editor de DNI
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Personaliza los datos de tu DNI antes de descargarlo
+            Selecciona qué campos quieres mostrar en tu DNI editado
           </p>
         </div>
 
         <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8">
-          {/* Panel izquierdo - Preview */}
+          {/* Panel izquierdo - Preview de ambas partes */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
               <i className="bi bi-eye mr-2"></i>
-              Vista previa
+              Vista previa - DNI completo
             </h3>
             
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <img
-                src={selectedFile instanceof File ? URL.createObjectURL(selectedFile) : selectedFile}
-                alt="DNI preview"
-                className="w-full h-auto rounded-lg shadow-md"
-              />
+            {/* Parte delantera */}
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-blue-500 text-white px-2 py-1 rounded text-xs mr-2">DELANTE</span>
+                Parte delantera del DNI
+              </h4>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <img
+                  src={frontFile instanceof File ? URL.createObjectURL(frontFile) : frontFile}
+                  alt="DNI parte delantera"
+                  className="w-full h-auto rounded-lg shadow-md"
+                  style={{ maxHeight: '200px', objectFit: 'contain' }}
+                />
+              </div>
+            </div>
+
+            {/* Parte trasera */}
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-green-500 text-white px-2 py-1 rounded text-xs mr-2">DETRÁS</span>
+                Parte trasera del DNI
+              </h4>
+              <div className="bg-gray-50 rounded-lg p-3">
+                <img
+                  src={backFile instanceof File ? URL.createObjectURL(backFile) : backFile}
+                  alt="DNI parte trasera"
+                  className="w-full h-auto rounded-lg shadow-md"
+                  style={{ maxHeight: '200px', objectFit: 'contain' }}
+                />
+              </div>
             </div>
 
             {/* Información del archivo */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-semibold text-blue-800 mb-2">Información del archivo</h4>
+              <h4 className="font-semibold text-blue-800 mb-2">Información de archivos</h4>
               <div className="text-blue-700 text-sm space-y-1">
-                <p><strong>Campos extraídos:</strong> {Object.keys(extractedData || {}).length} campos</p>
+                <p><strong>Campos disponibles:</strong> {Object.keys(mockExtractedData).length} campos</p>
                 <p><strong>Campos seleccionados:</strong> {Object.values(selectedFields).filter(Boolean).length}</p>
-                <p><strong>Estado:</strong> Listo para descargar</p>
+                <p><strong>Partes cargadas:</strong> <span className="text-green-600">Delantera + Trasera</span></p>
+                <p><strong>Estado:</strong> <span className="text-green-600">Listo para descargar</span></p>
               </div>
             </div>
           </div>
@@ -90,14 +138,14 @@ export default function DNIEditor({ selectedFile, extractedData, onBack }) {
               <div className="flex items-center">
                 <i className="bi bi-check-circle text-green-600 mr-2"></i>
                 <span className="text-green-800 text-sm font-medium">
-                  {Object.keys(extractedData || {}).length} campos extraídos correctamente
+                  {Object.keys(mockExtractedData).length} campos disponibles para selección
                 </span>
               </div>
             </div>
             
             {/* Lista de campos con checkboxes */}
             <div className="space-y-3 max-h-80 overflow-y-auto mb-6">
-              {extractedData && Object.entries(extractedData).map(([key, value]) => (
+              {Object.entries(mockExtractedData).map(([key, value]) => (
                 <label key={key} className="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
                   <input
                     type="checkbox"
@@ -124,7 +172,7 @@ export default function DNIEditor({ selectedFile, extractedData, onBack }) {
                 <button
                   onClick={() => {
                     const allSelected = {};
-                    Object.keys(extractedData || {}).forEach(key => {
+                    Object.keys(mockExtractedData).forEach(key => {
                       allSelected[key] = true;
                     });
                     setSelectedFields(allSelected);
@@ -136,7 +184,7 @@ export default function DNIEditor({ selectedFile, extractedData, onBack }) {
                 <button
                   onClick={() => {
                     const noneSelected = {};
-                    Object.keys(extractedData || {}).forEach(key => {
+                    Object.keys(mockExtractedData).forEach(key => {
                       noneSelected[key] = false;
                     });
                     setSelectedFields(noneSelected);

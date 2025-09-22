@@ -4,88 +4,80 @@ import FileUploadZone from './FileUploadZone';
 
 const MainSection = ({
   selectedFile,
-  previewUrl,
-  croppedImageUrl,
   onFileSelect,
-  onRecropImage,
   onClearImage,
-  onOpenDataModal
+  stepInfo,
+  onContinue
 }) => {
   return (
-    <section className="py-16 flex flex-col items-center justify-center p-4">
-      <div className={`w-full bg-white rounded-lg shadow-xl p-8 transition-all duration-500 ease-in-out ${
-        selectedFile ? 'max-w-6xl' : 'max-w-2xl'
-      }`}>
-        <div className={`flex flex-col gap-8 transition-all duration-500 ease-in-out ${
-          selectedFile ? 'md:flex-row' : ''
-        }`}>
-          {/* Zona de carga y Previsualización */}
-          <div className={`flex flex-col items-center justify-center transition-all duration-500 ease-in-out ${
-            selectedFile ? 'flex-1' : 'w-full'
-          }`}>
-            {!selectedFile ? (
-              <FileUploadZone onFileSelect={onFileSelect} />
-            ) : (
-              <div className="w-full h-80 flex items-center justify-center border border-gray-300 rounded-lg overflow-hidden relative">
-                <img 
-                  src={croppedImageUrl || previewUrl} 
-                  alt="Previsualización del DNI" 
-                  className="max-w-full max-h-full object-contain" 
-                />
-                
-                {/* Botones de acción sobre la imagen */}
-                <div className="absolute top-3 right-3 flex gap-2">
-                  {croppedImageUrl && (
-                    <button
-                      onClick={onRecropImage}
-                      className="bg-primary-600 bg-opacity-80 hover:bg-opacity-100 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200"
-                      title="Recortar de nuevo"
-                    >
-                      <i className="bi bi-scissors"></i> Recortar
-                    </button>
-                  )}
-                  <button
-                    onClick={onClearImage}
-                    className="bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full p-2 transition-all duration-200 hover:scale-110"
-                    title="Eliminar imagen"
-                  >
-                    <i className="bi bi-x-lg text-white"></i>
-                  </button>
-                </div>
-                
-                {!croppedImageUrl && (
-                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2">
-                    <button
-                      onClick={onRecropImage}
-                      className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-                    >
-                      <i className="bi bi-scissors"></i> Recortar DNI
-                    </button>
-                  </div>
-                )}
+    <div className="w-full">
+      {!selectedFile ? (
+        <FileUploadZone onFileSelect={onFileSelect} />
+      ) : (
+        <div className="space-y-4">
+          {/* Vista previa de la imagen - ocupa todo el ancho disponible */}
+          <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-green-200">
+            <div className="relative">
+              <img 
+                src={URL.createObjectURL(selectedFile)} 
+                alt="Previsualización del DNI" 
+                className="w-full h-64 object-contain bg-white" 
+              />
+              
+              {/* Botón para eliminar imagen */}
+              <button
+                onClick={onClearImage}
+                className="absolute top-3 right-3 bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full p-2 transition-all duration-200 hover:scale-110"
+                title="Eliminar imagen"
+              >
+                <i className="bi bi-x-lg text-white"></i>
+              </button>
+            </div>
+          </div>
+
+          {/* Información de confirmación */}
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center justify-center text-green-700 mb-3">
+              <i className="bi bi-check-circle-fill mr-2 text-lg"></i>
+              <span className="font-semibold">
+                ¡Parte {stepInfo?.side || ''} seleccionada!
+              </span>
+            </div>
+            
+            <p className="text-green-600 text-sm text-center mb-3">
+              {stepInfo?.current === 1 ? 
+                'Perfecto. Ahora procederemos a cargar la parte trasera de tu DNI.' :
+                'Excelente. Tienes ambas partes cargadas. Procederás al editor para seleccionar los campos.'
+              }
+            </p>
+            
+            {stepInfo && (
+              <div className="flex items-center justify-center">
+                <span className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
+                  {stepInfo.current}/{stepInfo.total}
+                </span>
+                <span className="text-green-600 text-sm">
+                  {stepInfo.current === 1 ? 'Continuarás con la parte trasera' : 'Listo para el editor'}
+                </span>
+              </div>
+            )}
+
+            {/* Botón para continuar manualmente (solo si existe la función) */}
+            {onContinue && (
+              <div className="mt-4 text-center">
+                <button
+                  onClick={onContinue}
+                  className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                >
+                  <i className="bi bi-arrow-right mr-2"></i>
+                  {stepInfo?.current === 1 ? 'Continuar con parte trasera' : 'Ir al editor'}
+                </button>
               </div>
             )}
           </div>
-
-          {/* Lado derecho: Botones de acción (solo aparece cuando hay imagen recortada) */}
-          {selectedFile && croppedImageUrl && (
-            <div className="flex-1 flex flex-col justify-center items-center border-l-0 md:border-l border-gray-200 pl-0 md:pl-8 transform transition-all duration-500 ease-in-out">
-              <div className="text-center">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">¡DNI listo para personalizar!</h3>
-                <p className="text-gray-600 mb-6">Tu imagen está recortada. Ahora configura qué datos quieres mostrar.</p>
-                
-                <button 
-                  onClick={onOpenDataModal}
-                  className="px-8 py-4 bg-secondary-600 hover:bg-secondary-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] text-lg"
-                >
-                  <i className="bi bi-shield-check"></i> Configurar Protección
-                </button>
-              </div>
-            </div>
-          )}
         </div>
-      </div>
-    </section>
+      )}
+    </div>
   );
 };
 

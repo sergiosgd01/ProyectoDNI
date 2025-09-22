@@ -1,10 +1,24 @@
 // src/components/FileUploadZone.jsx
-import React, { useState } from 'react';
+import React, { useState, useId, useEffect } from 'react';
 import CameraCapture from './CameraCapture';
 
 function FileUploadZone({ onFileSelect }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const fileInputId = useId(); // Genera un ID único para cada instancia
+
+  // Detectar si es móvil
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
 
   const handleDragOver = (event) => {
     event.preventDefault(); // Necesario para permitir el 'drop'
@@ -44,21 +58,23 @@ function FileUploadZone({ onFileSelect }) {
     <>
       <div
       className={`
-        w-full flex flex-col items-center justify-center p-16 border-2 border-dashed rounded-2xl
-        transition-all duration-300 ease-in-out cursor-pointer group min-h-[400px]
-        ${isDragOver 
+        w-full flex flex-col items-center justify-center p-8 md:p-16 border-2 rounded-2xl
+        transition-all duration-300 ease-in-out min-h-[400px]
+        ${!isMobile ? 'border-dashed cursor-pointer group' : 'border-solid'}
+        ${isDragOver && !isMobile
           ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-secondary-100 scale-[1.02] shadow-xl' 
-          : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50'
+          : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white'
         }
+        ${!isMobile ? 'hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50' : ''}
       `}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={() => document.getElementById('fileInput').click()}
+      onDragOver={!isMobile ? handleDragOver : undefined}
+      onDragLeave={!isMobile ? handleDragLeave : undefined}
+      onDrop={!isMobile ? handleDrop : undefined}
+      onClick={!isMobile ? () => document.getElementById(fileInputId).click() : undefined}
     >
       <input
         type="file"
-        id="fileInput"
+        id={fileInputId}
         className="hidden"
         accept="image/*"
         onChange={handleFileChange}
@@ -79,14 +95,17 @@ function FileUploadZone({ onFileSelect }) {
       <h3 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${
         isDragOver ? 'text-primary-700' : 'text-gray-800 group-hover:text-primary-600'
       }`}>
-        {isDragOver ? '¡Suelta tu imagen aquí!' : 'Arrastra tu DNI aquí'}
+        {isMobile 
+          ? 'Selecciona tu DNI' 
+          : (isDragOver ? '¡Suelta tu imagen aquí!' : 'Arrastra tu DNI aquí')
+        }
       </h3>
       
       {/* Texto secundario */}
       <p className={`text-lg font-medium mb-6 transition-colors duration-300 ${
         isDragOver ? 'text-primary-600' : 'text-gray-600 group-hover:text-primary-500'
       }`}>
-        o elige una de estas opciones
+        {isMobile ? 'Elige una de estas opciones' : 'o elige una de estas opciones'}
       </p>
       
       {/* Botones de acción */}
@@ -95,7 +114,7 @@ function FileUploadZone({ onFileSelect }) {
         <button 
           onClick={(e) => {
             e.stopPropagation();
-            document.getElementById('fileInput').click();
+            document.getElementById(fileInputId).click();
           }}
           className={`
             px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform flex items-center justify-center space-x-2
