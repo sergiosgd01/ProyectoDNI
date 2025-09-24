@@ -66,37 +66,18 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
     setSelectedProfile(null);
   };
 
-  const handleDownload = () => {
-    const selectedData = Object.entries(mockExtractedData)
-      .filter(([key]) => selectedFields[key])
-      .reduce((acc, [key, value]) => ({
-        ...acc,
-        [key]: value
-      }), {});
-
-    const profileInfo = selectedProfile ? getProfileById(selectedProfile) : null;
-    
-    console.log('Descargando DNI con configuración:', {
-      perfil: profileInfo ? profileInfo.name : 'Personalizado',
-      camposSeleccionados: selectedData,
-      totalCampos: selectedCount
-    });
-    
-    // Crear nombre de archivo con el perfil
-    const fileName = profileInfo 
-      ? `dni-${profileInfo.id}-${selectedCount}-campos`
-      : `dni-personalizado-${selectedCount}-campos`;
-    
-    // Descargar imagen del frente
-    if (frontFile) {
-      const url = URL.createObjectURL(frontFile);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${fileName}-delante.jpg`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+  const handleProcessDNI = async () => {
+    try {
+      // Aquí llamarás a tu WebAssembly
+      console.log('Procesando DNI con configuración:', selectedFields);
+      console.log('Foto delantera:', frontFile);
+      console.log('Foto trasera:', backFile);
+      
+      // TODO: Implementar llamada al WebAssembly
+      // const processedImages = await processWithWebAssembly(frontFile, backFile, selectedFields);
+      
+    } catch (error) {
+      console.error('Error procesando DNI:', error);
     }
   };
 
@@ -274,16 +255,11 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
             {/* Botones de acción */}
             <div className="flex-shrink-0">
               <button
-                onClick={handleDownload}
-                disabled={selectedCount === 0}
-                className={`w-full mb-3 sm:mb-4 inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 font-semibold text-sm sm:text-base rounded-lg transition-colors duration-200 shadow-lg ${
-                  selectedCount > 0
-                    ? 'bg-green-600 text-white hover:bg-green-700'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
+                onClick={handleProcessDNI}  // Nueva función
+                className="w-full bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
               >
-                <i className="bi bi-download mr-2"></i>
-                Descargar DNI ({selectedCount} campos)
+                <i className="bi bi-gear-fill text-xl mr-3"></i>
+                Procesar DNI
               </button>
 
               <div className="text-center text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">

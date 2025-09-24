@@ -91,6 +91,7 @@ function App() {
             frontFile={frontFile}
             backFile={backFile}
             onBack={handleBackToStep}
+            onProcess={handleDNIProcess}
           />
         );
       
@@ -101,6 +102,11 @@ function App() {
           />
         );
     }
+  };
+
+  const handleDNIProcess = async (frontFile, backFile, selectedFields) => {
+    // Aquí manejarás el procesamiento con WebAssembly
+    console.log('Iniciando procesamiento...', { frontFile, backFile, selectedFields });
   };
 
   return (
