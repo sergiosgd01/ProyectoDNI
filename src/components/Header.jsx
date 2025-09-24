@@ -1,7 +1,7 @@
 // src/components/Header.jsx
 import React, { useState } from 'react';
 
-function Header({ onShowStatistics, onShowHome, currentView }) {
+function Header({ onShowHome }) {
   const [selectedLanguage, setSelectedLanguage] = useState('es');
 
   const languages = [
@@ -31,27 +31,6 @@ function Header({ onShowStatistics, onShowHome, currentView }) {
 
           {/* Navegación y controles */}
           <div className="flex items-center space-x-4">
-            {/* Botón de Estadísticas */}
-            <button
-              onClick={currentView === 'home' ? onShowStatistics : onShowHome}
-              className={`inline-flex items-center px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
-                currentView === 'statistics'
-                  ? 'bg-primary-600 text-white hover:bg-primary-700 shadow-md'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
-              }`}
-            >
-              {currentView === 'home' ? (
-                <>
-                  <i className="bi bi-bar-chart mr-2"></i>
-                  Estadísticas
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-house mr-2"></i>
-                  Inicio
-                </>
-              )}
-            </button>
 
             {/* Selector de idioma */}
             <div className="relative">

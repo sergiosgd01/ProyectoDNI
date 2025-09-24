@@ -4,8 +4,12 @@ import BeforeAfter from '../BeforeAfter';
 import SecuritySection from '../SecuritySection';
 import FAQ from '../FAQ';
 import Footer from '../Footer';
+import { useScrollToTop } from '../../hooks/useScrollToTop';
 
 export default function HomePage({ onStartProcess }) {
+  // Scroll inicial al principio de la página
+  useScrollToTop();
+
   return (
     <>
       <ProjectInfo />
@@ -61,8 +65,8 @@ export default function HomePage({ onStartProcess }) {
       </section>
 
       <BeforeAfter 
-        originalImage="/dni.png"
-        processedImage="/dni-blanco-negro.png"
+        originalImage="/dni-blanco-negro.png"
+        processedImage="/dni.png"
       />
       <SecuritySection />
       <FAQ />

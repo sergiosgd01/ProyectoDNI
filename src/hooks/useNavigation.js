@@ -5,12 +5,10 @@ export function useNavigation() {
 
   const goTo = useCallback((view) => setCurrentView(view), []);
   const goHome = useCallback(() => setCurrentView('home'), []);
-  const goToStatistics = useCallback(() => setCurrentView('statistics'), []);
 
   return {
     currentView,
     goTo,
-    goHome,
-    goToStatistics
+    goHome
   };
 }

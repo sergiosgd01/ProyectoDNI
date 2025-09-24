@@ -1,13 +1,9 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
-import Statistics from './components/Statistics';
 import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
 import UploadPage from './components/pages/UploadPage';
-import FrontStepPage from './components/pages/FrontStepPage';
-import BackStepPage from './components/pages/BackStepPage';
-import { useResponsive } from './hooks/useResponsive';
 import { useDNIFiles } from './hooks/useDNIFiles';
 import { useNavigation } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
@@ -15,8 +11,7 @@ import { VIEWS } from './constants/views';
 import './index.css'; 
 
 function App() {
-  const { isMobile } = useResponsive();
-  const { currentView, goTo, goHome, goToStatistics } = useNavigation();
+  const { currentView, goTo, goHome } = useNavigation();
   const { 
     frontFile, 
     backFile, 
@@ -28,20 +23,40 @@ function App() {
     hasAllFiles 
   } = useDNIFiles();
 
+  // Estado para controlar si debe hacer auto-navegación al editor
+  const [shouldAutoNavigate, setShouldAutoNavigate] = useState(true);
+
   // Auto-navegación cuando ambos archivos están listos
-  useAutoNavigation(frontFile, backFile, currentView, goTo, isMobile);
+  useAutoNavigation(frontFile, backFile, currentView, goTo, shouldAutoNavigate);
+
+  // Resetear auto-navegación cuando se suben archivos por primera vez
+  useEffect(() => {
+    if (frontFile && !backFile && shouldAutoNavigate === false) {
+      setShouldAutoNavigate(true);
+    }
+  }, [frontFile, backFile, shouldAutoNavigate]);
 
   const handleStartProcess = () => {
-    goTo(isMobile ? VIEWS.FRONT : VIEWS.UPLOAD);
+    // Cuando se inicia el proceso por primera vez, permitir auto-navegación
+    setShouldAutoNavigate(true);
+    goTo(VIEWS.UPLOAD_PROCESS);
   };
 
   const handleBackToHome = () => {
     clearAllFiles();
+    setShouldAutoNavigate(true);
     goHome();
   };
 
   const handleBackToStep = () => {
-    goTo(isMobile ? VIEWS.BACK : VIEWS.UPLOAD);
+    // Cuando se regresa desde el editor, NO permitir auto-navegación
+    setShouldAutoNavigate(false);
+    goTo(VIEWS.UPLOAD_PROCESS);
+  };
+
+  const handleContinueToEditor = () => {
+    // Ir al editor manualmente
+    goTo(VIEWS.EDITOR);
   };
 
   const renderContent = () => {
@@ -53,7 +68,8 @@ function App() {
           />
         );
 
-      case VIEWS.UPLOAD:
+      case VIEWS.UPLOAD_PROCESS:
+        // Vista unificada responsive: lado a lado en desktop, uno debajo del otro en móvil
         return (
           <UploadPage
             frontFile={frontFile}
@@ -63,41 +79,20 @@ function App() {
             onClearFrontFile={clearFrontFile}
             onClearBackFile={clearBackFile}
             hasAllFiles={hasAllFiles}
+            onContinueToEditor={handleContinueToEditor}
+            shouldAutoNavigate={shouldAutoNavigate}
+            isProcessMode={true}
           />
         );
 
-      case VIEWS.FRONT:
-        return (
-          <FrontStepPage
-            frontFile={frontFile}
-            onFrontFileSelect={handleFrontFileSelect}
-            onClearFrontFile={clearFrontFile}
-          />
-        );
-
-      case VIEWS.BACK:
-        return (
-          <BackStepPage
-            backFile={backFile}
-            onBackFileSelect={handleBackFileSelect}
-            onClearBackFile={clearBackFile}
-            onBackToFront={() => goTo(VIEWS.FRONT)}
-            frontFileLoaded={!!frontFile}
-          />
-        );
-      
       case VIEWS.EDITOR:
         return (
           <DNIEditor
             frontFile={frontFile}
             backFile={backFile}
-            onBack={handleBackToHome}
-            onBackToStep={handleBackToStep}
+            onBack={handleBackToStep}
           />
         );
-      
-      case VIEWS.STATISTICS:
-        return <Statistics onBackHome={goHome} />;
       
       default:
         return (
@@ -111,9 +106,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Header 
-        onShowStatistics={goToStatistics}
         onShowHome={goHome}
-        currentView={currentView}
       />
       
       {renderContent()}

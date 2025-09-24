@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES, getProfileById, getFieldsCount } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
+import { useScrollToTop } from '../hooks/useScrollToTop';
 
 export default function DNIEditor({ frontFile, backFile, onBack }) {
   const colors = useColors();
+  
+  // Scroll inicial al principio de la página
+  useScrollToTop();
   
   // Datos mock que simularían lo que extraería el OCR
   const mockExtractedData = {
@@ -116,16 +120,16 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
         </div>
 
         {/* Layout responsive: stack en móvil, lado a lado en desktop */}
-        <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12">
+        <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
           {/* Vista previa - En móvil aparece primero */}
-          <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6">
-            <div className="flex items-center mb-4">
+          <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
+            <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-eye text-gray-600 text-lg sm:text-xl mr-2"></i>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Vista previa</h3>
             </div>
             
             {/* Frente del DNI */}
-            <div className="mb-4">
+            <div className="mb-4 flex-shrink-0">
               <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                 DELANTE
               </div>
@@ -140,7 +144,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
 
             {/* Detrás del DNI */}
             {backFile && (
-              <div className="mb-4">
+              <div className="mb-4 flex-shrink-0">
                 <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                   DETRÁS
                 </div>
@@ -154,8 +158,8 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
               </div>
             )}
 
-            {/* Información del perfil seleccionado */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+            {/* Información del perfil seleccionado - se expande para llenar el espacio restante */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-1 flex flex-col justify-center">
               <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
               <div className="space-y-1 text-xs sm:text-sm text-blue-700">
                 <div>
@@ -172,33 +176,35 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
           </div>
 
           {/* Configuración - En móvil aparece segundo */}
-          <div className="order-1 lg:order-2 bg-white rounded-lg shadow-lg p-4 sm:p-6">
-            <div className="flex items-center mb-4">
+          <div className="order-1 lg:order-2 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
+            <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-sliders text-gray-600 text-lg sm:text-xl mr-2"></i>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Configuración</h3>
             </div>
 
             {/* Selector de perfiles */}
-            <ProfileSelector
-              selectedProfile={selectedProfile}
-              onProfileSelect={handleProfileSelect}
-              selectedFields={selectedFields}
-            />
+            <div className="flex-shrink-0">
+              <ProfileSelector
+                selectedProfile={selectedProfile}
+                onProfileSelect={handleProfileSelect}
+                selectedFields={selectedFields}
+              />
+            </div>
 
             {/* Indicador de campos extraídos */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex-shrink-0">
               <div className="flex items-center text-green-800 text-xs sm:text-sm">
                 <i className="bi bi-check-circle-fill mr-2"></i>
                 {totalFields} campos disponibles para configuración
               </div>
             </div>
 
-            {/* Lista de campos con checkboxes - scrollable en móvil */}
-            <div className="mb-4">
-              <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base">Campos individuales</h4>
-              <div className="space-y-2 max-h-48 sm:max-h-64 overflow-y-auto">
+            {/* Lista de campos con checkboxes - se expande para usar el espacio disponible */}
+            <div className="mb-4 flex-1 flex flex-col">
+              <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base flex-shrink-0">Campos individuales</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start">
                 {Object.entries(mockExtractedData).map(([fieldName, value]) => (
-                  <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors">
+                  <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
                     <label className="flex items-start cursor-pointer">
                       <div className="relative flex items-center justify-center mt-1">
                         <input
@@ -232,11 +238,11 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
                           )}
                         </div>
                       </div>
-                      <div className="ml-3 sm:ml-4 flex-1">
-                        <div className="font-medium text-gray-800 text-xs sm:text-sm">
+                      <div className="ml-3 sm:ml-4 flex-1 min-w-0">
+                        <div className="font-medium text-gray-800 text-xs sm:text-sm truncate">
                           {formatFieldName(fieldName)}
                         </div>
-                        <div className="text-xs text-gray-600 mt-1">
+                        <div className="text-xs text-gray-600 mt-1 truncate">
                           {value}
                         </div>
                       </div>
@@ -247,7 +253,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
             </div>
 
             {/* Acciones rápidas */}
-            <div className="mb-4 sm:mb-6">
+            <div className="mb-4 sm:mb-6 flex-shrink-0">
               <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base">Acciones rápidas</h4>
               <div className="flex gap-2">
                 <button
@@ -265,35 +271,37 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
               </div>
             </div>
 
-            {/* Botón de descarga */}
-            <button
-              onClick={handleDownload}
-              disabled={selectedCount === 0}
-              className={`w-full mb-3 sm:mb-4 inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 font-semibold text-sm sm:text-base rounded-lg transition-colors duration-200 shadow-lg ${
-                selectedCount > 0
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <i className="bi bi-download mr-2"></i>
-              Descargar DNI ({selectedCount} campos)
-            </button>
+            {/* Botones de acción */}
+            <div className="flex-shrink-0">
+              <button
+                onClick={handleDownload}
+                disabled={selectedCount === 0}
+                className={`w-full mb-3 sm:mb-4 inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 font-semibold text-sm sm:text-base rounded-lg transition-colors duration-200 shadow-lg ${
+                  selectedCount > 0
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <i className="bi bi-download mr-2"></i>
+                Descargar DNI ({selectedCount} campos)
+              </button>
 
-            <div className="text-center text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
-              {selectedProfile 
-                ? `Configuración: ${getProfileById(selectedProfile)?.name}`
-                : 'Configuración personalizada'
-              }
+              <div className="text-center text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+                {selectedProfile 
+                  ? `Configuración: ${getProfileById(selectedProfile)?.name}`
+                  : 'Configuración personalizada'
+                }
+              </div>
+
+              {/* Botón de regreso */}
+              <button
+                onClick={onBack}
+                className="w-full inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-gray-600 text-white font-semibold text-sm sm:text-base rounded-lg hover:bg-gray-700 transition-colors duration-200"
+              >
+                <i className="bi bi-arrow-left mr-1 sm:mr-2 text-sm sm:text-base"></i>
+                Cambiar fotos
+              </button>
             </div>
-
-            {/* Botón de regreso */}
-            <button
-              onClick={onBack}
-              className="w-full inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-gray-600 text-white font-semibold text-sm sm:text-base rounded-lg hover:bg-gray-700 transition-colors duration-200"
-            >
-              <i className="bi bi-arrow-left mr-1 sm:mr-2 text-sm sm:text-base"></i>
-              Cambiar fotos
-            </button>
           </div>
         </div>
       </div>
