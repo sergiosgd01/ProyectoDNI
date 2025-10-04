@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import ProjectInfo from '../ProjectInfo';
 import MainSection from '../MainSection';
 import SecuritySection from '../SecuritySection';
@@ -18,11 +18,9 @@ export default function UploadPage({
   shouldAutoNavigate = true,
   isProcessMode = false
 }) {
-  // Referencias para las secciones
   const backSectionRef = useRef(null);
   const completionMessageRef = useRef(null);
   
-  // Referencias para rastrear cambios reales de archivos (solo auto-scroll en nuevas subidas)
   const previousFrontFile = useRef(frontFile);
   const previousBackFile = useRef(backFile);
   const initialLoadCompleted = useRef(false);
@@ -30,13 +28,12 @@ export default function UploadPage({
   // Scroll inicial al principio de la página
   useScrollToTop();
 
-  // Función para detectar si estamos en móvil
   const isMobileView = () => {
-    return window.innerWidth < 768; // md breakpoint
+    return window.innerWidth < 768; 
   };
 
   // Función para hacer scroll suave a la sección trasera
-  const scrollToBackSection = () => {
+  const scrollToBackSection = useCallback(() => {
     if (backSectionRef.current && isMobileView()) {
       // Pequeño delay para que se vea la confirmación de la foto delantera
       setTimeout(() => {
@@ -52,14 +49,14 @@ export default function UploadPage({
           if (backSectionRef.current) {
             backSectionRef.current.classList.remove('ring-2', 'ring-blue-400', 'ring-opacity-50');
           }
-        }, 2000); // Quitar el destacado después de 2 segundos
+        }, 2000); 
         
-      }, 400); // 400ms delay para que se vea el mensaje de confirmación
+      }, 400); 
     }
-  };
+  }, []);
 
   // Función para hacer scroll al mensaje de finalización
-  const scrollToCompletionMessage = () => {
+  const scrollToCompletionMessage = useCallback(() => {
     if (completionMessageRef.current && isMobileView()) {
       // Delay para que se vea la confirmación de la foto trasera
       setTimeout(() => {
@@ -75,11 +72,11 @@ export default function UploadPage({
           if (completionMessageRef.current) {
             completionMessageRef.current.classList.remove('ring-2', 'ring-green-400', 'ring-opacity-50');
           }
-        }, 3000); // Quitar el destacado después de 3 segundos
+        }, 3000);
         
-      }, 400); // 400ms delay para que se vea el mensaje de confirmación
+      }, 400); 
     }
-  };
+  }, []);
 
   // Auto-scroll cuando se sube la foto delantera en móvil (solo si es una nueva subida)
   useEffect(() => {
@@ -100,18 +97,15 @@ export default function UploadPage({
       scrollToBackSection();
     }
     
-    // Actualizar la referencia anterior
     previousFrontFile.current = frontFile;
-  }, [frontFile, backFile]);
+  }, [frontFile, backFile, scrollToBackSection]);
 
   // Auto-scroll cuando ambas fotos estén cargadas en móvil (solo si es una nueva subida)
   useEffect(() => {
-    // No hacer nada si la carga inicial no está completa
     if (!initialLoadCompleted.current) {
       return;
     }
 
-    // Solo hacer scroll si realmente cambió de null/undefined a tener archivo
     const wasEmpty = !previousBackFile.current;
     const nowHasFile = !!backFile;
     const isNewUpload = wasEmpty && nowHasFile && frontFile && hasAllFiles;
@@ -120,9 +114,8 @@ export default function UploadPage({
       scrollToCompletionMessage();
     }
     
-    // Actualizar la referencia anterior
     previousBackFile.current = backFile;
-  }, [frontFile, backFile, hasAllFiles]);
+  }, [frontFile, backFile, scrollToCompletionMessage, hasAllFiles]);
 
   return (
     <>

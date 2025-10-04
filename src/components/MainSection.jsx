@@ -1,4 +1,3 @@
-// src/components/MainSection.jsx
 import React from 'react';
 import FileUploadZone from './FileUploadZone';
 
@@ -15,7 +14,7 @@ const MainSection = ({
         <FileUploadZone onFileSelect={onFileSelect} />
       ) : (
         <div className="space-y-4">
-          {/* Vista previa de la imagen - ocupa todo el ancho disponible */}
+          {/* Vista previa de la imagen */}
           <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-green-200">
             <div className="relative">
               <img 
@@ -62,7 +61,7 @@ const MainSection = ({
               </div>
             )}
 
-            {/* Botón para continuar manualmente (solo si existe la función) */}
+            {/* Botón para continuar manualmente */}
             {onContinue && (
               <div className="mt-4 text-center">
                 <button

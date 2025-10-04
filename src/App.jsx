@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
 import DNIEditor from './components/DNIEditor';
@@ -19,7 +18,6 @@ function App() {
     handleBackFileSelect,
     clearFrontFile,
     clearBackFile,
-    clearAllFiles,
     hasAllFiles 
   } = useDNIFiles();
 
@@ -40,12 +38,6 @@ function App() {
     // Cuando se inicia el proceso por primera vez, permitir auto-navegación
     setShouldAutoNavigate(true);
     goTo(VIEWS.UPLOAD_PROCESS);
-  };
-
-  const handleBackToHome = () => {
-    clearAllFiles();
-    setShouldAutoNavigate(true);
-    goHome();
   };
 
   const handleBackToStep = () => {
@@ -105,7 +97,7 @@ function App() {
   };
 
   const handleDNIProcess = async (frontFile, backFile, selectedFields) => {
-    // Aquí manejarás el procesamiento con WebAssembly
+    // Manejarr el procesamiento con WebAssembly
     console.log('Iniciando procesamiento...', { frontFile, backFile, selectedFields });
   };
 

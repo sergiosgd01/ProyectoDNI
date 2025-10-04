@@ -1,8 +1,7 @@
 // 🎨 SISTEMA DE COLORES SIMPLIFICADO
-// Solo modifica estos valores para cambiar toda la aplicación
 
 export const COLORS = {
-  // 🔥 COLORES PRINCIPALES (Solo estos 2)
+  // 🔥 COLORES PRINCIPALES
   PRIMARY: '#eaaf0f',      // Amarillo dorado - Botones principales, enlaces, destacados
   SECONDARY: '#00b28c',    // Verde azulado - Éxito, confirmaciones, elementos de apoyo
   
@@ -20,7 +19,7 @@ export const COLORS = {
     900: '#111827'
   },
   
-  // ⚠️ ESTADOS (Solo cuando sea absolutamente necesario)
+  // ⚠️ ESTADOS 
   ERROR: '#ef4444',        // Rojo - Solo para errores críticos
   WARNING: '#f59e0b',      // Naranja - Solo para advertencias importantes
   
@@ -30,7 +29,7 @@ export const COLORS = {
   TRANSPARENT: 'transparent'
 };
 
-// 🎭 VARIANTES AUTOMÁTICAS (No tocar - se generan automáticamente)
+// 🎭 VARIANTES AUTOMÁTICAS 
 export const COLOR_VARIANTS = {
   PRIMARY: {
     50: '#fefbeb',
@@ -58,7 +57,7 @@ export const COLOR_VARIANTS = {
   }
 };
 
-// 🎯 USOS ESPECÍFICOS (Mapeo semántico)
+// 🎯 USOS ESPECÍFICOS
 export const SEMANTIC_COLORS = {
   // Botones
   BUTTON_PRIMARY: COLORS.PRIMARY,

@@ -1,4 +1,3 @@
-// src/components/FileUploadZone.jsx
 import React, { useState, useId, useEffect } from 'react';
 import CameraCapture from './CameraCapture';
 
@@ -21,7 +20,7 @@ function FileUploadZone({ onFileSelect }) {
   }, []);
 
   const handleDragOver = (event) => {
-    event.preventDefault(); // Necesario para permitir el 'drop'
+    event.preventDefault(); 
     setIsDragOver(true);
   };
 
@@ -80,7 +79,6 @@ function FileUploadZone({ onFileSelect }) {
         onChange={handleFileChange}
       />
       
-      {/* Icono mejorado */}
       <div className={`
         p-4 rounded-full mb-6 transition-all duration-300
         ${isDragOver 

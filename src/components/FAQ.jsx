@@ -1,4 +1,3 @@
-// src/components/FAQ.jsx
 import React from 'react';
 
 function FAQ() {

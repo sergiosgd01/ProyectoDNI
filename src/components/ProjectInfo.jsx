@@ -1,4 +1,3 @@
-// src/components/ProjectInfo.jsx
 import React from 'react';
 
 function ProjectInfo() {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES, getProfileById, getFieldsCount } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
@@ -68,7 +68,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
 
   const handleProcessDNI = async () => {
     try {
-      // Aquí llamarás a tu WebAssembly
+      // LLAMAR AL WEBASSEMBLYY 
       console.log('Procesando DNI con configuración:', selectedFields);
       console.log('Foto delantera:', frontFile);
       console.log('Foto trasera:', backFile);
@@ -90,7 +90,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
   return (
     <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
       <div className="container mx-auto px-4 max-w-7xl">
-        {/* Header - más compacto en móvil */}
+        {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">
             ✏️ Configurar DNI
@@ -100,9 +100,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
           </p>
         </div>
 
-        {/* Layout responsive: stack en móvil, lado a lado en desktop */}
         <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
-          {/* Vista previa - En móvil aparece primero */}
           <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
             <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-eye text-gray-600 text-lg sm:text-xl mr-2"></i>
@@ -156,7 +154,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
             </div>
           </div>
 
-          {/* Configuración - En móvil aparece segundo */}
+          {/* Configuración */}
           <div className="order-1 lg:order-2 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
             <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-sliders text-gray-600 text-lg sm:text-xl mr-2"></i>
@@ -255,7 +253,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
             {/* Botones de acción */}
             <div className="flex-shrink-0">
               <button
-                onClick={handleProcessDNI}  // Nueva función
+                onClick={handleProcessDNI}  
                 className="w-full bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
               >
                 <i className="bi bi-gear-fill text-xl mr-3"></i>

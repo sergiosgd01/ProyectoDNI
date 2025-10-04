@@ -1,3 +1,8 @@
+/**
+ * Hook para gestionar archivos de DNI (anverso y reverso)
+ * Proporciona estado y funciones para manejar las imágenes del documento
+ */
+
 import { useState, useCallback } from 'react';
 
 export function useDNIFiles() {

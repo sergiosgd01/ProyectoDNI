@@ -1,4 +1,3 @@
-// src/components/Header.jsx
 import React, { useState } from 'react';
 
 function Header({ onShowHome }) {

@@ -1,4 +1,3 @@
-// src/components/DataCheckboxes.jsx
 import React, { useState } from 'react';
 
 function DataCheckboxes() {
@@ -39,7 +38,7 @@ function DataCheckboxes() {
 
   return (
     <div className="w-full bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border border-gray-200 shadow-lg">
-      {/* Título mejorado */}
+      {/* Título */}
       <div className="mb-8">
         <h3 className="text-2xl font-bold text-gray-800 mb-2">
           Personaliza tu protección
@@ -49,7 +48,7 @@ function DataCheckboxes() {
         </p>
       </div>
       
-      {/* Grid de checkboxes modernos */}
+      {/* Grid de checkboxes */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {dataFields.map((field) => (
           <label 
@@ -94,7 +93,7 @@ function DataCheckboxes() {
         ))}
       </div>
       
-      {/* Botones de acción mejorados */}
+      {/* Botones de acción */}
       <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-200">
         <button
           onClick={() => setCheckedItems(Object.fromEntries(dataFields.map(field => [field.key, true])))}

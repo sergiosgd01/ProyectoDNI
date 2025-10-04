@@ -1,4 +1,3 @@
-// src/components/BeforeAfter.jsx
 import React, { useState } from 'react';
 
 function BeforeAfter({ originalImage, processedImage }) {

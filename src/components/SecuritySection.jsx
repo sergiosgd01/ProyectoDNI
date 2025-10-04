@@ -1,4 +1,3 @@
-// src/components/SecuritySection.jsx
 import React from 'react';
 
 function SecuritySection() {
