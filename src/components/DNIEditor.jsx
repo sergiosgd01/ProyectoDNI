@@ -3,34 +3,38 @@ import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES, getProfileById, getFieldsCount } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
+import { dniProcessor } from '../services/dniProcessor';
 
-export default function DNIEditor({ frontFile, backFile, onBack }) {
+export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) {
   const colors = useColors();
   
   // Scroll inicial al principio de la página
   useScrollToTop();
   
-  // Datos mock que simularían lo que extraería el OCR
-  const mockExtractedData = {
-    nombre: 'JUAN CARLOS',
-    apellidos: 'GARCÍA LÓPEZ',
-    dni: '12345678A',
-    fechaNacimiento: '01/01/1990',
-    sexo: 'M',
-    nacionalidad: 'ESP',
-    fechaExpedicion: '01/01/2020',
-    fechaCaducidad: '01/01/2030',
-    equipoExpedidor: 'MADRID',
-    numeroSoporte: 'MAD123456789'
-  };
+  // Campos disponibles para configuración
+  const availableFields = [
+    'nombre',
+    'apellidos', 
+    'dni',
+    'fechaNacimiento',
+    'sexo',
+    'nacionalidad',
+    'fechaExpedicion',
+    'fechaCaducidad',
+    'equipoExpedidor',
+    'numeroSoporte'
+  ];
 
   const [selectedProfile, setSelectedProfile] = useState('hotel');
-  const [selectedFields, setSelectedFields] = useState(
-    DNI_PROFILES.HOTEL.fields
-  );
+  const [selectedFields, setSelectedFields] = useState(DNI_PROFILES.HOTEL.fields);
+  
+  // ESTADOS para integración
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processedResult, setProcessedResult] = useState(null);
+  const [processingError, setProcessingError] = useState(null);
 
   const selectedCount = getFieldsCount(selectedFields);
-  const totalFields = Object.keys(mockExtractedData).length;
+  const totalFields = availableFields.length;
 
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
@@ -51,7 +55,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
   };
 
   const handleSelectAll = () => {
-    setSelectedFields(Object.keys(mockExtractedData).reduce((acc, key) => ({
+    setSelectedFields(availableFields.reduce((acc, key) => ({
       ...acc,
       [key]: true
     }), {}));
@@ -59,7 +63,7 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
   };
 
   const handleDeselectAll = () => {
-    setSelectedFields(Object.keys(mockExtractedData).reduce((acc, key) => ({
+    setSelectedFields(availableFields.reduce((acc, key) => ({
       ...acc,
       [key]: false
     }), {}));
@@ -68,16 +72,35 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
 
   const handleProcessDNI = async () => {
     try {
-      // LLAMAR AL WEBASSEMBLYY 
+      setIsProcessing(true);
+      setProcessingError(null);
+
       console.log('Procesando DNI con configuración:', selectedFields);
       console.log('Foto delantera:', frontFile);
       console.log('Foto trasera:', backFile);
+
+      // DATOS para el componente externo
+      const dniData = {
+        frontFile,
+        backFile,
+        fieldsToRedact: selectedFields 
+      };
+
+      // LLAMAR al servicio que comunicará con el componente externo
+      const result = await dniProcessor.processeDNI(dniData);
       
-      // TODO: Implementar llamada al WebAssembly
-      // const processedImages = await processWithWebAssembly(frontFile, backFile, selectedFields);
+      setProcessedResult(result);
       
+      // NOTIFICAR al componente padre si se proporciona callback
+      if (onProcessed) {
+        onProcessed(result);
+      }
+
     } catch (error) {
       console.error('Error procesando DNI:', error);
+      setProcessingError(error.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -101,43 +124,125 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
         </div>
 
         <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
+          
+          {/* Vista previa */}
           <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
             <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-eye text-gray-600 text-lg sm:text-xl mr-2"></i>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Vista previa</h3>
+              {isProcessing && (
+                <div className="ml-auto flex items-center text-blue-600">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  <span className="text-sm">Procesando...</span>
+                </div>
+              )}
             </div>
             
-            {/* Frente del DNI */}
-            <div className="mb-4 flex-shrink-0">
-              <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                DELANTE
-              </div>
-              <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                <img
-                  src={URL.createObjectURL(frontFile)}
-                  alt="DNI delante"
-                  className="w-full h-auto rounded-lg shadow-md"
-                />
-              </div>
-            </div>
-
-            {/* Detrás del DNI */}
-            {backFile && (
-              <div className="mb-4 flex-shrink-0">
-                <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                  DETRÁS
+            {/* MOSTRAR resultado procesado si existe */}
+            {processedResult ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center text-green-800 text-sm">
+                    <i className="bi bi-check-circle-fill mr-2"></i>
+                    DNI procesado correctamente
+                  </div>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                  <img
-                    src={URL.createObjectURL(backFile)}
-                    alt="DNI detrás"
-                    className="w-full h-auto rounded-lg shadow-md"
-                  />
+
+                {/* Mostrar imágenes procesadas */}
+                <div className="mb-4">
+                  <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                    DELANTE - PROCESADO
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
+                    <img
+                      src={processedResult.frontImageUrl}
+                      alt="DNI delante procesado"
+                      className="w-full h-auto rounded-lg shadow-md"
+                    />
+                  </div>
+                </div>
+
+                {processedResult.backImageUrl && (
+                  <div className="mb-4">
+                    <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                      DETRÁS - PROCESADO
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
+                      <img
+                        src={processedResult.backImageUrl}
+                        alt="DNI detrás procesado"
+                        className="w-full h-auto rounded-lg shadow-md"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Botones de descarga */}
+                <div className="flex gap-2">
+                  <a
+                    href={processedResult.frontImageUrl}
+                    download="dni-front-processed.jpg"
+                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    <i className="bi bi-download mr-1"></i>
+                    Descargar Delante
+                  </a>
+                  {processedResult.backImageUrl && (
+                    <a
+                      href={processedResult.backImageUrl}
+                      download="dni-back-processed.jpg"
+                      className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      <i className="bi bi-download mr-1"></i>
+                      Descargar Detrás
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Mostrar imágenes originales */}
+                <div className="mb-4 flex-shrink-0">
+                  <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                    DELANTE
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
+                    <img
+                      src={URL.createObjectURL(frontFile)}
+                      alt="DNI delante"
+                      className="w-full h-auto rounded-lg shadow-md"
+                    />
+                  </div>
+                </div>
+
+                {backFile && (
+                  <div className="mb-4 flex-shrink-0">
+                    <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                      DETRÁS
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
+                      <img
+                        src={URL.createObjectURL(backFile)}
+                        alt="DNI detrás"
+                        className="w-full h-auto rounded-lg shadow-md"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Mostrar error si existe */}
+            {processingError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center text-red-800 text-sm">
+                  <i className="bi bi-exclamation-triangle-fill mr-2"></i>
+                  Error: {processingError}
                 </div>
               </div>
             )}
 
-            {/* Información del perfil seleccionado - se expande para llenar el espacio restante */}
+            {/* Información del perfil seleccionado */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-1 flex flex-col justify-center">
               <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
               <div className="space-y-1 text-xs sm:text-sm text-blue-700">
@@ -149,7 +254,12 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
                   }
                 </div>
                 <div><strong>Campos seleccionados:</strong> {selectedCount} de {totalFields}</div>
-                <div><strong>Estado:</strong> <span className="text-green-600">Listo para descargar</span></div>
+                <div>
+                  <strong>Estado:</strong> 
+                  <span className={processedResult ? "text-green-600" : "text-blue-600"}>
+                    {processedResult ? ' Procesado' : ' Listo para procesar'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -178,17 +288,17 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
               </div>
             </div>
 
-            {/* Lista de campos con checkboxes - se expande para usar el espacio disponible */}
+            {/* Lista de campos con checkboxes */}
             <div className="mb-4 flex-1 flex flex-col">
               <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base flex-shrink-0">Campos individuales</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start">
-                {Object.entries(mockExtractedData).map(([fieldName, value]) => (
+                {availableFields.map((fieldName) => (
                   <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
-                    <label className="flex items-start cursor-pointer">
-                      <div className="relative flex items-center justify-center mt-1">
+                    <label className="flex items-center cursor-pointer">
+                      <div className="relative flex items-center justify-center">
                         <input
                           type="checkbox"
-                          checked={selectedFields[fieldName]}
+                          checked={selectedFields[fieldName] || false}
                           onChange={() => handleFieldToggle(fieldName)}
                           className="sr-only"
                         />
@@ -217,12 +327,9 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
                           )}
                         </div>
                       </div>
-                      <div className="ml-3 sm:ml-4 flex-1 min-w-0">
-                        <div className="font-medium text-gray-800 text-xs sm:text-sm truncate">
+                      <div className="ml-3 sm:ml-4 flex-1">
+                        <div className="font-medium text-gray-800 text-xs sm:text-sm">
                           {formatFieldName(fieldName)}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1 truncate">
-                          {value}
                         </div>
                       </div>
                     </label>
@@ -252,15 +359,38 @@ export default function DNIEditor({ frontFile, backFile, onBack }) {
 
             {/* Botones de acción */}
             <div className="flex-shrink-0">
-              <button
-                onClick={handleProcessDNI}  
-                className="w-full bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
-              >
-                <i className="bi bi-gear-fill text-xl mr-3"></i>
-                Procesar DNI
-              </button>
+              {!processedResult ? (
+                <button
+                  onClick={handleProcessDNI}
+                  disabled={isProcessing}
+                  className="w-full bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-gear-fill text-xl mr-3"></i>
+                      Procesar DNI
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setProcessedResult(null);
+                    setProcessingError(null);
+                  }}
+                  className="w-full bg-orange-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
+                >
+                  <i className="bi bi-arrow-repeat text-xl mr-3"></i>
+                  Procesar de nuevo
+                </button>
+              )}
 
-              <div className="text-center text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+              <div className="text-center text-xs sm:text-sm text-gray-600 my-3">
                 {selectedProfile 
                   ? `Configuración: ${getProfileById(selectedProfile)?.name}`
                   : 'Configuración personalizada'
