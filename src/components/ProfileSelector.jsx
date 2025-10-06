@@ -2,19 +2,27 @@ import React from 'react';
 import { DNI_PROFILES, getProfilesList, getFieldsCount } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 
-export default function ProfileSelector({ selectedProfile, onProfileSelect, selectedFields }) {
+export default function ProfileSelector({ selectedProfile, onProfileSelect, selectedFrontFields, selectedBackFields }) {
   const profiles = getProfilesList();
   const colors = useColors();
 
   const isCustomProfile = () => {
-    return !profiles.some(profile => 
-      JSON.stringify(profile.fields) === JSON.stringify(selectedFields)
-    );
+    return !profiles.some(profile => {
+      const frontMatch = JSON.stringify(profile.frontFields) === JSON.stringify(selectedFrontFields);
+      const backMatch = JSON.stringify(profile.backFields) === JSON.stringify(selectedBackFields);
+      return frontMatch && backMatch;
+    });
   };
 
-  const renderFieldsIndicator = (fields) => {
-    const totalFields = Object.keys(fields).length;
-    const selectedCount = getFieldsCount(fields);
+  const renderFieldsIndicator = (profile) => {
+    const frontFields = profile.frontFields || {};
+    const backFields = profile.backFields || {};
+    
+    const totalFrontFields = Object.keys(frontFields).length;
+    const totalBackFields = Object.keys(backFields).length;
+    const totalFields = totalFrontFields + totalBackFields;
+    
+    const selectedCount = getFieldsCount(frontFields, backFields);
     
     return (
       <div className="flex items-center justify-between">
@@ -78,7 +86,7 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
                 {profile.description}
               </p>
               
-              {renderFieldsIndicator(profile.fields)}
+              {renderFieldsIndicator(profile)}
             </button>
           );
         })}
