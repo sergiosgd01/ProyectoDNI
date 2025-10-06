@@ -31,7 +31,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'domicilio',
     'municipio',
     'provincia',
-    'equipoExpedidor'
+    'equipoExpedidor',
+    'progenitores'
   ];
 
   // Combinar todos los campos
@@ -57,7 +58,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     domicilio: true,
     municipio: false,
     provincia: false,
-    equipoExpedidor: false
+    equipoExpedidor: false,
+    progenitores: false
   });
   
   // ESTADOS para integración
