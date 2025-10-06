@@ -5,6 +5,9 @@
  * Solo envía: frontFile, backFile, y fieldsToRedact
  */
 
+import { censorDniComplete } from '../components/dni_scripts/dni_censor';
+
+
 export class DNIProcessor {
   
   /**
@@ -94,56 +97,72 @@ export class DNIProcessor {
   }
 
   /**
-   * Este método debe ser reemplazado con la implementación real
-   * que comunique con el componente externo de procesamiento OCR
+   * Este método procesa las imágenes del DNI usando OpenCV
    * 
    * @param {Object} dniData - Datos validados del DNI
    * @returns {Promise<Object>} Resultado del procesamiento real
    */
+
   async callExternalProcessor(dniData) {
-    console.log('⚠️ USANDO PROCESADOR SIMULADO');
-    
-    // TODO: REEMPLAZAR ESTO CON SU IMPLEMENTACIÓN REAL
-    // Por ejemplo:
-    // return await externalOCRService.process({
-    //   frontImage: dniData.frontFile,
-    //   backImage: dniData.backFile,
-    //   fieldsToHide: dniData.fieldsToRedact
-    // });
+    console.log('🔄 Procesando DNI con censura...');
 
-    // Simulación temporal para desarrollo
-    await this.simulateProcessing();
+    try {
+      console.log('📝 Campos frontales a censurar:', dniData.frontFields);
+      console.log('📝 Campos traseros a censurar:', dniData.backFields);
 
-    return {
-      success: true,
-      frontImageUrl: await this.createMockProcessedImage(dniData.frontFile),
-      backImageUrl: dniData.backFile 
-        ? await this.createMockProcessedImage(dniData.backFile) 
-        : null,
-      timestamp: new Date().toISOString(),
-      message: 'Procesamiento simulado completado'
-    };
+      // Procesar ambas caras del DNI con campos separados
+      const { frontImageUrl, backImageUrl } = await censorDniComplete(
+        dniData.frontFile,
+        dniData.backFile,
+        {
+          frontFields: dniData.frontFields,
+          backFields: dniData.backFields
+        }
+      );
+
+      console.log('✅ Procesamiento completado');
+
+      return {
+        success: true,
+        frontImageUrl,
+        backImageUrl,
+        timestamp: new Date().toISOString(),
+        message: 'Procesamiento completado'
+      };
+    } catch (error) {
+      console.error('❌ Error en callExternalProcessor:', error);
+      throw error;
+    }
   }
 
-  /**
-   * Simular tiempo de procesamiento
-   * @private
-   */
-  async simulateProcessing() {
-    const delay = 2000;
-    console.log(`⏳ Simulando procesamiento (${delay}ms)...`);
-    return new Promise(resolve => setTimeout(resolve, delay));
-  }
+  // Actualizar validateInput para verificar los campos separados
+  validateInput(dniData) {
+    if (!dniData.frontFile) {
+      throw new Error('La imagen frontal del DNI es obligatoria');
+    }
 
-  /**
-   * Crear imagen procesada simulada (temporal)
-   * @private
-   */
-  async createMockProcessedImage(file) {
-    // En producción, esto devolverá la URL de la imagen procesada por el OCR
-    return URL.createObjectURL(file);
-  }
+    if (!dniData.backFile) {
+      throw new Error('La imagen trasera del DNI es obligatoria');
+    }
 
+    if (!dniData.frontFields || typeof dniData.frontFields !== 'object') {
+      throw new Error('Los campos frontales son obligatorios');
+    }
+
+    if (!dniData.backFields || typeof dniData.backFields !== 'object') {
+      throw new Error('Los campos traseros son obligatorios');
+    }
+
+    if (!(dniData.frontFile instanceof File)) {
+      throw new Error('frontFile debe ser un objeto File válido');
+    }
+
+    if (!(dniData.backFile instanceof File)) {
+      throw new Error('backFile debe ser un objeto File válido');
+    }
+
+    console.log('✅ Validación de entrada completada');
+  }
   /**
    * Obtener campos que se deben tachar (true)
    * @param {Object} fieldsToRedact - Objeto de campos

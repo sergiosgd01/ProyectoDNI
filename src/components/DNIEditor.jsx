@@ -11,8 +11,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   // Scroll inicial al principio de la página
   useScrollToTop();
   
-  // Campos disponibles para configuración
-  const availableFields = [
+  // Campos disponibles para configuración front
+  const frontfields = [
     'nombre',
     'apellidos', 
     'dni',
@@ -21,77 +21,133 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'nacionalidad',
     'fechaExpedicion',
     'fechaCaducidad',
-    'equipoExpedidor',
-    'numeroSoporte'
+    'numeroSoporte',
+    'can'
   ];
 
+  // Campos disponibles para configuración back
+  const backfields = [
+    'mrz',
+    'domicilio',
+    'municipio',
+    'provincia',
+    'equipoExpedidor'
+  ];
+
+  // Combinar todos los campos
+  const availableFields = [...frontfields, ...backfields];
+  const totalFields = availableFields.length;
+
   const [selectedProfile, setSelectedProfile] = useState('hotel');
-  const [selectedFields, setSelectedFields] = useState(DNI_PROFILES.HOTEL.fields);
+  const [selectedFrontFields, setSelectedFrontFields] = useState({
+    nombre: true,
+    apellidos: true,
+    dni: true,
+    fechaNacimiento: true,
+    sexo: false,
+    nacionalidad: false,
+    fechaExpedicion: true,
+    fechaCaducidad: true,
+    numeroSoporte: false,
+    can: false
+  });
+
+  const [selectedBackFields, setSelectedBackFields] = useState({
+    mrz: true,
+    domicilio: true,
+    municipio: false,
+    provincia: false,
+    equipoExpedidor: false
+  });
   
   // ESTADOS para integración
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);
   const [processingError, setProcessingError] = useState(null);
 
-  const selectedCount = getFieldsCount(selectedFields);
-  const totalFields = availableFields.length;
+  // Calcular campos seleccionados
+  const selectedFrontCount = Object.values(selectedFrontFields).filter(Boolean).length;
+  const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
+  const selectedCount = selectedFrontCount + selectedBackCount;
 
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
     const profile = getProfileById(profileId);
     if (profile) {
       setSelectedProfile(profileId);
-      setSelectedFields(profile.fields);
+      setSelectedFrontFields(profile.frontFields || profile.fields || {});
+      setSelectedBackFields(profile.backFields || {});
     }
   };
 
+  // Update the handleFieldToggle function to handle both front and back fields
   const handleFieldToggle = (fieldName) => {
-    setSelectedFields(prev => ({
-      ...prev,
-      [fieldName]: !prev[fieldName]
-    }));
+    if (frontfields.includes(fieldName)) {
+      setSelectedFrontFields(prev => ({
+        ...prev,
+        [fieldName]: !prev[fieldName]
+      }));
+    } else if (backfields.includes(fieldName)) {
+      setSelectedBackFields(prev => ({
+        ...prev,
+        [fieldName]: !prev[fieldName]
+      }));
+    }
     // Resetear perfil seleccionado ya que es personalizado
     setSelectedProfile(null);
   };
 
+  // Update handleSelectAll and handleDeselectAll
   const handleSelectAll = () => {
-    setSelectedFields(availableFields.reduce((acc, key) => ({
+    setSelectedFrontFields(frontfields.reduce((acc, key) => ({
       ...acc,
       [key]: true
     }), {}));
+    
+    setSelectedBackFields(backfields.reduce((acc, key) => ({
+      ...acc,
+      [key]: true
+    }), {}));
+    
     setSelectedProfile('complete');
   };
 
   const handleDeselectAll = () => {
-    setSelectedFields(availableFields.reduce((acc, key) => ({
+    setSelectedFrontFields(frontfields.reduce((acc, key) => ({
       ...acc,
       [key]: false
     }), {}));
+    
+    setSelectedBackFields(backfields.reduce((acc, key) => ({
+      ...acc,
+      [key]: false
+    }), {}));
+    
     setSelectedProfile(null);
   };
+
 
   const handleProcessDNI = async () => {
     try {
       setIsProcessing(true);
       setProcessingError(null);
 
-      console.log('Procesando DNI con configuración:', selectedFields);
-      console.log('Foto delantera:', frontFile);
-      console.log('Foto trasera:', backFile);
+      console.log('Procesando DNI con configuración front:', selectedFrontFields);
+      console.log('Procesando DNI con configuración back:', selectedBackFields);
 
       // DATOS para el componente externo
       const dniData = {
         frontFile,
         backFile,
-        fieldsToRedact: selectedFields 
+        frontFields: selectedFrontFields,
+        backFields: selectedBackFields
       };
 
-      // LLAMAR al servicio que comunicará con el componente externo
+      // LLAMAR al servicio
       const result = await dniProcessor.processeDNI(dniData);
       
       setProcessedResult(result);
       
-      // NOTIFICAR al componente padre si se proporciona callback
       if (onProcessed) {
         onProcessed(result);
       }
@@ -105,9 +161,37 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   };
 
   const formatFieldName = (fieldName) => {
-    return fieldName
+    const fieldNames = {
+      nombre: 'Nombre',
+      apellidos: 'Apellidos',
+      dni: 'DNI',
+      fechaNacimiento: 'Fecha de Nacimiento',
+      sexo: 'Sexo',
+      nacionalidad: 'Nacionalidad',
+      fechaExpedicion: 'Fecha de Expedición',
+      fechaCaducidad: 'Fecha de Caducidad',
+      numeroSoporte: 'Número de Soporte',
+      can: 'CAN',
+      mrz: 'MRZ',
+      domicilio: 'Domicilio',
+      municipio: 'Municipio',
+      provincia: 'Provincia',
+      equipoExpedidor: 'Equipo Expedidor'
+    };
+    
+    return fieldNames[fieldName] || fieldName
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, str => str.toUpperCase());
+  };
+
+  // Obtener el estado del campo (front o back)
+  const isFieldSelected = (fieldName) => {
+    if (frontfields.includes(fieldName)) {
+      return selectedFrontFields[fieldName] || false;
+    } else if (backfields.includes(fieldName)) {
+      return selectedBackFields[fieldName] || false;
+    }
+    return false;
   };
 
   return (
@@ -276,7 +360,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
               <ProfileSelector
                 selectedProfile={selectedProfile}
                 onProfileSelect={handleProfileSelect}
-                selectedFields={selectedFields}
+                selectedFrontFields={selectedFrontFields}
+                selectedBackFields={selectedBackFields}
               />
             </div>
 
@@ -291,50 +376,105 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
             {/* Lista de campos con checkboxes */}
             <div className="mb-4 flex-1 flex flex-col">
               <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base flex-shrink-0">Campos individuales</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 content-start">
-                {availableFields.map((fieldName) => (
-                  <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
-                    <label className="flex items-center cursor-pointer">
-                      <div className="relative flex items-center justify-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedFields[fieldName] || false}
-                          onChange={() => handleFieldToggle(fieldName)}
-                          className="sr-only"
-                        />
-                        <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
-                           selectedFields[fieldName] ? 'shadow-md' : ''
-                         }`}
-                             style={{
-                               backgroundColor: selectedFields[fieldName] ? colors.primary : 'white',
-                               borderColor: selectedFields[fieldName] ? colors.primary : colors.border.default
-                             }}
-                             onMouseEnter={(e) => {
-                               if (!selectedFields[fieldName]) {
-                                 e.target.style.borderColor = colors.primary;
-                               }
-                             }}
-                             onMouseLeave={(e) => {
-                               if (!selectedFields[fieldName]) {
-                                 e.target.style.borderColor = colors.border.default;
-                               }
-                             }}
-                        >
-                          {selectedFields[fieldName] && (
-                            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
+              
+              {/* Campos Front */}
+              <div className="mb-4">
+                <h5 className="text-xs font-semibold text-gray-600 mb-2">ANVERSO (DELANTE)</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {frontfields.map((fieldName) => (
+                    <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
+                      <label className="flex items-center cursor-pointer">
+                        <div className="relative flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isFieldSelected(fieldName)}
+                            onChange={() => handleFieldToggle(fieldName)}
+                            className="sr-only"
+                          />
+                          <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
+                             isFieldSelected(fieldName) ? 'shadow-md' : ''
+                           }`}
+                               style={{
+                                 backgroundColor: isFieldSelected(fieldName) ? colors.primary : 'white',
+                                 borderColor: isFieldSelected(fieldName) ? colors.primary : colors.border.default
+                               }}
+                               onMouseEnter={(e) => {
+                                 if (!isFieldSelected(fieldName)) {
+                                   e.target.style.borderColor = colors.primary;
+                                 }
+                               }}
+                               onMouseLeave={(e) => {
+                                 if (!isFieldSelected(fieldName)) {
+                                   e.target.style.borderColor = colors.border.default;
+                                 }
+                               }}
+                          >
+                            {isFieldSelected(fieldName) && (
+                              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="ml-3 sm:ml-4 flex-1">
-                        <div className="font-medium text-gray-800 text-xs sm:text-sm">
-                          {formatFieldName(fieldName)}
+                        <div className="ml-3 sm:ml-4 flex-1">
+                          <div className="font-medium text-gray-800 text-xs sm:text-sm">
+                            {formatFieldName(fieldName)}
+                          </div>
                         </div>
-                      </div>
-                    </label>
-                  </div>
-                ))}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Campos Back */}
+              <div>
+                <h5 className="text-xs font-semibold text-gray-600 mb-2">REVERSO (DETRÁS)</h5>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {backfields.map((fieldName) => (
+                    <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
+                      <label className="flex items-center cursor-pointer">
+                        <div className="relative flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={isFieldSelected(fieldName)}
+                            onChange={() => handleFieldToggle(fieldName)}
+                            className="sr-only"
+                          />
+                          <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${
+                             isFieldSelected(fieldName) ? 'shadow-md' : ''
+                           }`}
+                               style={{
+                                 backgroundColor: isFieldSelected(fieldName) ? colors.primary : 'white',
+                                 borderColor: isFieldSelected(fieldName) ? colors.primary : colors.border.default
+                               }}
+                               onMouseEnter={(e) => {
+                                 if (!isFieldSelected(fieldName)) {
+                                   e.target.style.borderColor = colors.primary;
+                                 }
+                               }}
+                               onMouseLeave={(e) => {
+                                 if (!isFieldSelected(fieldName)) {
+                                   e.target.style.borderColor = colors.border.default;
+                                 }
+                               }}
+                          >
+                            {isFieldSelected(fieldName) && (
+                              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-3 sm:ml-4 flex-1">
+                          <div className="font-medium text-gray-800 text-xs sm:text-sm">
+                            {formatFieldName(fieldName)}
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
