@@ -6,8 +6,8 @@
  */
 export const addWatermark = (canvas, ctx, options = {}) => {
   const {
-    text, // Sin valor por defecto - OBLIGATORIO pasarlo
-    fontSize = 26,
+    text,
+    fontSize = 24,
     fontFamily = "Arial",
     fontWeight = "bold",
     fillColor = "rgba(255, 255, 255, 0.35)",
@@ -27,8 +27,16 @@ export const addWatermark = (canvas, ctx, options = {}) => {
 
   ctx.save();
   
+  // Ajustar tamaño de fuente según longitud del texto
+  let adjustedFontSize = fontSize;
+  if (text.length > 35) {
+    adjustedFontSize = Math.max(14, fontSize - Math.floor((text.length - 35) / 3));
+  } else if (text.length > 25) {
+    adjustedFontSize = Math.max(18, fontSize - 4);
+  }
+  
   // Configurar el texto
-  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+  ctx.font = `${fontWeight} ${adjustedFontSize}px ${fontFamily}`;
   ctx.fillStyle = fillColor;
   ctx.strokeStyle = strokeColor;
   ctx.lineWidth = strokeWidth;
@@ -43,18 +51,22 @@ export const addWatermark = (canvas, ctx, options = {}) => {
     // Patrón repetido por toda la imagen
     const rotationRad = rotation * Math.PI / 180;
     
+    // Ajustar espaciado según longitud del texto
+    const adjustedSpacingX = text.length > 30 ? spacingX * 1.2 : spacingX;
+    const adjustedSpacingY = text.length > 30 ? spacingY * 1.2 : spacingY;
+    
     // Calcular cuántas repeticiones necesitamos (con margen extra)
     const diagonal = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
-    const cols = Math.ceil(diagonal / spacingX) + 2;
-    const rows = Math.ceil(diagonal / spacingY) + 2;
+    const cols = Math.ceil(diagonal / adjustedSpacingX) + 2;
+    const rows = Math.ceil(diagonal / adjustedSpacingY) + 2;
     
     // Dibujar el patrón
     for (let row = -1; row < rows; row++) {
       for (let col = -1; col < cols; col++) {
         ctx.save();
         
-        const x = col * spacingX;
-        const y = row * spacingY;
+        const x = col * adjustedSpacingX;
+        const y = row * adjustedSpacingY;
         
         ctx.translate(x, y);
         ctx.rotate(rotationRad);

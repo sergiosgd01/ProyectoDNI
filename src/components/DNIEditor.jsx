@@ -63,12 +63,10 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     equipoExpedidor: false
   });
   
-  // ESTADOS para integración
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);
   const [processingError, setProcessingError] = useState(null);
 
-  // Calcular campos seleccionados
   const selectedFrontCount = Object.values(selectedFrontFields).filter(Boolean).length;
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
   const selectedCount = selectedFrontCount + selectedBackCount;
@@ -86,8 +84,25 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   
   // Verificar si la configuración actual coincide con algún perfil
   useEffect(() => {
+    // No hacer nada si ya hay un perfil seleccionado explícitamente
+    if (selectedProfile) {
+      const profile = getProfileById(selectedProfile);
+      if (profile) {
+        const profileFront = profile.frontFields || profile.fields || {};
+        const profileBack = profile.backFields || {};
+        
+        const frontMatch = JSON.stringify(profileFront) === JSON.stringify(selectedFrontFields);
+        const backMatch = JSON.stringify(profileBack) === JSON.stringify(selectedBackFields);
+        
+        // Si coincide exactamente, mantener el perfil seleccionado
+        if (frontMatch && backMatch) {
+          return;
+        }
+      }
+    }
+    
+    // Solo buscar coincidencias si no hay perfil seleccionado o si los campos no coinciden
     const checkProfileMatch = () => {
-      // Importa los perfiles disponibles
       const profiles = ['hotel', 'bank', 'transport', 'minimal', 'complete'];
       
       for (const profileId of profiles) {
@@ -96,18 +111,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
           const profileFront = profile.frontFields || profile.fields || {};
           const profileBack = profile.backFields || {};
           
-          // Comparar si coinciden todos los campos
-          const frontMatch = Object.keys(profileFront).every(
-            key => profileFront[key] === selectedFrontFields[key]
-          ) && Object.keys(selectedFrontFields).every(
-            key => profileFront[key] === selectedFrontFields[key]
-          );
-          
-          const backMatch = Object.keys(profileBack).every(
-            key => profileBack[key] === selectedBackFields[key]
-          ) && Object.keys(selectedBackFields).every(
-            key => profileBack[key] === selectedBackFields[key]
-          );
+          const frontMatch = JSON.stringify(profileFront) === JSON.stringify(selectedFrontFields);
+          const backMatch = JSON.stringify(profileBack) === JSON.stringify(selectedBackFields);
           
           if (frontMatch && backMatch) {
             setSelectedProfile(profileId);
@@ -116,7 +121,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         }
       }
       
-      // Si no coincide con ningún perfil
       setSelectedProfile(null);
     };
     
@@ -124,15 +128,15 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   }, [selectedFrontFields, selectedBackFields]);
 
   useEffect(() => {
-  if (selectedProfile) {
-    const profile = getProfileById(selectedProfile);
-    if (profile) {
-      setWatermarkText(`Uso exclusivo para ${profile.name}`);
+    if (selectedProfile) {
+      const profile = getProfileById(selectedProfile);
+      if (profile) {
+        setWatermarkText(`Uso exclusivo para ${profile.name}`);
+      }
+    } else {
+      setWatermarkText('Uso exclusivo para verificación');
     }
-  } else {
-    setWatermarkText('Uso exclusivo para verificación');
-  }
-}, [selectedProfile]);
+  }, [selectedProfile]);
 
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
@@ -144,7 +148,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     }
   };
 
-  // Update the handleFieldToggle function to handle both front and back fields
   const handleFieldToggle = (fieldName) => {
     if (frontfields.includes(fieldName)) {
       setSelectedFrontFields(prev => ({
@@ -159,7 +162,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     }
   };
 
-  // Update handleSelectAll and handleDeselectAll
   const handleSelectAll = () => {
     setSelectedFrontFields(frontfields.reduce((acc, key) => ({
       ...acc,
