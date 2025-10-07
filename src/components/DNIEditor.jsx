@@ -22,7 +22,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'fechaExpedicion',
     'fechaCaducidad',
     'numeroSoporte',
-    'can'
+    'can',
+    'firma'
   ];
 
   // Campos disponibles para configuración back
@@ -50,7 +51,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     fechaExpedicion: true,
     fechaCaducidad: true,
     numeroSoporte: false,
-    can: false
+    can: false,
+    firma: false
   });
 
   const [selectedBackFields, setSelectedBackFields] = useState({
@@ -174,6 +176,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       fechaCaducidad: 'Fecha de Caducidad',
       numeroSoporte: 'Número de Soporte',
       can: 'CAN',
+      firma: 'Firma',
       mrz: 'MRZ',
       domicilio: 'Domicilio',
       municipio: 'Municipio',

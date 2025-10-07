@@ -10,14 +10,22 @@ export const POSICIONES = {
     [0.38, 0.292, 0.703, 0.35], // APELLIDO1
     [0.38, 0.345, 0.703, 0.411] // APELLIDO2
   ],
-  dni: [[0.441, 0.166, 0.749, 0.271]],
+  dni: [
+    [0.441, 0.166, 0.749, 0.271],
+    [0.01, 0.19, 0.21, 0.235], //dni pequeño (bandero EU)
+    [0.82, 0.67, 0.95, 0.71] // dni con foto
+  ],
   fechaNacimiento: [[0.775, 0.524, 0.985, 0.596]],
   sexo: [[0.397, 0.53, 0.45, 0.592]],
   nacionalidad: [[0.525, 0.528, 0.679, 0.591]],
   fechaExpedicion: [[0.389, 0.615, 0.592, 0.682]],
   fechaCaducidad: [[0.592, 0.615, 0.793, 0.682]],
-  numeroSoporte: [[0.392, 0.707, 0.585, 0.77]],
-  can: [[0.778, 0.819, 0.99, 0.92]]
+  numeroSoporte: [
+    [0.392, 0.707, 0.585, 0.77], // numero de soporte
+    [0.765, 0.175, 0.88, 0.25] //numero de soporte "ventana"
+  ],
+  can: [[0.778, 0.819, 0.99, 0.92]],
+  firma: [[0.435, 0.78, 0.74, 0.89]],
 };
 
 // Atributos presentes en el DNI 4.0 (cara trasera)
@@ -47,7 +55,8 @@ export const FIELD_MAPPING_FRONT = {
   fechaExpedicion: 'fechaExpedicion',
   fechaCaducidad: 'fechaCaducidad',
   numeroSoporte: 'numeroSoporte',
-  can: 'can'
+  can: 'can',
+  firma: 'firma'
 };
 
 export const FIELD_MAPPING_BACK = {
