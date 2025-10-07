@@ -162,11 +162,11 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front') 
  */
 export async function censorDniComplete(frontFile, backFile, fields) {
   const frontFieldsToRedact = Object.entries(fields.frontFields || {})
-    .filter(([, value]) => value === true)
+    .filter(([, value]) => value === false)
     .map(([key]) => key);
 
   const backFieldsToRedact = Object.entries(fields.backFields || {})
-    .filter(([, value]) => value === true)
+    .filter(([, value]) => value === false)
     .map(([key]) => key);
 
   console.log('📝 Censurando campos frontales:', frontFieldsToRedact);

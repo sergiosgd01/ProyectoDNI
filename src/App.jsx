@@ -3,10 +3,12 @@ import Header from './components/Header';
 import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
 import UploadPage from './components/pages/UploadPage';
+import ProcessingLoader from './components/ProcessingLoader';
 import { useDNIFiles } from './hooks/useDNIFiles';
 import { useNavigation } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
 import { VIEWS } from './constants/views';
+import { DEMO_MODE } from './config/demoMode';
 import './index.css'; 
 
 function App() {
@@ -23,9 +25,20 @@ function App() {
 
   // Estado para controlar si debe hacer auto-navegación al editor
   const [shouldAutoNavigate, setShouldAutoNavigate] = useState(true);
+  
+  // Estado para controlar el loader de procesamiento (solo en modo demo)
+  const [showProcessingLoader, setShowProcessingLoader] = useState(false);
 
   // Auto-navegación cuando ambos archivos están listos
-  useAutoNavigation(frontFile, backFile, currentView, goTo, shouldAutoNavigate);
+  // Si DEMO_MODE está activo, pasar el setter del loader
+  useAutoNavigation(
+    frontFile, 
+    backFile, 
+    currentView, 
+    goTo, 
+    shouldAutoNavigate,
+    DEMO_MODE.enabled ? setShowProcessingLoader : null  // Solo pasar si demo está activo
+  );
 
   // Resetear auto-navegación cuando se suben archivos por primera vez
   useEffect(() => {
@@ -46,8 +59,20 @@ function App() {
     goTo(VIEWS.UPLOAD_PROCESS);
   };
 
-  const handleContinueToEditor = () => {
-    // Ir al editor manualmente
+  const handleContinueToEditor = async () => {
+    // Si está en modo demo, mostrar loader
+    if (DEMO_MODE.enabled) {
+      setShowProcessingLoader(true);
+      
+      // Esperar a que termine la animación del loader
+      await new Promise(resolve => {
+        setTimeout(resolve, DEMO_MODE.timings.processingSteps);
+      });
+      
+      setShowProcessingLoader(false);
+    }
+    
+    // Ir al editor (con o sin demo)
     goTo(VIEWS.EDITOR);
   };
 
@@ -97,12 +122,17 @@ function App() {
   };
 
   const handleDNIProcess = async (frontFile, backFile, selectedFields) => {
-    // Manejarr el procesamiento con WebAssembly
+    // Manejar el procesamiento con WebAssembly
     console.log('Iniciando procesamiento...', { frontFile, backFile, selectedFields });
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Loader de procesamiento - SOLO SE MUESTRA EN MODO DEMO */}
+      {DEMO_MODE.enabled && showProcessingLoader && (
+        <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
+      )}
+      
       <Header 
         onShowHome={goHome}
       />

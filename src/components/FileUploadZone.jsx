@@ -109,7 +109,7 @@ function FileUploadZone({ onFileSelect }) {
       {/* Botones de acción */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         {/* Botón de archivo */}
-        <button 
+        <button  
           onClick={(e) => {
             e.stopPropagation();
             document.getElementById(fileInputId).click();
