@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ProfileSelector from './ProfileSelector';
-import { DNI_PROFILES, getProfileById, getFieldsCount } from '../constants/dniProfiles';
+import { getProfileById } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { dniProcessor } from '../services/dniProcessor';
+import jsPDF from 'jspdf';
+import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
+import WatermarkInput from './WatermarkInput';
 
 export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) {
   const colors = useColors();
@@ -70,6 +73,67 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
   const selectedCount = selectedFrontCount + selectedBackCount;
 
+  const [watermarkText, setWatermarkText] = useState('Uso exclusivo para Hotel');
+
+  useEffect(() => {
+    if (processedResult) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  }, [processedResult]);
+  
+  // Verificar si la configuración actual coincide con algún perfil
+  useEffect(() => {
+    const checkProfileMatch = () => {
+      // Importa los perfiles disponibles
+      const profiles = ['hotel', 'bank', 'transport', 'minimal', 'complete'];
+      
+      for (const profileId of profiles) {
+        const profile = getProfileById(profileId);
+        if (profile) {
+          const profileFront = profile.frontFields || profile.fields || {};
+          const profileBack = profile.backFields || {};
+          
+          // Comparar si coinciden todos los campos
+          const frontMatch = Object.keys(profileFront).every(
+            key => profileFront[key] === selectedFrontFields[key]
+          ) && Object.keys(selectedFrontFields).every(
+            key => profileFront[key] === selectedFrontFields[key]
+          );
+          
+          const backMatch = Object.keys(profileBack).every(
+            key => profileBack[key] === selectedBackFields[key]
+          ) && Object.keys(selectedBackFields).every(
+            key => profileBack[key] === selectedBackFields[key]
+          );
+          
+          if (frontMatch && backMatch) {
+            setSelectedProfile(profileId);
+            return;
+          }
+        }
+      }
+      
+      // Si no coincide con ningún perfil
+      setSelectedProfile(null);
+    };
+    
+    checkProfileMatch();
+  }, [selectedFrontFields, selectedBackFields]);
+
+  useEffect(() => {
+  if (selectedProfile) {
+    const profile = getProfileById(selectedProfile);
+    if (profile) {
+      setWatermarkText(`Uso exclusivo para ${profile.name}`);
+    }
+  } else {
+    setWatermarkText('Uso exclusivo para verificación');
+  }
+}, [selectedProfile]);
+
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
     const profile = getProfileById(profileId);
@@ -93,8 +157,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         [fieldName]: !prev[fieldName]
       }));
     }
-    // Resetear perfil seleccionado ya que es personalizado
-    setSelectedProfile(null);
   };
 
   // Update handleSelectAll and handleDeselectAll
@@ -126,7 +188,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     setSelectedProfile(null);
   };
 
-
   const handleProcessDNI = async () => {
     try {
       setIsProcessing(true);
@@ -157,6 +218,141 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       setProcessingError(error.message);
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Función para combinar ambas imágenes en JPG con marca de agua
+  const handleDownloadCombined = async () => {
+    if (!processedResult) return;
+
+    try {
+      const imageUrls = [processedResult.frontImageUrl];
+      if (processedResult.backImageUrl) {
+        imageUrls.push(processedResult.backImageUrl);
+      }
+
+      const canvas = await combineImagesWithWatermark(imageUrls, 20, {
+        text: watermarkText
+      });
+
+      // Descargar
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'dni-completo-procesado.jpg';
+        link.click();
+        URL.revokeObjectURL(url);
+      }, 'image/jpeg', 0.95);
+
+    } catch (error) {
+      console.error('Error al combinar imágenes:', error);
+    }
+  };
+
+  // Función para combinar ambas imágenes en PDF con marca de agua
+  const handleDownloadCombinedPDF = async () => {
+    if (!processedResult) return;
+
+    try {
+      // Crear imágenes con marca de agua
+      const frontImageWithWatermark = await imageToCanvasWithWatermark(
+        processedResult.frontImageUrl,
+        {
+          text: watermarkText
+        }
+      );
+
+      // Crear PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pageWidth - (margin * 2);
+
+      // Cargar imagen frontal para obtener dimensiones
+      const frontImg = new Image();
+      frontImg.src = processedResult.frontImageUrl;
+      await new Promise((resolve) => { 
+        frontImg.onload = resolve; 
+      });
+
+      // Calcular dimensiones proporcionales para la imagen frontal
+      const frontRatio = frontImg.height / frontImg.width;
+      let frontWidth = maxWidth;
+      let frontHeight = frontWidth * frontRatio;
+
+      // Añadir imagen frontal con marca de agua
+      pdf.addImage(
+        frontImageWithWatermark,
+        'JPEG',
+        margin,
+        margin,
+        frontWidth,
+        frontHeight,
+        undefined,
+        'FAST'
+      );
+
+      // Si hay imagen trasera, procesarla también
+      if (processedResult.backImageUrl) {
+        const backImageWithWatermark = await imageToCanvasWithWatermark(
+          processedResult.backImageUrl,
+          {
+            text: watermarkText
+          }
+        );
+
+        const backImg = new Image();
+        backImg.src = processedResult.backImageUrl;
+        await new Promise((resolve) => { 
+          backImg.onload = resolve; 
+        });
+
+        const backRatio = backImg.height / backImg.width;
+        let backWidth = maxWidth;
+        let backHeight = backWidth * backRatio;
+
+        const yPosition = margin + frontHeight + 10;
+
+        // Si no cabe en la misma página, añadir nueva página
+        if (yPosition + backHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.addImage(
+            backImageWithWatermark,
+            'JPEG',
+            margin,
+            margin,
+            backWidth,
+            backHeight,
+            undefined,
+            'FAST'
+          );
+        } else {
+          // Añadir en la misma página
+          pdf.addImage(
+            backImageWithWatermark,
+            'JPEG',
+            margin,
+            yPosition,
+            backWidth,
+            backHeight,
+            undefined,
+            'FAST'
+          );
+        }
+      }
+
+      // Descargar el PDF
+      pdf.save('dni-completo-procesado.pdf');
+
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
     }
   };
 
@@ -207,16 +403,16 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
           </p>
         </div>
 
-        <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-stretch">
+        <div className="max-w-none mx-auto space-y-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start">
           
           {/* Vista previa */}
-          <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col">
+          <div className="order-2 lg:order-1 bg-white rounded-lg shadow-lg p-4 sm:p-6 flex flex-col h-fit">
             <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-eye text-gray-600 text-lg sm:text-xl mr-2"></i>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Vista previa</h3>
               {isProcessing && (
-                <div className="ml-auto flex items-center text-blue-600">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                <div className="ml-auto flex items-center" style={{ color: colors.secondary }}>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 mr-2" style={{ borderColor: colors.secondary }}></div>
                   <span className="text-sm">Procesando...</span>
                 </div>
               )}
@@ -262,24 +458,58 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
                 )}
 
                 {/* Botones de descarga */}
-                <div className="flex gap-2">
-                  <a
-                    href={processedResult.frontImageUrl}
-                    download="dni-front-processed.jpg"
-                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    <i className="bi bi-download mr-1"></i>
-                    Descargar Delante
-                  </a>
-                  {processedResult.backImageUrl && (
-                    <a
-                      href={processedResult.backImageUrl}
-                      download="dni-back-processed.jpg"
-                      className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg text-center hover:bg-green-700 transition-colors text-sm font-medium"
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => downloadImageWithWatermark(
+                        processedResult.frontImageUrl,
+                        'dni-front-processed.jpg',
+                        { 
+                          text: watermarkText
+                        }
+                      )}
+                      style={{ backgroundColor: colors.secondary }}
+                      className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
                     >
                       <i className="bi bi-download mr-1"></i>
-                      Descargar Detrás
-                    </a>
+                      Descargar Anverso
+                    </button>
+                    {processedResult.backImageUrl && (
+                      <button
+                        onClick={() => downloadImageWithWatermark(
+                          processedResult.backImageUrl,
+                          'dni-back-processed.jpg',
+                          { 
+                            text: watermarkText
+                          }
+                        )}
+                        style={{ backgroundColor: colors.secondary }}
+                        className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
+                      >
+                        <i className="bi bi-download mr-1"></i>
+                        Descargar Reverso
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Botones para descargar combinado (JPG y PDF) */}
+                  {processedResult.backImageUrl && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDownloadCombined}
+                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-center hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        <i className="bi bi-file-earmark-image mr-1"></i>
+                        Completo JPG
+                      </button>
+                      <button
+                        onClick={handleDownloadCombinedPDF}
+                        className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg text-center hover:bg-red-700 transition-colors text-sm font-medium"
+                      >
+                        <i className="bi bi-file-earmark-pdf mr-1"></i>
+                        Completo PDF
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -327,7 +557,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
             )}
 
             {/* Información del perfil seleccionado */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex-1 flex flex-col justify-center">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mt-4">
               <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
               <div className="space-y-1 text-xs sm:text-sm text-blue-700">
                 <div>
@@ -499,11 +729,22 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
 
             {/* Botones de acción */}
             <div className="flex-shrink-0">
+              
+              <WatermarkInput
+                value={watermarkText}
+                onChange={setWatermarkText}
+                maxLength={50}
+              />
+
               {!processedResult ? (
                 <button
                   onClick={handleProcessDNI}
                   disabled={isProcessing}
-                  className="w-full bg-blue-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  style={{ 
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.primary,
+                    cursor: isProcessing ? 'not-allowed' : 'pointer'
+                  }}
+                  className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
                 >
                   {isProcessing ? (
                     <>
@@ -519,14 +760,29 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
                 </button>
               ) : (
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setProcessedResult(null);
                     setProcessingError(null);
+                    await handleProcessDNI();
                   }}
-                  className="w-full bg-orange-600 text-white py-4 px-8 rounded-lg font-semibold text-lg hover:bg-orange-700 transition-colors flex items-center justify-center"
+                  disabled={isProcessing}
+                  style={{ 
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.primary,
+                    cursor: isProcessing ? 'not-allowed' : 'pointer'
+                  }}
+                  className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
                 >
-                  <i className="bi bi-arrow-repeat text-xl mr-3"></i>
-                  Procesar de nuevo
+                  {isProcessing ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                      Procesando...
+                    </>
+                  ) : (
+                    <>
+                      <i className="bi bi-arrow-repeat text-xl mr-3"></i>
+                      Procesar de nuevo
+                    </>
+                  )}
                 </button>
               )}
 
