@@ -3,49 +3,70 @@
  * Esta función NO usa hooks de React y puede llamarse desde cualquier módulo
  */
 
+// Atributos presentes en el DNI 4.0 (cara frontal)
 export const POSICIONES = {
-  nombre: [0.38, 0.429, 0.703, 0.501],
-  apellidos: [0.38, 0.292, 0.703, 0.411], // Combinación de APELLIDO1 y APELLIDO2
-  dni: [0.441, 0.166, 0.749, 0.271],
-  sexo: [0.397, 0.53, 0.45, 0.592],
-  nacionalidad: [0.525, 0.528, 0.679, 0.591],
-  numeroSoporte: [0.392, 0.707, 0.585, 0.77],
-  fechaExpedicion: [0.389, 0.615, 0.592, 0.682],
-  fechaCaducidad: [0.592, 0.615, 0.793, 0.682],
-  fechaNacimiento: [0.775, 0.524, 0.985, 0.596],
-  can: [0.775, 0.707, 0.985, 0.77]
+  nombre: [[0.38, 0.429, 0.703, 0.501]],
+  apellidos: [
+    [0.38, 0.292, 0.703, 0.35], // APELLIDO1
+    [0.38, 0.345, 0.703, 0.411] // APELLIDO2
+  ],
+  dni: [
+    [0.441, 0.166, 0.749, 0.271],
+    [0.01, 0.19, 0.21, 0.235], //dni pequeño (bandero EU)
+    [0.82, 0.67, 0.95, 0.71] // dni con foto
+  ],
+  fechaNacimiento: [[0.775, 0.524, 0.985, 0.596]],
+  sexo: [[0.397, 0.53, 0.45, 0.592]],
+  nacionalidad: [[0.525, 0.528, 0.679, 0.591]],
+  fechaExpedicion: [[0.389, 0.615, 0.592, 0.682]],
+  fechaCaducidad: [[0.592, 0.615, 0.793, 0.682]],
+  numeroSoporte: [
+    [0.392, 0.707, 0.585, 0.77], // numero de soporte
+    [0.765, 0.175, 0.88, 0.25] //numero de soporte "ventana"
+  ],
+  can: [[0.778, 0.819, 0.99, 0.92]],
+  firma: [[0.435, 0.78, 0.74, 0.89]],
 };
 
-// Posiciones para el reverso del DNI
-const POSICIONES_BACK = {
-  mrz: [0, 0.65, 1, 0.938], 
-  domicilio: [0.27, 0.07, 0.95, 0.13],
-  municipio: [0.27, 0.123, 0.95, 0.18],
-  equipoExpedidor: [0.035, 0.268, 0.08, 0.57],
-  provincia: [0.27, 0.171, 0.95, 0.228]
+// Atributos presentes en el DNI 4.0 (cara trasera)
+export const POSICIONES_BACK = {
+  mrz: [[0, 0.65, 1, 0.938]],
+  domicilio: [[0.27, 0.07, 0.95, 0.13]],
+  municipio: [
+    [0.27, 0.123, 0.95, 0.18], // MUNICIPIO
+    [0.27, 0.35, 0.9, 0.4]     // MUNICIPIO_N
+  ],
+  provincia: [
+    [0.27, 0.171, 0.95, 0.228], // PROVINCIA
+    [0.27, 0.39, 0.9, 0.452]    // PROVINCIA_N
+  ],
+  equipoExpedidor: [[0.035, 0.268, 0.08, 0.57]],
+  progenitores: [[0.27, 0.52, 0.9, 0.6]]
 };
 
 // Mapeo de nombres de campos del backend al frontend
-const FIELD_MAPPING_FRONT = {
+export const FIELD_MAPPING_FRONT = {
   nombre: 'nombre',
   apellidos: 'apellidos',
   dni: 'dni',
+  fechaNacimiento: 'fechaNacimiento',
   sexo: 'sexo',
   nacionalidad: 'nacionalidad',
-  numeroSoporte: 'numeroSoporte',
   fechaExpedicion: 'fechaExpedicion',
   fechaCaducidad: 'fechaCaducidad',
-  fechaNacimiento: 'fechaNacimiento',
-  can: 'can'
+  numeroSoporte: 'numeroSoporte',
+  can: 'can',
+  firma: 'firma'
 };
 
-const FIELD_MAPPING_BACK = {
+export const FIELD_MAPPING_BACK = {
   mrz: 'mrz',
   domicilio: 'domicilio',
   municipio: 'municipio',
   provincia: 'provincia',
-  equipoExpedidor: 'equipoExpedidor'
-};
+  equipoExpedidor: 'equipoExpedidor',
+  progenitores: 'progenitores'
+};  
 
 
 
@@ -90,26 +111,28 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front') 
 
   fieldsToRedact.forEach((fieldName) => {
     const mappedField = fieldMapping[fieldName] || fieldName;
-    const position = posiciones[mappedField];
+    const positions = posiciones[mappedField];
 
-    if (!position) {
+    if (!positions || positions.length === 0) {
       console.warn(`⚠️ Campo no encontrado: ${fieldName} (lado: ${side})`);
       return;
     }
 
-    try {
-      const [x1, y1, x2, y2] = position;
-      const px1 = Math.floor(x1 * src.cols);
-      const py1 = Math.floor(y1 * src.rows);
-      const px2 = Math.floor(x2 * src.cols);
-      const py2 = Math.floor(y2 * src.rows);
+    positions.forEach((position) => {
+      try {
+        const [x1, y1, x2, y2] = position;
+        const px1 = Math.floor(x1 * src.cols);
+        const py1 = Math.floor(y1 * src.rows);
+        const px2 = Math.floor(x2 * src.cols);
+        const py2 = Math.floor(y2 * src.rows);
 
-      const pt1 = new cv.Point(px1, py1);
-      const pt2 = new cv.Point(px2, py2);
-      cv.rectangle(src, pt1, pt2, [0, 0, 0, 255], cv.FILLED);
-    } catch (error) {
-      console.error(`Error censurando ${fieldName}:`, error);
-    }
+        const pt1 = new cv.Point(px1, py1);
+        const pt2 = new cv.Point(px2, py2);
+        cv.rectangle(src, pt1, pt2, [0, 0, 0, 255], cv.FILLED);
+      } catch (error) {
+        console.error(`Error censurando ${fieldName}:`, error);
+      }
+    });
   });
 
   const resultCanvas = document.createElement('canvas');

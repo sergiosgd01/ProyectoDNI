@@ -26,7 +26,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'fechaExpedicion',
     'fechaCaducidad',
     'numeroSoporte',
-    'can'
+    'can',
+    'firma'
   ];
 
   // Campos disponibles para configuración back
@@ -35,21 +36,37 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'domicilio',
     'municipio',
     'provincia',
-    'equipoExpedidor'
+    'equipoExpedidor',
+    'progenitores'
   ];
 
   // Combinar todos los campos
   const availableFields = [...frontfields, ...backfields];
   const totalFields = availableFields.length;
 
-  const [selectedProfile, setSelectedProfile] = useState('viajes');
-  const [selectedFrontFields, setSelectedFrontFields] = useState(
-    DNI_PROFILES.VIAJES.frontFields
-  );
+  const [selectedProfile, setSelectedProfile] = useState('hotel');
+  const [selectedFrontFields, setSelectedFrontFields] = useState({
+    nombre: true,
+    apellidos: true,
+    dni: true,
+    fechaNacimiento: true,
+    sexo: false,
+    nacionalidad: false,
+    fechaExpedicion: true,
+    fechaCaducidad: true,
+    numeroSoporte: false,
+    can: false,
+    firma: false
+  });
 
-  const [selectedBackFields, setSelectedBackFields] = useState(
-    DNI_PROFILES.VIAJES.backFields
-  );
+  const [selectedBackFields, setSelectedBackFields] = useState({
+    mrz: true,
+    domicilio: true,
+    municipio: false,
+    provincia: false,
+    equipoExpedidor: false,
+    progenitores: false
+  });
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);
@@ -376,6 +393,7 @@ const handleProcessDNI = async () => {
       fechaCaducidad: 'Fecha de Caducidad',
       numeroSoporte: 'Número de Soporte',
       can: 'CAN',
+      firma: 'Firma',
       mrz: 'MRZ',
       domicilio: 'Domicilio',
       municipio: 'Municipio',
