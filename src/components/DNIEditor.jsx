@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import ProfileSelector from './ProfileSelector';
-import { getProfileById } from '../constants/dniProfiles';
+import { DNI_PROFILES } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { dniProcessor } from '../services/dniProcessor';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
 import WatermarkInput from './WatermarkInput';
+import { DEMO_MODE } from '../config/demoMode';
 
 export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) {
   const colors = useColors();
@@ -41,27 +42,14 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   const availableFields = [...frontfields, ...backfields];
   const totalFields = availableFields.length;
 
-  const [selectedProfile, setSelectedProfile] = useState('hotel');
-  const [selectedFrontFields, setSelectedFrontFields] = useState({
-    nombre: true,
-    apellidos: true,
-    dni: true,
-    fechaNacimiento: true,
-    sexo: false,
-    nacionalidad: false,
-    fechaExpedicion: true,
-    fechaCaducidad: true,
-    numeroSoporte: false,
-    can: false
-  });
+  const [selectedProfile, setSelectedProfile] = useState('viajes');
+  const [selectedFrontFields, setSelectedFrontFields] = useState(
+    DNI_PROFILES.VIAJES.frontFields
+  );
 
-  const [selectedBackFields, setSelectedBackFields] = useState({
-    mrz: true,
-    domicilio: true,
-    municipio: false,
-    provincia: false,
-    equipoExpedidor: false
-  });
+  const [selectedBackFields, setSelectedBackFields] = useState(
+    DNI_PROFILES.VIAJES.backFields
+  );
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);
@@ -71,7 +59,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
   const selectedCount = selectedFrontCount + selectedBackCount;
 
-  const [watermarkText, setWatermarkText] = useState('Uso exclusivo para Hotel');
+  const [watermarkText, setWatermarkText] = useState('Uso exclusivo para Viajes');
 
   useEffect(() => {
     if (processedResult) {
@@ -86,7 +74,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   useEffect(() => {
     // No hacer nada si ya hay un perfil seleccionado explícitamente
     if (selectedProfile) {
-      const profile = getProfileById(selectedProfile);
+      const profile = DNI_PROFILES.getProfileById(selectedProfile);
       if (profile) {
         const profileFront = profile.frontFields || profile.fields || {};
         const profileBack = profile.backFields || {};
@@ -103,10 +91,10 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     
     // Solo buscar coincidencias si no hay perfil seleccionado o si los campos no coinciden
     const checkProfileMatch = () => {
-      const profiles = ['hotel', 'bank', 'transport', 'minimal', 'complete'];
-      
+      const profiles = ['viajes', 'salud', 'administrativo', 'financiero'];
+
       for (const profileId of profiles) {
-        const profile = getProfileById(profileId);
+        const profile = DNI_PROFILES.getProfileById(profileId);
         if (profile) {
           const profileFront = profile.frontFields || profile.fields || {};
           const profileBack = profile.backFields || {};
@@ -129,7 +117,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
 
   useEffect(() => {
     if (selectedProfile) {
-      const profile = getProfileById(selectedProfile);
+      const profile = DNI_PROFILES.getProfileById(selectedProfile);
       if (profile) {
         setWatermarkText(`Uso exclusivo para ${profile.name}`);
       }
@@ -140,7 +128,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
 
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
-    const profile = getProfileById(profileId);
+    const profile = DNI_PROFILES.getProfileById(profileId);
     if (profile) {
       setSelectedProfile(profileId);
       setSelectedFrontFields(profile.frontFields || profile.fields || {});
@@ -190,38 +178,56 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     setSelectedProfile(null);
   };
 
-  const handleProcessDNI = async () => {
-    try {
-      setIsProcessing(true);
-      setProcessingError(null);
+const handleProcessDNI = async () => {
+  try {
+    setIsProcessing(true);
+    setProcessingError(null);
 
-      console.log('Procesando DNI con configuración front:', selectedFrontFields);
-      console.log('Procesando DNI con configuración back:', selectedBackFields);
+    console.log('Procesando DNI con configuración front:', selectedFrontFields);
+    console.log('Procesando DNI con configuración back:', selectedBackFields);
 
-      // DATOS para el componente externo
-      const dniData = {
-        frontFile,
-        backFile,
-        frontFields: selectedFrontFields,
-        backFields: selectedBackFields
-      };
+    // Si está en modo demo, cargar las imágenes demo como archivos File
+    let frontFileToProcess = frontFile;
+    let backFileToProcess = backFile;
 
-      // LLAMAR al servicio
-      const result = await dniProcessor.processeDNI(dniData);
-      
-      setProcessedResult(result);
-      
-      if (onProcessed) {
-        onProcessed(result);
+    if (DEMO_MODE.enabled) {
+      // Cargar imagen frontal demo
+      const frontResponse = await fetch('/demo/front-image.jpg');
+      const frontBlob = await frontResponse.blob();
+      frontFileToProcess = new File([frontBlob], 'front-demo.jpg', { type: 'image/jpeg' });
+
+      // Cargar imagen trasera demo si existe backFile
+      if (backFile) {
+        const backResponse = await fetch('/demo/back-image.jpg');
+        const backBlob = await backResponse.blob();
+        backFileToProcess = new File([backBlob], 'back-demo.jpg', { type: 'image/jpeg' });
       }
-
-    } catch (error) {
-      console.error('Error procesando DNI:', error);
-      setProcessingError(error.message);
-    } finally {
-      setIsProcessing(false);
     }
-  };
+
+    // Preparar datos para el procesador
+    const dniData = {
+      frontFile: frontFileToProcess,
+      backFile: backFileToProcess,
+      frontFields: selectedFrontFields,
+      backFields: selectedBackFields
+    };
+
+    // Procesar con el servicio real
+    const result = await dniProcessor.processeDNI(dniData);
+    
+    setProcessedResult(result);
+    
+    if (onProcessed) {
+      onProcessed(result);
+    }
+
+  } catch (error) {
+    console.error('Error procesando DNI:', error);
+    setProcessingError(error.message);
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   // Función para combinar ambas imágenes en JPG con marca de agua
   const handleDownloadCombined = async () => {
@@ -524,7 +530,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                     <img
-                      src={URL.createObjectURL(frontFile)}
+                      src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
                       alt="DNI delante"
                       className="w-full h-auto rounded-lg shadow-md"
                     />
@@ -538,7 +544,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
-                        src={URL.createObjectURL(backFile)}
+                        src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : URL.createObjectURL(backFile)}
                         alt="DNI detrás"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
@@ -565,7 +571,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
                 <div>
                   <strong>Perfil:</strong> {
                     selectedProfile 
-                      ? getProfileById(selectedProfile)?.name 
+                      ? DNI_PROFILES.getProfileById(selectedProfile)?.name
                       : 'Personalizado'
                   }
                 </div>
@@ -790,7 +796,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
 
               <div className="text-center text-xs sm:text-sm text-gray-600 my-3">
                 {selectedProfile 
-                  ? `Configuración: ${getProfileById(selectedProfile)?.name}`
+                  ? `Configuración: ${DNI_PROFILES.getProfileById(selectedProfile)?.name}`
                   : 'Configuración personalizada'
                 }
               </div>

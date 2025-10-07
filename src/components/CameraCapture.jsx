@@ -147,24 +147,11 @@ function CameraCapture({ onCapture, onClose }) {
       return;
     }
     
-    const frameWidth = 384;
-    const frameHeight = 240;
-    const videoElement = video.getBoundingClientRect();
-    const scaleX = videoWidth / videoElement.width;
-    const scaleY = videoHeight / videoElement.height;
-    const cropWidth = frameWidth * scaleX;
-    const cropHeight = frameHeight * scaleY;
-    const startX = (videoWidth - cropWidth) / 2;
-    const startY = (videoHeight - cropHeight) / 2;
+    // Capturar toda la imagen sin recortar
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
     
-    canvas.width = cropWidth;
-    canvas.height = cropHeight;
-    
-    context.drawImage(
-      video, 
-      startX, startY, cropWidth, cropHeight,
-      0, 0, cropWidth, cropHeight
-    );
+    context.drawImage(video, 0, 0, videoWidth, videoHeight);
     
     canvas.toBlob((blob) => {
       if (!blob) {
@@ -282,26 +269,15 @@ function CameraCapture({ onCapture, onClose }) {
                 className="w-full h-full object-cover"
               />
 
-              {/* Frame guía centrado */}
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="border-2 border-white border-dashed rounded-lg" 
-                     style={{ width: '85%', maxWidth: '340px', aspectRatio: '384/240' }}>
-                  {/* Esquinas decorativas */}
-                  <div className="relative w-full h-full">
-                    <div className="absolute top-0 left-0 w-8 h-8 border-l-4 border-t-4 border-white"></div>
-                    <div className="absolute top-0 right-0 w-8 h-8 border-r-4 border-t-4 border-white"></div>
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-l-4 border-b-4 border-white"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-r-4 border-b-4 border-white"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Texto instructivo */}
+              {/* Texto instructivo flotante */}
               <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none">
-                <div className="inline-block bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
-                  <p className="text-white text-sm font-medium">
+                <div className="inline-block bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl">
+                  <p className="text-white text-sm font-semibold mb-1">
                     <i className="bi bi-credit-card mr-2"></i>
-                    Coloca tu DNI dentro del marco
+                    Asegúrate de capturar el DNI completo
+                  </p>
+                  <p className="text-white/80 text-xs">
+                    El documento debe estar visible en su totalidad
                   </p>
                 </div>
               </div>
@@ -326,7 +302,7 @@ function CameraCapture({ onCapture, onClose }) {
     );
   }
 
-  // Vista desktop (sin cambios)
+  // Vista desktop
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden">
@@ -352,7 +328,7 @@ function CameraCapture({ onCapture, onClose }) {
         }}>
           <div className="flex items-center justify-center text-xs sm:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             <i className="bi bi-info-circle mr-2 flex-shrink-0" style={{ color: 'var(--color-primary)' }}></i>
-            <span className="text-center">Coloca tu DNI dentro del marco y asegúrate de que esté bien iluminado</span>
+            <span className="text-center">Asegúrate de capturar el DNI completo y con buena iluminación</span>
           </div>
         </div>
 
@@ -401,28 +377,18 @@ function CameraCapture({ onCapture, onClose }) {
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-cover"
+                  className="w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain"
                 />
 
-                {/* Frame guía */}
+                {/* Mensaje flotante centrado */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="border-2 border-white border-dashed rounded-lg flex items-center justify-center" 
-                       style={{ width: '90%', maxWidth: '384px', aspectRatio: '384/240' }}>
-                    <div className="text-white text-center px-4">
-                      <i className="bi bi-credit-card text-3xl sm:text-4xl mb-2"></i>
-                      <p className="text-sm sm:text-base font-semibold">Coloca tu DNI aquí</p>
-                      <p className="text-xs sm:text-sm opacity-75">Asegúrate de que esté centrado</p>
+                  <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-2xl max-w-md mx-4">
+                    <div className="text-white text-center">
+                      <i className="bi bi-credit-card text-4xl mb-3 block" style={{ color: 'var(--color-primary)' }}></i>
+                      <p className="text-base font-bold mb-2">Captura el DNI completo</p>
+                      <p className="text-sm opacity-90">Asegúrate de que todo el documento sea visible</p>
                     </div>
                   </div>
-                </div>
-
-                {/* Esquinas del frame */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"
-                     style={{ width: '90%', maxWidth: '384px', aspectRatio: '384/240' }}>
-                  <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-l-4 border-t-4" style={{ borderColor: 'var(--color-primary)' }}></div>
-                  <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-r-4 border-t-4" style={{ borderColor: 'var(--color-primary)' }}></div>
-                  <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-l-4 border-b-4" style={{ borderColor: 'var(--color-primary)' }}></div>
-                  <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-r-4 border-b-4" style={{ borderColor: 'var(--color-primary)' }}></div>
                 </div>
               </div>
 
@@ -461,7 +427,7 @@ function CameraCapture({ onCapture, onClose }) {
               <div className="text-center text-xs sm:text-sm px-4" style={{ color: 'var(--color-text-secondary)' }}>
                 <p className="flex items-center justify-center gap-1">
                   <i className="bi bi-lightbulb flex-shrink-0" style={{ color: 'var(--color-warning)' }}></i>
-                  <span>Asegúrate de tener buena iluminación y que el DNI esté completamente dentro del marco</span>
+                  <span>Usa buena iluminación y mantén el DNI horizontal para mejores resultados</span>
                 </p>
               </div>
             </div>

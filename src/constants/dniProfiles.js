@@ -1,4 +1,4 @@
-export const DNI_PROFILES = {
+const DNI_PROFILES_DATA = {
   VIAJES: {
     id: 'viajes',
     name: 'Viajes',
@@ -13,7 +13,7 @@ export const DNI_PROFILES = {
       sexo: false,
       nacionalidad: true,
       fechaExpedicion: false,
-      fechaCaducidad: false,
+      fechaCaducidad: true,
       numeroSoporte: false,
       can: false
     },
@@ -106,19 +106,30 @@ export const DNI_PROFILES = {
       equipoExpedidor: false
     }
   },
-
 };
 
-export const getProfileById = (profileId) => {
-  return Object.values(DNI_PROFILES).find(profile => profile.id === profileId);
+// Objeto principal con datos y métodos
+export const DNI_PROFILES = {
+  // Datos de los perfiles
+  ...DNI_PROFILES_DATA,
+  
+  // Métodos de utilidad
+  getProfileById(profileId) {
+    return Object.values(DNI_PROFILES_DATA).find(profile => profile.id === profileId);
+  },
+  
+  getProfilesList() {
+    return Object.values(DNI_PROFILES_DATA);
+  },
+  
+  getFieldsCount(frontFields, backFields) {
+    const frontCount = frontFields ? Object.values(frontFields).filter(Boolean).length : 0;
+    const backCount = backFields ? Object.values(backFields).filter(Boolean).length : 0;
+    return frontCount + backCount;
+  }
 };
 
-export const getProfilesList = () => {
-  return Object.values(DNI_PROFILES);
-};
-
-export const getFieldsCount = (frontFields, backFields) => {
-  const frontCount = frontFields ? Object.values(frontFields).filter(Boolean).length : 0;
-  const backCount = backFields ? Object.values(backFields).filter(Boolean).length : 0;
-  return frontCount + backCount;
-};
+// Mantener exports individuales por compatibilidad (opcional)
+export const getProfileById = DNI_PROFILES.getProfileById;
+export const getProfilesList = DNI_PROFILES.getProfilesList;
+export const getFieldsCount = DNI_PROFILES.getFieldsCount;
