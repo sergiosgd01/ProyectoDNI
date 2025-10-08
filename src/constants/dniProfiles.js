@@ -21,8 +21,8 @@ const DNI_PROFILES_DATA = {
     backFields: {
       mrz: false,
       domicilio: false,
-      municipio: false,
-      provincia: false,
+      municipio: true,
+      provincia: true,
       equipoExpedidor: false,
       progenitores: false
     }

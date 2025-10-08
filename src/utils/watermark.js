@@ -7,7 +7,7 @@
 export const addWatermark = (canvas, ctx, options = {}) => {
   const {
     text,
-    fontSize = 24,
+    fontSize = 16, // ✅ Reducido de 24 a 16
     fontFamily = "Arial",
     fontWeight = "bold",
     fillColor = "rgba(255, 255, 255, 0.35)",
@@ -15,8 +15,8 @@ export const addWatermark = (canvas, ctx, options = {}) => {
     strokeWidth = 1,
     rotation = -45,
     pattern = true,
-    spacingX = 300,
-    spacingY = 150
+    spacingX = 180, // ✅ Reducido de 300 a 180
+    spacingY = 100  // ✅ Reducido de 150 a 100
   } = options;
 
   // Validar que se pasó el texto
@@ -30,9 +30,9 @@ export const addWatermark = (canvas, ctx, options = {}) => {
   // Ajustar tamaño de fuente según longitud del texto
   let adjustedFontSize = fontSize;
   if (text.length > 35) {
-    adjustedFontSize = Math.max(14, fontSize - Math.floor((text.length - 35) / 3));
+    adjustedFontSize = Math.max(10, fontSize - Math.floor((text.length - 35) / 3)); // ✅ Mínimo 10 en vez de 14
   } else if (text.length > 25) {
-    adjustedFontSize = Math.max(18, fontSize - 4);
+    adjustedFontSize = Math.max(12, fontSize - 3); // ✅ Mínimo 12 en vez de 18
   }
   
   // Configurar el texto
@@ -52,17 +52,17 @@ export const addWatermark = (canvas, ctx, options = {}) => {
     const rotationRad = rotation * Math.PI / 180;
     
     // Ajustar espaciado según longitud del texto
-    const adjustedSpacingX = text.length > 30 ? spacingX * 1.2 : spacingX;
-    const adjustedSpacingY = text.length > 30 ? spacingY * 1.2 : spacingY;
+    const adjustedSpacingX = text.length > 30 ? spacingX * 1.1 : spacingX; // ✅ Reducido multiplicador de 1.2 a 1.1
+    const adjustedSpacingY = text.length > 30 ? spacingY * 1.1 : spacingY; // ✅ Reducido multiplicador de 1.2 a 1.1
     
     // Calcular cuántas repeticiones necesitamos (con margen extra)
     const diagonal = Math.sqrt(canvas.width ** 2 + canvas.height ** 2);
-    const cols = Math.ceil(diagonal / adjustedSpacingX) + 2;
-    const rows = Math.ceil(diagonal / adjustedSpacingY) + 2;
+    const cols = Math.ceil(diagonal / adjustedSpacingX) + 3; // ✅ +3 en vez de +2 para más repeticiones
+    const rows = Math.ceil(diagonal / adjustedSpacingY) + 3; // ✅ +3 en vez de +2 para más repeticiones
     
     // Dibujar el patrón
-    for (let row = -1; row < rows; row++) {
-      for (let col = -1; col < cols; col++) {
+    for (let row = -2; row < rows; row++) { // ✅ Empezar desde -2 en vez de -1
+      for (let col = -2; col < cols; col++) { // ✅ Empezar desde -2 en vez de -1
         ctx.save();
         
         const x = col * adjustedSpacingX;
