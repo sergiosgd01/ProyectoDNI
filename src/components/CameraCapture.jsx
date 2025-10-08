@@ -93,33 +93,35 @@ function CameraCapture({ onCapture, onClose }) {
     }
   }, [selectedDeviceId, isMobile, stopCamera]);
 
-  useEffect(() => {
-    const initialize = async () => {
-      if (hasInitialized.current) return;
-      hasInitialized.current = true;
+ useEffect(() => {
+  const initialize = async () => {
+    if (hasInitialized.current) return;
+    hasInitialized.current = true;
 
-      await initializeCamera();
-      const videoDevices = await getAvailableDevices();
+    const videoDevices = await getAvailableDevices();
+    
+    if (!selectedDeviceId && videoDevices.length > 0 && isMobile) {
+      const backCamera = videoDevices.find(device => 
+        device.label.toLowerCase().includes('back') || 
+        device.label.toLowerCase().includes('rear') ||
+        device.label.toLowerCase().includes('trasera')
+      );
       
-      if (!selectedDeviceId && videoDevices.length > 0) {
-        const backCamera = videoDevices.find(device => 
-          device.label.toLowerCase().includes('back') || 
-          device.label.toLowerCase().includes('rear') ||
-          device.label.toLowerCase().includes('trasera')
-        );
-        
-        if (backCamera && isMobile) {
-          setSelectedDeviceId(backCamera.deviceId);
-        }
+      if (backCamera) {
+        setSelectedDeviceId(backCamera.deviceId);
+        return; 
       }
-    };
+    }
+    
+    await initializeCamera();
+  };
 
-    initialize();
+  initialize();
 
-    return () => {
-      stopCamera();
-    };
-  }, []);
+  return () => {
+    stopCamera();
+  };
+}, []);
 
   useEffect(() => {
     if (selectedDeviceId === null || !hasInitialized.current) {
