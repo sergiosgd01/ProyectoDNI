@@ -40,33 +40,18 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     'progenitores'
   ];
 
-  // Combinar todos los campos
+   // Combinar todos los campos
   const availableFields = [...frontfields, ...backfields];
   const totalFields = availableFields.length;
 
-  const [selectedProfile, setSelectedProfile] = useState('hotel');
-  const [selectedFrontFields, setSelectedFrontFields] = useState({
-    nombre: true,
-    apellidos: true,
-    dni: true,
-    fechaNacimiento: true,
-    sexo: false,
-    nacionalidad: false,
-    fechaExpedicion: true,
-    fechaCaducidad: true,
-    numeroSoporte: false,
-    can: false,
-    firma: false
-  });
+  const [selectedProfile, setSelectedProfile] = useState('viajes');
+  const [selectedFrontFields, setSelectedFrontFields] = useState(
+    DNI_PROFILES.VIAJES.frontFields
+  );
 
-  const [selectedBackFields, setSelectedBackFields] = useState({
-    mrz: true,
-    domicilio: true,
-    municipio: false,
-    provincia: false,
-    equipoExpedidor: false,
-    progenitores: false
-  });
+  const [selectedBackFields, setSelectedBackFields] = useState(
+    DNI_PROFILES.VIAJES.backFields
+  );
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);

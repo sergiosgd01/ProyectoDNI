@@ -15,14 +15,16 @@ const DNI_PROFILES_DATA = {
       fechaExpedicion: false,
       fechaCaducidad: true,
       numeroSoporte: false,
-      can: false
+      can: false,
+      firma: false
     },
     backFields: {
       mrz: false,
       domicilio: false,
       municipio: false,
       provincia: false,
-      equipoExpedidor: false
+      equipoExpedidor: false,
+      progenitores: false
     }
   },
 
@@ -42,14 +44,16 @@ const DNI_PROFILES_DATA = {
       fechaExpedicion: false,
       fechaCaducidad: false,
       numeroSoporte: false,
-      can: false
+      can: false,
+      firma: false
     },
     backFields: {
       mrz: false,
       domicilio: false,
       municipio: false,
       provincia: false,
-      equipoExpedidor: false
+      equipoExpedidor: false,
+      progenitores: false
     }
   },
 
@@ -69,14 +73,16 @@ const DNI_PROFILES_DATA = {
       fechaExpedicion: false,
       fechaCaducidad: false,
       numeroSoporte: false,
-      can: false
+      can: false,
+      firma: false
     },
     backFields: {
       mrz: false,
       domicilio: true,
       municipio: true,
       provincia: true,
-      equipoExpedidor: false
+      equipoExpedidor: false,
+      progenitores: false
     }
   },
 
@@ -96,14 +102,16 @@ const DNI_PROFILES_DATA = {
       fechaExpedicion: false,
       fechaCaducidad: false,
       numeroSoporte: false,
-      can: false
+      can: false,
+      firma: false
     },
     backFields: {
       mrz: false,
       domicilio: false,
       municipio: false,
       provincia: false,
-      equipoExpedidor: false
+      equipoExpedidor: false,
+      progenitores: false
     }
   },
 };
