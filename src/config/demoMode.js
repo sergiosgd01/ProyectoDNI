@@ -1,5 +1,5 @@
 export const DEMO_MODE = {
-  enabled: true, // 👈 Cambia a false para modo normal
+  enabled: false, // 👈 Cambia a false para modo normal
   
   timings: {
     uploadDelay: 800,

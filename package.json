@@ -11,7 +11,11 @@
   },
   "dependencies": {
     "bootstrap-icons": "^1.13.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
     "jspdf": "^3.0.3",
+    "mongoose": "^8.19.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },
@@ -28,5 +32,18 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.4",
     "vite": "^7.0.4"
-  }
+  },
+  "description": "",
+  "main": "eslint.config.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergiosgd01/ProyectoDNI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sergiosgd01/ProyectoDNI/issues"
+  },
+  "homepage": "https://github.com/sergiosgd01/ProyectoDNI#readme"
 }

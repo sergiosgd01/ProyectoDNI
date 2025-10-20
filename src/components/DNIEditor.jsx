@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ProfileSelector from './ProfileSelector';
-import { DNI_PROFILES } from '../constants/dniProfiles';
+import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { dniProcessor } from '../services/dniProcessor';
@@ -8,6 +8,7 @@ import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
 import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
+import { dniApi } from '../services/dniApi';
 
 export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) {
   const colors = useColors();
@@ -218,6 +219,19 @@ const handleProcessDNI = async () => {
     const result = await dniProcessor.processeDNI(dniData);
     
     setProcessedResult(result);
+
+    const fakeDniNumber = '12345678Z'; 
+    const hologramReadable = true; 
+    const homogenityPassed = true; 
+
+    await dniApi.saveDniRecord({
+      dniNumber: fakeDniNumber,
+      hologramReadable,
+      homogenityPassed,
+      profileUsed: selectedProfile || 'personalizado'
+    });
+
+    console.log('DNI guardado en la base de datos');
     
     if (onProcessed) {
       onProcessed(result);

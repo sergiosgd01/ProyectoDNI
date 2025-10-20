@@ -1,3 +1,4 @@
+// Datos de perfiles de DNI (usados por front y back)
 const DNI_PROFILES_DATA = {
   VIAJES: {
     id: 'viajes',
@@ -16,7 +17,7 @@ const DNI_PROFILES_DATA = {
       fechaCaducidad: true,
       numeroSoporte: false,
       can: false,
-      firma: false
+      firma: false,
     },
     backFields: {
       mrz: false,
@@ -24,10 +25,9 @@ const DNI_PROFILES_DATA = {
       municipio: true,
       provincia: true,
       equipoExpedidor: false,
-      progenitores: false
-    }
+      progenitores: false,
+    },
   },
-
   SALUD: {
     id: 'salud',
     name: 'Salud',
@@ -45,7 +45,7 @@ const DNI_PROFILES_DATA = {
       fechaCaducidad: false,
       numeroSoporte: false,
       can: false,
-      firma: false
+      firma: false,
     },
     backFields: {
       mrz: false,
@@ -53,10 +53,9 @@ const DNI_PROFILES_DATA = {
       municipio: false,
       provincia: false,
       equipoExpedidor: false,
-      progenitores: false
-    }
+      progenitores: false,
+    },
   },
-
   ADMINISTRATIVO: {
     id: 'administrativo',
     name: 'Administrativo / Legal',
@@ -74,7 +73,7 @@ const DNI_PROFILES_DATA = {
       fechaCaducidad: false,
       numeroSoporte: false,
       can: false,
-      firma: false
+      firma: false,
     },
     backFields: {
       mrz: false,
@@ -82,10 +81,9 @@ const DNI_PROFILES_DATA = {
       municipio: true,
       provincia: true,
       equipoExpedidor: false,
-      progenitores: false
-    }
+      progenitores: false,
+    },
   },
-
   FINANCIERO: {
     id: 'financiero',
     name: 'Financiero / Banca',
@@ -103,7 +101,7 @@ const DNI_PROFILES_DATA = {
       fechaCaducidad: false,
       numeroSoporte: false,
       can: false,
-      firma: false
+      firma: false,
     },
     backFields: {
       mrz: false,
@@ -111,33 +109,27 @@ const DNI_PROFILES_DATA = {
       municipio: false,
       provincia: false,
       equipoExpedidor: false,
-      progenitores: false
-    }
+      progenitores: false,
+    },
   },
 };
 
-// Objeto principal con datos y métodos
-export const DNI_PROFILES = {
-  // Datos de los perfiles
+// Objeto principal con utilidades
+const DNI_PROFILES = {
   ...DNI_PROFILES_DATA,
-  
-  // Métodos de utilidad
   getProfileById(profileId) {
-    return Object.values(DNI_PROFILES_DATA).find(profile => profile.id === profileId);
+    return Object.values(DNI_PROFILES_DATA).find(p => p.id === profileId);
   },
-  
   getProfilesList() {
     return Object.values(DNI_PROFILES_DATA);
   },
-  
   getFieldsCount(frontFields, backFields) {
     const frontCount = frontFields ? Object.values(frontFields).filter(Boolean).length : 0;
     const backCount = backFields ? Object.values(backFields).filter(Boolean).length : 0;
     return frontCount + backCount;
-  }
+  },
 };
 
-// Mantener exports individuales por compatibilidad (opcional)
-export const getProfileById = DNI_PROFILES.getProfileById;
-export const getProfilesList = DNI_PROFILES.getProfilesList;
-export const getFieldsCount = DNI_PROFILES.getFieldsCount;
+// 👇 Exportaciones explícitas compatibles con Node y React
+export { DNI_PROFILES_DATA, DNI_PROFILES };
+export default DNI_PROFILES;
