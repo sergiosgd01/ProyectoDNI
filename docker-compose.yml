@@ -1,0 +1,16 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: mongo_db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: dniadmin
+      MONGO_INITDB_ROOT_PASSWORD: dnipassword
+      MONGO_INITDB_DATABASE: proyecto_dni
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
