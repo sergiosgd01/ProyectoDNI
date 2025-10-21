@@ -37,6 +37,16 @@ const DniSchema = new mongoose.Schema({
     // true = se muestra, false = se oculta
     // Ejemplo: { "nombre": true, "apellidos": false, "dni": true, ... }
   },
+  ocrFrontData: {
+    type: Map,
+    of: String,
+    default: null,
+  },
+  ocrBackData: {
+    type: Map,
+    of: String,
+    default: null,
+  },
   watermarkText: {
     type: String,
     default: null,

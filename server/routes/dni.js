@@ -14,7 +14,8 @@ router.post('/save', async (req, res) => {
     homogenityPassed, 
     profileUsed,
     customFields,
-    watermarkText 
+    watermarkText,
+    ocrData,
   } = req.body;
 
   try {
@@ -47,6 +48,23 @@ router.post('/save', async (req, res) => {
       }
       
       recordData.watermarkText = watermarkText.trim();
+    }
+
+    if (ocrData) {
+      if (typeof ocrData !== 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'ocrData debe ser un objeto con propiedades front/back',
+        });
+      }
+
+      if (ocrData.front && typeof ocrData.front === 'object') {
+        recordData.ocrFrontData = new Map(Object.entries(ocrData.front));
+      }
+
+      if (ocrData.back && typeof ocrData.back === 'object') {
+        recordData.ocrBackData = new Map(Object.entries(ocrData.back));
+      }
     }
 
     const record = new Dni(recordData);
@@ -121,7 +139,7 @@ router.get('/history/:dniNumber', async (req, res) => {
   try {
     const records = await Dni.find({ dniNumber })
       .sort({ uploadDate: -1 })
-      .select('uploadDate profileUsed homogenityPassed hologramReadable customFields watermarkText -_id');
+      .select('uploadDate profileUsed homogenityPassed hologramReadable customFields watermarkText ocrFrontData ocrBackData -_id');
 
     if (!records.length) {
       return res.status(404).json({
@@ -137,6 +155,8 @@ router.get('/history/:dniNumber', async (req, res) => {
       homogenidad_ok: r.homogenityPassed,
       customFields: r.customFields ? Object.fromEntries(r.customFields) : null,
       watermarkText: r.watermarkText || null,
+      ocrFrontData: r.ocrFrontData ? Object.fromEntries(r.ocrFrontData) : null,
+      ocrBackData: r.ocrBackData ? Object.fromEntries(r.ocrBackData) : null,
     }));
 
     res.status(200).json({
