@@ -37,6 +37,12 @@ const DniSchema = new mongoose.Schema({
     // true = se muestra, false = se oculta
     // Ejemplo: { "nombre": true, "apellidos": false, "dni": true, ... }
   },
+  watermarkText: {
+    type: String,
+    default: null,
+    maxLength: 100,
+    trim: true,
+  },
 });
 
 DniSchema.index({ dniNumber: 1 });

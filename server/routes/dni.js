@@ -13,7 +13,8 @@ router.post('/save', async (req, res) => {
     hologramReadable, 
     homogenityPassed, 
     profileUsed,
-    customFields  
+    customFields,
+    watermarkText 
   } = req.body;
 
   try {
@@ -24,6 +25,7 @@ router.post('/save', async (req, res) => {
       profileUsed,
     };
     
+    // ✅ Guardar customFields si es personalizado
     if (profileUsed === 'personalizado' && customFields) {
       if (typeof customFields !== 'object') {
         return res.status(400).json({
@@ -33,6 +35,18 @@ router.post('/save', async (req, res) => {
       }
       
       recordData.customFields = new Map(Object.entries(customFields));
+    }
+
+    // ✅ Guardar marca de agua si existe
+    if (watermarkText) {
+      if (watermarkText.length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'El texto de la marca de agua no puede superar 50 caracteres'
+        });
+      }
+      
+      recordData.watermarkText = watermarkText.trim();
     }
 
     const record = new Dni(recordData);
@@ -107,7 +121,7 @@ router.get('/history/:dniNumber', async (req, res) => {
   try {
     const records = await Dni.find({ dniNumber })
       .sort({ uploadDate: -1 })
-      .select('uploadDate profileUsed homogenityPassed hologramReadable customFields -_id');
+      .select('uploadDate profileUsed homogenityPassed hologramReadable customFields watermarkText -_id');
 
     if (!records.length) {
       return res.status(404).json({
@@ -121,7 +135,8 @@ router.get('/history/:dniNumber', async (req, res) => {
       perfil: r.profileUsed,
       holograma_ok: r.hologramReadable,
       homogenidad_ok: r.homogenityPassed,
-      customFields: r.customFields ? Object.fromEntries(r.customFields) : null, 
+      customFields: r.customFields ? Object.fromEntries(r.customFields) : null,
+      watermarkText: r.watermarkText || null,
     }));
 
     res.status(200).json({

@@ -213,7 +213,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         backFields: selectedBackFields
       };
 
-      // Procesar con el servicio real
       const result = await dniProcessor.processeDNI(dniData);
       
       setProcessedResult(result);
@@ -229,7 +228,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         dniNumber: fakeDniNumber,
         hologramReadable,
         homogenityPassed,
-        profileUsed: isCustomProfile ? 'personalizado' : selectedProfile
+        profileUsed: isCustomProfile ? 'personalizado' : selectedProfile,
+        watermarkText: watermarkText || null 
       };
       
       if (isCustomProfile) {
@@ -239,8 +239,6 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         };
         
         saveData.customFields = allFields;
-        
-        console.log('💾 Guardando perfil personalizado con campos:', allFields);
       }
 
       // Guardar en BD
