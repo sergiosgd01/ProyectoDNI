@@ -182,13 +182,13 @@ export async function censorDniComplete(frontFile, backFile, fields) {
     backFile ? censorDniImage(backFile, backFieldsToRedact, 'back') : Promise.resolve(null)
   ]);
 
-  let ocrr = null;
+  let ocrData = null;
   try {
-    ocrr = await extractDniText(frontFile, backFile, fields);
-    if (ocrr && (ocrr.front || ocrr.back)) {
+    ocrData = await extractDniText(frontFile, backFile, fields);
+    if (ocrData && (ocrData.front || ocrData.back)) {
       console.groupCollapsed('Datos extrídos mediante OCR:')
-      console.log('Datos anverso: ', ocrr.front);
-      console.log('Datos reverso: ', ocrr.back);
+      console.log('Datos anverso: ', ocrData.front);
+      console.log('Datos reverso: ', ocrData.back);
     }
     console.groupEnd();
   } catch (ocrError) {
@@ -202,7 +202,7 @@ export async function censorDniComplete(frontFile, backFile, fields) {
       front: frontFieldsToRedact,
       back: backFieldsToRedact
     },
-    ocrr
+    ocrData
   };
 }
 
