@@ -27,12 +27,19 @@ const DniSchema = new mongoose.Schema({
   },
   profileUsed: {
     type: String,
-    enum: VALID_PROFILES, // generado dinámicamente desde los perfiles compartidos
+    enum: VALID_PROFILES, 
     required: true,
+  },
+  customFields: {
+    type: Map,
+    of: Boolean,
+    default: null,
+    // true = se muestra, false = se oculta
+    // Ejemplo: { "nombre": true, "apellidos": false, "dni": true, ... }
   },
 });
 
-// Índice opcional para búsquedas rápidas por DNI
 DniSchema.index({ dniNumber: 1 });
+DniSchema.index({ profileUsed: 1, uploadDate: -1 });
 
 export default mongoose.model('Dni', DniSchema);

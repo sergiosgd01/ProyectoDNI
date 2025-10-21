@@ -8,16 +8,34 @@ const router = express.Router();
  * @desc Guarda SIEMPRE un nuevo registro, incluso si el DNI ya existe
  */
 router.post('/save', async (req, res) => {
-  const { dniNumber, hologramReadable, homogenityPassed, profileUsed } = req.body;
+  const { 
+    dniNumber, 
+    hologramReadable, 
+    homogenityPassed, 
+    profileUsed,
+    customFields  
+  } = req.body;
 
   try {
-    const record = new Dni({
+    const recordData = {
       dniNumber,
       hologramReadable,
       homogenityPassed,
       profileUsed,
-    });
+    };
+    
+    if (profileUsed === 'personalizado' && customFields) {
+      if (typeof customFields !== 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'customFields debe ser un objeto con valores true/false'
+        });
+      }
+      
+      recordData.customFields = new Map(Object.entries(customFields));
+    }
 
+    const record = new Dni(recordData);
     await record.save();
 
     res.status(201).json({
@@ -89,7 +107,7 @@ router.get('/history/:dniNumber', async (req, res) => {
   try {
     const records = await Dni.find({ dniNumber })
       .sort({ uploadDate: -1 })
-      .select('uploadDate profileUsed homogenityPassed hologramReadable -_id');
+      .select('uploadDate profileUsed homogenityPassed hologramReadable customFields -_id');
 
     if (!records.length) {
       return res.status(404).json({
@@ -98,12 +116,12 @@ router.get('/history/:dniNumber', async (req, res) => {
       });
     }
 
-    // Crear respuesta estructurada
     const history = records.map((r) => ({
       fecha: r.uploadDate,
       perfil: r.profileUsed,
       holograma_ok: r.hologramReadable,
       homogenidad_ok: r.homogenityPassed,
+      customFields: r.customFields ? Object.fromEntries(r.customFields) : null, 
     }));
 
     res.status(200).json({

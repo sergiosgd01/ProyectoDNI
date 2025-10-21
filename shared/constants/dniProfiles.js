@@ -1,4 +1,3 @@
-// Datos de perfiles de DNI (usados por front y back)
 const DNI_PROFILES_DATA = {
   VIAJES: {
     id: 'viajes',
@@ -114,7 +113,6 @@ const DNI_PROFILES_DATA = {
   },
 };
 
-// Objeto principal con utilidades
 const DNI_PROFILES = {
   ...DNI_PROFILES_DATA,
   getProfileById(profileId) {
@@ -130,6 +128,5 @@ const DNI_PROFILES = {
   },
 };
 
-// 👇 Exportaciones explícitas compatibles con Node y React
 export { DNI_PROFILES_DATA, DNI_PROFILES };
 export default DNI_PROFILES;

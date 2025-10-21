@@ -181,69 +181,84 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     setSelectedProfile(null);
   };
 
-const handleProcessDNI = async () => {
-  try {
-    setIsProcessing(true);
-    setProcessingError(null);
+  const handleProcessDNI = async () => {
+    try {
+      setIsProcessing(true);
+      setProcessingError(null);
 
-    console.log('Procesando DNI con configuración front:', selectedFrontFields);
-    console.log('Procesando DNI con configuración back:', selectedBackFields);
+      console.log('Procesando DNI con configuración front:', selectedFrontFields);
+      console.log('Procesando DNI con configuración back:', selectedBackFields);
 
-    // Si está en modo demo, cargar las imágenes demo como archivos File
-    let frontFileToProcess = frontFile;
-    let backFileToProcess = backFile;
+      // Si está en modo demo, cargar las imágenes demo como archivos File
+      let frontFileToProcess = frontFile;
+      let backFileToProcess = backFile;
 
-    if (DEMO_MODE.enabled) {
-      // Cargar imagen frontal demo
-      const frontResponse = await fetch('/demo/front-image.jpg');
-      const frontBlob = await frontResponse.blob();
-      frontFileToProcess = new File([frontBlob], 'front-demo.jpg', { type: 'image/jpeg' });
+      if (DEMO_MODE.enabled) {
+        const frontResponse = await fetch('/demo/front-image.jpg');
+        const frontBlob = await frontResponse.blob();
+        frontFileToProcess = new File([frontBlob], 'front-demo.jpg', { type: 'image/jpeg' });
 
-      // Cargar imagen trasera demo si existe backFile
-      if (backFile) {
-        const backResponse = await fetch('/demo/back-image.jpg');
-        const backBlob = await backResponse.blob();
-        backFileToProcess = new File([backBlob], 'back-demo.jpg', { type: 'image/jpeg' });
+        if (backFile) {
+          const backResponse = await fetch('/demo/back-image.jpg');
+          const backBlob = await backResponse.blob();
+          backFileToProcess = new File([backBlob], 'back-demo.jpg', { type: 'image/jpeg' });
+        }
       }
+
+      // Preparar datos para el procesador
+      const dniData = {
+        frontFile: frontFileToProcess,
+        backFile: backFileToProcess,
+        frontFields: selectedFrontFields,
+        backFields: selectedBackFields
+      };
+
+      // Procesar con el servicio real
+      const result = await dniProcessor.processeDNI(dniData);
+      
+      setProcessedResult(result);
+
+      const fakeDniNumber = '12345678Z'; 
+      const hologramReadable = true; 
+      const homogenityPassed = true;
+      
+      // Determinar si es personalizado (no coincide con ningún perfil predefinido)
+      const isCustomProfile = !selectedProfile || selectedProfile === null;
+      
+      const saveData = {
+        dniNumber: fakeDniNumber,
+        hologramReadable,
+        homogenityPassed,
+        profileUsed: isCustomProfile ? 'personalizado' : selectedProfile
+      };
+      
+      if (isCustomProfile) {
+        const allFields = {
+          ...selectedFrontFields,
+          ...selectedBackFields
+        };
+        
+        saveData.customFields = allFields;
+        
+        console.log('💾 Guardando perfil personalizado con campos:', allFields);
+      }
+
+      // Guardar en BD
+      await dniApi.saveDniRecord(saveData);
+
+      console.log('✅ DNI guardado en la base de datos');
+      
+      if (onProcessed) {
+        onProcessed(result);
+      }
+
+    } catch (error) {
+      console.error('❌ Error procesando DNI:', error);
+      setProcessingError(error.message);
+    } finally {
+      setIsProcessing(false);
     }
-
-    // Preparar datos para el procesador
-    const dniData = {
-      frontFile: frontFileToProcess,
-      backFile: backFileToProcess,
-      frontFields: selectedFrontFields,
-      backFields: selectedBackFields
-    };
-
-    // Procesar con el servicio real
-    const result = await dniProcessor.processeDNI(dniData);
-    
-    setProcessedResult(result);
-
-    const fakeDniNumber = '12345678Z'; 
-    const hologramReadable = true; 
-    const homogenityPassed = true; 
-
-    await dniApi.saveDniRecord({
-      dniNumber: fakeDniNumber,
-      hologramReadable,
-      homogenityPassed,
-      profileUsed: selectedProfile || 'personalizado'
-    });
-
-    console.log('DNI guardado en la base de datos');
-    
-    if (onProcessed) {
-      onProcessed(result);
-    }
-
-  } catch (error) {
-    console.error('Error procesando DNI:', error);
-    setProcessingError(error.message);
-  } finally {
-    setIsProcessing(false);
-  }
-};
+  };
 
   // Función para combinar ambas imágenes en JPG con marca de agua
   const handleDownloadCombined = async () => {

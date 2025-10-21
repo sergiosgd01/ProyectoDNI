@@ -21,7 +21,7 @@ mongoose.connect(process.env.MONGO_URI)
 
 // Rutas
 app.get('/', (req, res) => res.send('✅ API de DNI funcionando correctamente'));
-app.use('/api/dni', dniRoutes); // 👈 esta línea activa /api/dni/save, /api/dni/:dniNumber, etc.
+app.use('/api/dni', dniRoutes); 
 
 // Puerto
 const PORT = process.env.PORT || 5000;
