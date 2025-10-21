@@ -3,6 +3,11 @@
  * Esta función NO usa hooks de React y puede llamarse desde cualquier módulo
  */
 
+// Campos OCR (extraer)
+const FRONT_STATIC_FIELDS = ['dni', 'numeroSoporte'];     
+const BACK_STATIC_FIELDS  = ['mrz'];   
+const OCR_LANGUAGE = 'spa';
+
 // Atributos presentes en el DNI 4.0 (cara frontal)
 export const POSICIONES = {
   nombre: [[0.38, 0.429, 0.703, 0.501]],
@@ -169,13 +174,26 @@ export async function censorDniComplete(frontFile, backFile, fields) {
     .filter(([, value]) => value === false)
     .map(([key]) => key);
 
-  console.log('📝 Censurando campos frontales:', frontFieldsToRedact);
-  console.log('📝 Censurando campos traseros:', backFieldsToRedact);
+  console.log('Censurando campos frontales:', frontFieldsToRedact);
+  console.log('Censurando campos traseros:', backFieldsToRedact);
 
   const [frontImageUrl, backImageUrl] = await Promise.all([
     censorDniImage(frontFile, frontFieldsToRedact, 'front'),
     backFile ? censorDniImage(backFile, backFieldsToRedact, 'back') : Promise.resolve(null)
   ]);
+
+  let ocrr = null;
+  try {
+    ocrr = await extractDniText(frontFile, backFile, fields);
+    if (ocrr && (ocrr.front || ocrr.back)) {
+      console.groupCollapsed('Datos extrídos mediante OCR:')
+      console.log('Datos anverso: ', ocrr.front);
+      console.log('Datos reverso: ', ocrr.back);
+    }
+    console.groupEnd();
+  } catch (ocrError) {
+    console.error('Error ejecutando OCR: ', ocrError);
+  }
 
   return {
     frontImageUrl,
@@ -183,6 +201,118 @@ export async function censorDniComplete(frontFile, backFile, fields) {
     processedFields: {
       front: frontFieldsToRedact,
       back: backFieldsToRedact
-    }
+    },
+    ocrr
   };
+}
+
+// Métodos necesarios para OCR, métodos "utils" y método principal
+
+/**
+ * Métodos utils
+ * - getFieldPositions: localiza las coordenadas del campo en función del lado (front/back) usando los mapas de posiciones.
+ * - createCanvasFromImage: genera un canvas HTML5 a partir de una imagen y dibuja la imagen completa sobre él.
+ * - runOcrOnField: recorta una región rectangular del canvas y ejecuta OCR con Tesseract para obtener el texto.
+ * - extractSideText: recibe un archivo de imagen y una lista de campos; para cada campo obtiene posiciones, recorta la región y aplica OCR, devolviendo {campo: texto}. 
+ * Groso modo replica "los métodos" de censura pero en este caso en vez de realizar un recorte extrae el texto con OCR de cada 
+ * elemento declarado del DNI para la extracción (FRONT_STATIC_FIELDS, BACK_STATIC_FIELDS)
+ */
+
+function getFieldPositions(fieldName, side = 'front') {
+  const posiciones = side === 'back' ? POSICIONES_BACK : POSICIONES;
+  const fieldMapping = side === 'back' ? FIELD_MAPPING_BACK : FIELD_MAPPING_FRONT;
+  const mappedField = fieldMapping[fieldName] || fieldName;
+  return posiciones[mappedField] || [];
+}
+
+function createCanvasFromImage(image) {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0);
+  return canvas;
+}
+
+async function runOcrOnField(worker, baseCanvas, rect) {
+  const [x1, y1, x2, y2] = rect;
+  const width = Math.max(x2 - x1, 1);
+  const height = Math.max(y2 - y1, 1);
+
+  const fieldCanvas = document.createElement('canvas');
+  fieldCanvas.width = width;
+  fieldCanvas.height = height;
+  const ctx = fieldCanvas.getContext('2d');
+  ctx.drawImage(baseCanvas, x1, y1, width, height, 0, 0, width, height);
+
+  const { data } = await worker.recognize(fieldCanvas);
+  const text = data?.text?.trim() || '';
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+async function extractSideText(imageFile, fieldNames, side = 'front') {
+  if (!imageFile || !fieldNames || fieldNames.length === 0) {
+    return null;
+  }
+
+  const img = await loadImageFromFile(imageFile);
+  const baseCanvas = createCanvasFromImage(img);
+  let workerModule;
+  try {
+    workerModule = await import('tesseract.js');
+  } catch (error) {
+    console.error('✘ No se pudo cargar tesseract.js. Asegúrate de instalar la dependencia.', error);
+    throw error;
+  }
+  const worker = await workerModule.createWorker(OCR_LANGUAGE);
+
+  try {
+
+    const results = {};
+    for (const fieldName of fieldNames) {
+      const positions = getFieldPositions(fieldName, side);
+      if (!positions.length) {
+        continue;
+      }
+
+      const texts = [];
+      for (const position of positions) {
+        const [x1, y1, x2, y2] = position;
+        const px1 = Math.floor(x1 * baseCanvas.width);
+        const py1 = Math.floor(y1 * baseCanvas.height);
+        const px2 = Math.floor(x2 * baseCanvas.width);
+        const py2 = Math.floor(y2 * baseCanvas.height);
+
+        const text = await runOcrOnField(worker, baseCanvas, [px1, py1, px2, py2]);
+        if (text) {
+          texts.push(text);
+        }
+      }
+
+      results[fieldName] = texts.length ? texts.join(' ').trim() : '';
+    }
+
+    return results;
+  } finally {
+    await worker.terminate();
+  }
+}
+
+ /* 
+ * Método principal - extractDniTextStatic: función principal que aplica OCR al DNI.
+ *   Procesa los campos del anverso y del reverso declarados,
+ *   llamando a extractSideText y a los métodos utils para cada campo.
+ *   Devuelve un objeto con los textos extraídos: { front: {...}, back: {...} }.
+ */
+
+export async function extractDniText(frontFile, backFile) {
+  const frontResults = frontFile
+    ? await extractSideText(frontFile, FRONT_STATIC_FIELDS, 'front')
+    : null;
+
+  const backResults = backFile
+    ? await extractSideText(backFile, BACK_STATIC_FIELDS, 'back')
+    : null;
+
+  return { front: frontResults, back: backResults };
 }
