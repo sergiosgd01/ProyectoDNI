@@ -216,19 +216,26 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       const result = await dniProcessor.processeDNI(dniData);
       
       setProcessedResult(result);
+      console.log('Datos OCR extraídos:', result?.ocrData);
 
-      const fakeDniNumber = '12345678Z'; 
       const hologramReadable = true; 
       const homogenityPassed = true;
-      
-      // Determinar si es personalizado (no coincide con ningún perfil predefinido)
-      const isCustomProfile = !selectedProfile || selectedProfile === null;
-      
+      const extractedDniNumber = result?.ocrData?.front?.dni || null;
+      const normalizedDniNumber = extractedDniNumber
+        ? extractedDniNumber.replace(/\s+/g, ' ').trim().split(' ')[0]
+        : null;
+
+      const resolvedProfile = selectedProfile
+        ? DNI_PROFILES.getProfileById(selectedProfile)
+        : null;
+      const isCustomProfile = !resolvedProfile;
+      const profileUsed = isCustomProfile ? 'personalizado' : resolvedProfile.id;
+
       const saveData = {
-        dniNumber: fakeDniNumber,
+        dniNumber: normalizedDniNumber || 'DESCONOCIDO',
         hologramReadable,
         homogenityPassed,
-        profileUsed: isCustomProfile ? 'personalizado' : selectedProfile,
+        profileUsed,
         watermarkText: watermarkText || null 
       };
       
@@ -239,6 +246,10 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         };
         
         saveData.customFields = allFields;
+      }
+
+      if (result?.ocrData) {
+        saveData.ocrData = result.ocrData;
       }
 
       // Guardar en BD
