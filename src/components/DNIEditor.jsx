@@ -4,6 +4,7 @@ import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { dniProcessor } from '../services/dniProcessor';
+import { detectDniFromFile } from './dni_scripts/dni_detector';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
 import WatermarkInput from './WatermarkInput';
@@ -212,6 +213,15 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         frontFields: selectedFrontFields,
         backFields: selectedBackFields
       };
+
+      if (frontFileToProcess) {
+        try {
+          const rectangles = await detectDniFromFile(frontFileToProcess);
+          console.log("[Detector] Coordenadas detectadas durante el procesamiento:", rectangles);
+        } catch (detectorError) {
+          console.error("[Detector] Error ejecutando detección previa al procesamiento:", detectorError);
+        }
+      }
 
       const result = await dniProcessor.processeDNI(dniData);
       

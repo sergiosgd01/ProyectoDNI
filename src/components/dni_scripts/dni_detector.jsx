@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
 const MODEL_PATH = "/models/model_prov.onnx";
+const MODEL_INPUT_SIZE = 640;
 
 let sharedSession = null;
 let sharedSessionPromise = null;
@@ -17,7 +18,10 @@ const ensureSession = async () => {
 
   if (!sharedSessionPromise) {
     console.log("[Detector] Inicializando modelo ONNX (compartido)...");
-    sharedSessionPromise = window.ort.InferenceSession.create(MODEL_PATH)
+    sharedSessionPromise = window.ort.InferenceSession.create(MODEL_PATH, {
+      executionProviders: ["wasm"],
+      executionMode: "sequential"
+    })
       .then((sess) => {
         sharedSession = sess;
         console.log("[Detector] Modelo cargado correctamente");
@@ -31,6 +35,7 @@ const ensureSession = async () => {
 
   return sharedSessionPromise;
 };
+
 
 /**
  * Normaliza la salida del modelo para obtener rectángulos listos para recorte.
@@ -90,6 +95,93 @@ const parseDetections = (outputTensor, imageWidth, imageHeight) => {
   return rectangles;
 };
 
+const mapRectanglesToSource = (rectangles, meta, sourceWidth, sourceHeight) => {
+  if (!meta) {
+    return rectangles;
+  }
+
+  const { scale, padX, padY } = meta;
+  if (!scale || scale <= 0) {
+    return rectangles;
+  }
+
+  return rectangles
+    .map((rect) => {
+      const x1 = (rect.x - padX) / scale;
+      const y1 = (rect.y - padY) / scale;
+      const x2 = (rect.x2 - padX) / scale;
+      const y2 = (rect.y2 - padY) / scale;
+
+      const xMin = Math.max(0, Math.min(sourceWidth, x1));
+      const yMin = Math.max(0, Math.min(sourceHeight, y1));
+      const xMax = Math.max(0, Math.min(sourceWidth, x2));
+      const yMax = Math.max(0, Math.min(sourceHeight, y2));
+
+      const width = Math.max(0, xMax - xMin);
+      const height = Math.max(0, yMax - yMin);
+
+      if (width === 0 || height === 0) {
+        return null;
+      }
+
+      return {
+        ...rect,
+        x: Math.round(xMin),
+        y: Math.round(yMin),
+        x2: Math.round(xMax),
+        y2: Math.round(yMax),
+        width: Math.round(width),
+        height: Math.round(height)
+      };
+    })
+    .filter(Boolean);
+};
+
+const letterboxCanvas = (sourceCanvas, targetSize = MODEL_INPUT_SIZE) => {
+  const canvas = document.createElement("canvas");
+  canvas.width = targetSize;
+  canvas.height = targetSize;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, targetSize, targetSize);
+
+  const scale = Math.min(targetSize / sourceCanvas.width, targetSize / sourceCanvas.height);
+  const drawWidth = Math.round(sourceCanvas.width * scale);
+  const drawHeight = Math.round(sourceCanvas.height * scale);
+  const padX = Math.floor((targetSize - drawWidth) / 2);
+  const padY = Math.floor((targetSize - drawHeight) / 2);
+
+  ctx.drawImage(
+    sourceCanvas,
+    0,
+    0,
+    sourceCanvas.width,
+    sourceCanvas.height,
+    padX,
+    padY,
+    drawWidth,
+    drawHeight
+  );
+
+  return {
+    canvas,
+    meta: {
+      scale,
+      padX,
+      padY,
+      targetSize
+    }
+  };
+};
+
+const tensorFromCanvas = (canvas) => {
+  const ctx = canvas.getContext("2d");
+  const { width, height } = canvas;
+  const imageData = ctx.getImageData(0, 0, width, height);
+  const data = Float32Array.from(imageData.data).filter((_, i) => i % 4 !== 3);
+  return new window.ort.Tensor("float32", data, [1, 3, height, width]);
+};
+
 const inferDetections = async (session, inputCanvas) => {
   if (!session) {
     throw new Error("Sesión de modelo no disponible");
@@ -104,21 +196,21 @@ const inferDetections = async (session, inputCanvas) => {
     throw new Error("No se pudo obtener el contexto 2D del canvas de entrada");
   }
 
-  const imageData = ctx.getImageData(0, 0, inputCanvas.width, inputCanvas.height);
-
-  // Convertir a tensor [1,3,H,W] eliminando alpha
-  const data = Float32Array.from(imageData.data).filter((_, i) => i % 4 !== 3);
-  const tensor = new window.ort.Tensor("float32", data, [
-    1,
-    3,
-    inputCanvas.height,
-    inputCanvas.width
-  ]);
+  const { canvas: processedCanvas, meta } = letterboxCanvas(inputCanvas, MODEL_INPUT_SIZE);
+  const tensor = tensorFromCanvas(processedCanvas);
 
   const feeds = { images: tensor }; // Ajusta 'images' al nombre del input de tu modelo
   const results = await session.run(feeds);
 
-  return parseDetections(results.output0, inputCanvas.width, inputCanvas.height);
+  const letterboxRects = parseDetections(results.output0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
+  const mappedRects = mapRectanglesToSource(
+    letterboxRects,
+    meta,
+    inputCanvas.width,
+    inputCanvas.height
+  );
+
+  return mappedRects;
 };
 
 const DniDetector = ({ inputCanvas, onDetection }) => {
