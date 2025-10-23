@@ -226,7 +226,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       const result = await dniProcessor.processeDNI(dniData);
       
       setProcessedResult(result);
-      console.log('Datos OCR extraídos:', result?.ocrData);
+      console.log('Datos Normalizados OCR:', result?.ocrData);
 
       const hologramReadable = true; 
       const homogenityPassed = true;
