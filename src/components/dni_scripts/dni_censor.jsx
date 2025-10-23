@@ -182,11 +182,9 @@ export async function censorDniComplete(frontFile, backFile, fields) {
 
   let ocrData = null;
   try {
-    ocrData = await extractDniText(frontFile, backFile, fields);
+    ocrData = await extractDniText(frontFile, backFile);
     if (ocrData && (ocrData.front || ocrData.back)) {
-      console.groupCollapsed('Datos RAW OCR:')
-      console.log('Datos anverso: ', ocrData.front);
-      console.log('Datos reverso: ', ocrData.back);
+      console.groupCollapsed('Datos RAW OCR:', ocrData);
     }
     console.groupEnd();
   } catch (ocrError) {
@@ -307,19 +305,9 @@ const OCR_LANGUAGE = 'spa';
  *   llamando a extractSideText y a los métodos utils para cada campo.
  *   Devuelve un objeto con los textos extraídos: { front: {...}, back: {...} }.
  */
-
-export async function extractDniText(frontFile, backFile, fields) {
-  const frontFieldList = fields?.frontFields
-    ? Object.entries(fields.frontFields)
-        .filter(([, visible]) => visible)
-        .map(([name]) => name)
-    : getFrontOcrFields();
-
-  const backFieldList = fields?.backFields
-    ? Object.entries(fields.backFields)
-        .filter(([, visible]) => visible)
-        .map(([name]) => name)
-    : getBackOcrFields();
+export async function extractDniText(frontFile, backFile) {
+  const frontFieldList = getFrontOcrFields();
+  const backFieldList = getBackOcrFields();
 
   const frontRaw = frontFile && frontFieldList.length
     ? await extractSideText(frontFile, frontFieldList, 'front')
@@ -329,8 +317,8 @@ export async function extractDniText(frontFile, backFile, fields) {
     ? await extractSideText(backFile, backFieldList, 'back')
     : null;
 
-  const normalizedFront = frontRaw ? OCRHelper.normalizeDniData(frontRaw) : null;
-  const normalizedBack = backRaw ? OCRHelper.normalizeDniData(backRaw) : null;
-
-  return { front: normalizedFront, back: normalizedBack };
+  return {
+    front: frontRaw ? OCRHelper.normalizeDniData(frontRaw) : null,
+    back: backRaw ? OCRHelper.normalizeDniData(backRaw) : null
+  };
 }
