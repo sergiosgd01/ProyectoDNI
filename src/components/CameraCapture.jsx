@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { processWithYolo } from '../services/processWithYolo';
 
 function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
@@ -9,13 +10,15 @@ function CameraCapture({ onCapture, onClose }) {
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const isInitializing = useRef(false);
-  const hasInitialized = useRef(false); 
-  
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const hasInitialized = useRef(false);
+
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
   }, []);
@@ -23,7 +26,7 @@ function CameraCapture({ onCapture, onClose }) {
   const getAvailableDevices = useCallback(async () => {
     try {
       const allDevices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = allDevices.filter(device => device.kind === 'videoinput');
+      const videoDevices = allDevices.filter((device) => device.kind === 'videoinput');
       setDevices(videoDevices);
       return videoDevices;
     } catch (err) {
@@ -32,144 +35,176 @@ function CameraCapture({ onCapture, onClose }) {
     }
   }, []);
 
-  const initializeCamera = useCallback(async () => {
-    if (isInitializing.current) {
-      return;
-    }
+  const initializeCamera = useCallback(
+    async () => {
+      if (isInitializing.current) {
+        return;
+      }
 
-    try {
-      isInitializing.current = true;
-      setIsLoading(true);
-      setError(null);
+      try {
+        isInitializing.current = true;
+        setIsLoading(true);
+        setError(null);
 
-      stopCamera();
+        stopCamera();
 
-      const constraints = {
-        video: {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 }
+        const constraints = {
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+          },
+        };
+
+        if (selectedDeviceId) {
+          constraints.video.deviceId = { exact: selectedDeviceId };
+        } else {
+          constraints.video.facingMode = isMobile ? 'environment' : 'user';
         }
-      };
 
-      if (selectedDeviceId) {
-        constraints.video.deviceId = { exact: selectedDeviceId };
-      } else {
-        constraints.video.facingMode = isMobile ? 'environment' : 'user';
-      }
+        const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+        streamRef.current = newStream;
 
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = newStream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = newStream;
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-        
-        await new Promise((resolve) => {
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current.play().then(resolve).catch(resolve);
-          };
-        });
-        
+          await new Promise((resolve) => {
+            videoRef.current.onloadedmetadata = () => {
+              videoRef.current.play().then(resolve).catch(resolve);
+            };
+          });
+
+          setIsLoading(false);
+        }
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        console.log('Error name:', err.name);
         setIsLoading(false);
+
+        if (err.name === 'NotFoundError') {
+          setError('No se encontró ninguna cámara en tu dispositivo.');
+        } else if (err.name === 'NotAllowedError') {
+          setError('Acceso a la cámara denegado. Por favor, permite el acceso a la cámara.');
+        } else if (err.name === 'NotReadableError' || err.name === 'AbortError') {
+          setError('Error desconocido al acceder a la cámara.');
+        } else if (err.name === 'OverconstrainedError') {
+          setError('No se puede usar esa cámara específica. Intenta con otra.');
+          setSelectedDeviceId(null);
+        } else {
+          setError(`Error al acceder a la cámara: ${err.message}`);
+        }
+      } finally {
+        isInitializing.current = false;
       }
-    } catch (err) {
-      console.error('Error accessing camera:', err);
-      console.log('Error name:', err.name);
-      setIsLoading(false);
-      
-      if (err.name === 'NotFoundError') {
-        setError('No se encontró ninguna cámara en tu dispositivo.');
-      } else if (err.name === 'NotAllowedError') {
-        setError('Acceso a la cámara denegado. Por favor, permite el acceso a la cámara.');
-      } else if (err.name === 'NotReadableError' || err.name === 'AbortError') {
-        setError('Error desconocido al acceder a la cámara.');
-      } else if (err.name === 'OverconstrainedError') {
-        setError('No se puede usar esa cámara específica. Intenta con otra.');
-        setSelectedDeviceId(null);
-      } else {
-        setError(`Error al acceder a la cámara: ${err.message}`);
+    },
+    [selectedDeviceId, isMobile, stopCamera]
+  );
+
+  useEffect(() => {
+    const initialize = async () => {
+      if (hasInitialized.current) return;
+      hasInitialized.current = true;
+
+      const videoDevices = await getAvailableDevices();
+
+      if (!selectedDeviceId && videoDevices.length > 0 && isMobile) {
+        const backCamera = videoDevices.find(
+          (device) =>
+            device.label.toLowerCase().includes('back') ||
+            device.label.toLowerCase().includes('rear') ||
+            device.label.toLowerCase().includes('trasera')
+        );
+
+        if (backCamera) {
+          setSelectedDeviceId(backCamera.deviceId);
+          return;
+        }
       }
-    } finally {
-      isInitializing.current = false;
-    }
-  }, [selectedDeviceId, isMobile, stopCamera]);
 
- useEffect(() => {
-  const initialize = async () => {
-    if (hasInitialized.current) return;
-    hasInitialized.current = true;
+      await initializeCamera();
+    };
 
-    const videoDevices = await getAvailableDevices();
-    
-    if (!selectedDeviceId && videoDevices.length > 0 && isMobile) {
-      const backCamera = videoDevices.find(device => 
-        device.label.toLowerCase().includes('back') || 
-        device.label.toLowerCase().includes('rear') ||
-        device.label.toLowerCase().includes('trasera')
-      );
-      
-      if (backCamera) {
-        setSelectedDeviceId(backCamera.deviceId);
-        return; 
-      }
-    }
-    
-    await initializeCamera();
-  };
+    initialize();
 
-  initialize();
-
-  return () => {
-    stopCamera();
-  };
-}, []);
+    return () => {
+      stopCamera();
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (selectedDeviceId === null || !hasInitialized.current) {
       return;
     }
-    
+
     initializeCamera();
   }, [selectedDeviceId, initializeCamera]);
 
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    
+
     if (!video || !canvas || !streamRef.current) {
       console.error('Video o canvas no disponibles');
       return;
     }
-    
+
     const context = canvas.getContext('2d');
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
-    
+
     if (videoWidth === 0 || videoHeight === 0) {
       console.error('Video no tiene dimensiones válidas');
       return;
     }
-    
+
     // Capturar toda la imagen sin recortar
     canvas.width = videoWidth;
     canvas.height = videoHeight;
-    
-    context.drawImage(video, 0, 0, videoWidth, videoHeight);
-    
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        console.error('Error al crear el blob de la imagen');
-        return;
-      }
 
-      const file = new File([blob], 'dni-camera-capture.jpg', { 
-        type: 'image/jpeg',
-        lastModified: Date.now()
-      });
-      
-      onCapture(file);
-      stopCamera();
-      onClose();
-    }, 'image/jpeg', 0.95);
+    context.drawImage(video, 0, 0, videoWidth, videoHeight);
+
+    // Convertir a blob y procesar con YOLO antes de propagar la captura
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) {
+          console.error('Error al crear el blob de la imagen');
+          return;
+        }
+
+        const originalFile = new File([blob], 'dni-camera-capture.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
+
+        // Indicar carga mientras procesa
+        setIsLoading(true);
+
+        try {
+          const resp = await processWithYolo(originalFile, { url: 'https://blotless-krysta-nontemporally.ngrok-free.dev/process' });
+
+          if (resp.ok && resp.blob) {
+            const processedFile = new File([resp.blob], 'dni-camera-processed.jpg', {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+
+            // enviar archivo procesado y metadatos YOLO
+            onCapture?.(processedFile, { yolo: { ok: true, confidence: resp.confidence } });
+          } else {
+            // fallback: enviar original con info de fallo
+            onCapture?.(originalFile, { yolo: { ok: false, error: resp.error || 'no result' } });
+          }
+        } catch (err) {
+          console.error('[CameraCapture] Error en processWithYolo:', err);
+          onCapture?.(originalFile, { yolo: { ok: false, error: err?.message || String(err) } });
+        } finally {
+          setIsLoading(false);
+          stopCamera();
+          onClose();
+        }
+      },
+      'image/jpeg',
+      0.95
+    );
   };
 
   const handleDeviceChange = (deviceId) => {
@@ -188,23 +223,29 @@ function CameraCapture({ onCapture, onClose }) {
     initializeCamera();
   };
 
+  // if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+  //   return (
+  //     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+  //       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+  //         <h3 className="text-xl font-bold mb-4 text-center" style={{ color: 'var(--color-error)' }}>
+  //           <i className="bi bi-exclamation-triangle mr-2"></i>
+  //           Cámara no disponible
+  //         </h3>
+  //         <p className="text-center mb-6" style={{ color: 'var(--color-text-secondary)' }}>
+  //           Tu dispositivo no soporta el acceso a la cámara o estás usando una conexión no segura (HTTP).
+  //         </p>
+  //         <button onClick={handleClose} className="btn-primary w-full py-3">
+  //           Entendido
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-          <h3 className="text-xl font-bold mb-4 text-center" style={{ color: 'var(--color-error)' }}>
-            <i className="bi bi-exclamation-triangle mr-2"></i>
-            Cámara no disponible
-          </h3>
-          <p className="text-center mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-            Tu dispositivo no soporta el acceso a la cámara o estás usando una conexión no segura (HTTP).
-          </p>
-          <button onClick={handleClose} className="btn-primary w-full py-3">
-            Entendido
-          </button>
-        </div>
-      </div>
-    );
+    console.warn('⚠️ Navegador bloqueó el acceso a la cámara (contexto no seguro)');
+    // continuar sin detener la ejecución
+    navigator.mediaDevices = { getUserMedia: () => Promise.reject(new Error('No disponible')) };
   }
 
   // Vista móvil fullscreen
@@ -230,21 +271,13 @@ function CameraCapture({ onCapture, onClose }) {
             <div className="w-20 h-20 rounded-full flex items-center justify-center bg-red-500/20">
               <i className="bi bi-exclamation-triangle text-5xl text-red-500"></i>
             </div>
-            <p className="text-white text-center font-medium px-4">
-              {error}
-            </p>
+            <p className="text-white text-center font-medium px-4">{error}</p>
             <div className="flex flex-col gap-3 w-full max-w-sm px-4">
-              <button 
-                onClick={handleRetry} 
-                className="btn-primary w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
-              >
+              <button onClick={handleRetry} className="btn-primary w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
                 <i className="bi bi-arrow-clockwise"></i>
                 Intentar de nuevo
               </button>
-              <button 
-                onClick={handleClose} 
-                className="bg-white/20 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-colors"
-              >
+              <button onClick={handleClose} className="bg-white/20 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
                 <i className="bi bi-arrow-left"></i>
                 Volver atrás
               </button>
@@ -262,14 +295,8 @@ function CameraCapture({ onCapture, onClose }) {
                   </div>
                 </div>
               )}
-              
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
+
+              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
 
               {/* Texto instructivo flotante */}
               <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none">
@@ -278,20 +305,14 @@ function CameraCapture({ onCapture, onClose }) {
                     <i className="bi bi-credit-card mr-2"></i>
                     Asegúrate de capturar el DNI completo
                   </p>
-                  <p className="text-white/80 text-xs">
-                    El documento debe estar visible en su totalidad
-                  </p>
+                  <p className="text-white/80 text-xs">El documento debe estar visible en su totalidad</p>
                 </div>
               </div>
             </div>
 
             {/* Botón de captura flotante */}
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-              <button
-                onClick={capturePhoto}
-                disabled={isLoading}
-                className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50"
-              >
+              <button onClick={capturePhoto} disabled={isLoading} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
                 <i className="bi bi-camera-fill text-2xl"></i>
                 Capturar Foto
               </button>
@@ -314,20 +335,13 @@ function CameraCapture({ onCapture, onClose }) {
             <i className="bi bi-camera mr-2 text-xl sm:text-2xl" style={{ color: 'var(--color-primary)' }}></i>
             Capturar DNI
           </h3>
-          <button
-            onClick={handleClose}
-            className="text-2xl hover:opacity-70 transition-opacity"
-            style={{ color: 'var(--color-text-muted)' }}
-          >
+          <button onClick={handleClose} className="text-2xl hover:opacity-70 transition-opacity" style={{ color: 'var(--color-text-muted)' }}>
             <i className="bi bi-x"></i>
           </button>
         </div>
 
         {/* Instrucciones */}
-        <div className="p-3 sm:p-4 border-b flex-shrink-0" style={{ 
-          backgroundColor: 'var(--color-bg-secondary)', 
-          borderColor: 'var(--color-border-default)' 
-        }}>
+        <div className="p-3 sm:p-4 border-b flex-shrink-0" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-default)' }}>
           <div className="flex items-center justify-center text-xs sm:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             <i className="bi bi-info-circle mr-2 flex-shrink-0" style={{ color: 'var(--color-primary)' }}></i>
             <span className="text-center">Asegúrate de capturar el DNI completo y con buena iluminación</span>
@@ -345,17 +359,11 @@ function CameraCapture({ onCapture, onClose }) {
                 {error}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md px-4">
-                <button 
-                  onClick={handleRetry} 
-                  className="btn-primary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2"
-                >
+                <button onClick={handleRetry} className="btn-primary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2">
                   <i className="bi bi-arrow-clockwise"></i>
                   Intentar de nuevo
                 </button>
-                <button 
-                  onClick={handleClose} 
-                  className="btn-secondary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2"
-                >
+                <button onClick={handleClose} className="btn-secondary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2">
                   <i className="bi bi-arrow-left"></i>
                   Volver atrás
                 </button>
@@ -373,33 +381,12 @@ function CameraCapture({ onCapture, onClose }) {
                     </div>
                   </div>
                 )}
-                
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain"
-                />
 
-                {/* Mensaje flotante centrado */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-4 shadow-2xl max-w-md mx-4">
-                    <div className="text-white text-center">
-                      <i className="bi bi-credit-card text-4xl mb-3 block" style={{ color: 'var(--color-primary)' }}></i>
-                      <p className="text-base font-bold mb-2">Captura el DNI completo</p>
-                      <p className="text-sm opacity-90">Asegúrate de que todo el documento sea visible</p>
-                    </div>
-                  </div>
-                </div>
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain" />
               </div>
 
               {/* Botón de captura */}
-              <button
-                onClick={capturePhoto}
-                disabled={isLoading}
-                className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
-              >
+              <button onClick={capturePhoto} disabled={isLoading} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
                 <i className="bi bi-camera text-xl"></i>
                 Capturar Foto
               </button>
@@ -407,15 +394,7 @@ function CameraCapture({ onCapture, onClose }) {
               {/* Selector de cámara (solo desktop con múltiples cámaras) */}
               {!isMobile && devices.length > 1 && (
                 <div className="flex justify-center">
-                  <select
-                    value={selectedDeviceId || ''}
-                    onChange={(e) => handleDeviceChange(e.target.value)}
-                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm"
-                    style={{ 
-                      borderColor: 'var(--color-border-default)',
-                      color: 'var(--color-text-primary)'
-                    }}
-                  >
+                  <select value={selectedDeviceId || ''} onChange={(e) => handleDeviceChange(e.target.value)} className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm" style={{ borderColor: 'var(--color-border-default)', color: 'var(--color-text-primary)' }}>
                     {devices.map((device, index) => (
                       <option key={device.deviceId} value={device.deviceId}>
                         {device.label || `Cámara ${index + 1}`}
