@@ -223,30 +223,48 @@ function CameraCapture({ onCapture, onClose }) {
     initializeCamera();
   };
 
-  // if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-  //   return (
-  //     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-  //       <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
-  //         <h3 className="text-xl font-bold mb-4 text-center" style={{ color: 'var(--color-error)' }}>
-  //           <i className="bi bi-exclamation-triangle mr-2"></i>
-  //           Cámara no disponible
-  //         </h3>
-  //         <p className="text-center mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-  //           Tu dispositivo no soporta el acceso a la cámara o estás usando una conexión no segura (HTTP).
-  //         </p>
-  //         <button onClick={handleClose} className="btn-primary w-full py-3">
-  //           Entendido
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
-
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     console.warn('⚠️ Navegador bloqueó el acceso a la cámara (contexto no seguro)');
-    // continuar sin detener la ejecución
     navigator.mediaDevices = { getUserMedia: () => Promise.reject(new Error('No disponible')) };
   }
+
+  // Componente de guía DNI reutilizable
+  const DNIGuide = () => (
+    <>
+      {/* Overlay oscuro de fondo */}
+      <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
+      
+      {/* Guía del DNI centrada */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div
+          className="relative border-2 border-white rounded-xl shadow-2xl bg-transparent"
+          style={{
+            width: isMobile ? '80%' : '60%',
+            aspectRatio: '1.586',
+            maxWidth: '600px',
+            maxHeight: '70vh',
+          }}
+        >
+          {/* Área transparente (sin overlay) - usa box-shadow para simular recorte */}
+          <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' }}></div>
+
+          {/* Esquinas decorativas */}
+          <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-xl"></div>
+          <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-xl"></div>
+          <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-xl"></div>
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-xl"></div>
+
+          {/* Texto instructivo */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <i className="bi bi-credit-card text-white text-4xl mb-2 block opacity-90"></i>
+            <p className="text-white text-sm font-semibold drop-shadow-lg">
+              Alinea tu DNI aquí
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
 
   // Vista móvil fullscreen
   if (isMobile) {
@@ -298,20 +316,21 @@ function CameraCapture({ onCapture, onClose }) {
 
               <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
 
-              {/* Texto instructivo flotante */}
-              <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none">
+              {/* Guía DNI superpuesta */}
+              {!isLoading && <DNIGuide />}
+
+              {/* Texto instructivo flotante superior */}
+              <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none z-10">
                 <div className="inline-block bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl">
-                  <p className="text-white text-sm font-semibold mb-1">
-                    <i className="bi bi-credit-card mr-2"></i>
-                    Asegúrate de capturar el DNI completo
+                  <p className="text-white text-sm font-semibold">
+                    Coloca el DNI dentro del recuadro
                   </p>
-                  <p className="text-white/80 text-xs">El documento debe estar visible en su totalidad</p>
                 </div>
               </div>
             </div>
 
             {/* Botón de captura flotante */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
               <button onClick={capturePhoto} disabled={isLoading} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
                 <i className="bi bi-camera-fill text-2xl"></i>
                 Capturar Foto
@@ -344,7 +363,7 @@ function CameraCapture({ onCapture, onClose }) {
         <div className="p-3 sm:p-4 border-b flex-shrink-0" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-default)' }}>
           <div className="flex items-center justify-center text-xs sm:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             <i className="bi bi-info-circle mr-2 flex-shrink-0" style={{ color: 'var(--color-primary)' }}></i>
-            <span className="text-center">Asegúrate de capturar el DNI completo y con buena iluminación</span>
+            <span className="text-center">Coloca el DNI dentro del recuadro y captura cuando esté alineado</span>
           </div>
         </div>
 
@@ -383,6 +402,9 @@ function CameraCapture({ onCapture, onClose }) {
                 )}
 
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain" />
+
+                {/* Guía DNI superpuesta */}
+                {!isLoading && <DNIGuide />}
               </div>
 
               {/* Botón de captura */}
