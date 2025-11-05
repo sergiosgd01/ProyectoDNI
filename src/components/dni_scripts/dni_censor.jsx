@@ -163,7 +163,8 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front') 
  * @param {Object} fields.backFields - Campos traseros a censurar
  * @returns {Promise<{frontImageUrl: string, backImageUrl: string}>}
  */
-export async function censorDniComplete(frontFile, backFile, fields) {
+export async function censorDniComplete(frontFile, backFile, fields, options = {}) {
+  const { precomputedOcr = null } = options;
   const frontFieldsToRedact = Object.entries(fields.frontFields || {})
     .filter(([, value]) => value === false)
     .map(([key]) => key);
@@ -181,14 +182,22 @@ export async function censorDniComplete(frontFile, backFile, fields) {
   ]);
 
   let ocrData = null;
-  try {
-    ocrData = await extractDniText(frontFile, backFile);
+  if (precomputedOcr) {
+    ocrData = precomputedOcr;
     if (ocrData && (ocrData.front || ocrData.back)) {
-      console.groupCollapsed('Datos RAW OCR:', ocrData);
+      console.groupCollapsed('Datos RAW OCR (prevalidado):', ocrData);
     }
     console.groupEnd();
-  } catch (ocrError) {
-    console.error('Error ejecutando OCR: ', ocrError);
+  } else {
+    try {
+      ocrData = await extractDniText(frontFile, backFile);
+      if (ocrData && (ocrData.front || ocrData.back)) {
+        console.groupCollapsed('Datos RAW OCR:', ocrData);
+      }
+      console.groupEnd();
+    } catch (ocrError) {
+      console.error('Error ejecutando OCR: ', ocrError);
+    }
   }
 
   return {

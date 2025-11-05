@@ -7,12 +7,23 @@ import { dniProcessor } from '../services/dniProcessor';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
+import { validateDniConsistency } from '../utils/OCRhelpers';
+import { extractDniText } from './dni_scripts/dni_censor';
 import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
 import { dniApi } from '../services/dniApi';
 
-export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) {
+export default function DNIEditor({
+  frontFile,
+  backFile,
+  onBack,
+  onProcessed,
+  initialOcrData = null,
+  initialValidation = null
+}) {
   const colors = useColors();
+  const [cachedOcrData, setCachedOcrData] = useState(initialOcrData);
+  const [cachedValidation, setCachedValidation] = useState(initialValidation);
   
   // Scroll inicial al principio de la página
   useScrollToTop();
@@ -58,6 +69,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedResult, setProcessedResult] = useState(null);
   const [processingError, setProcessingError] = useState(null);
+  const [validationPopup, setValidationPopup] = useState(null);
 
   const selectedFrontCount = Object.values(selectedFrontFields).filter(Boolean).length;
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
@@ -73,6 +85,32 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       });
     }
   }, [processedResult]);
+
+  useEffect(() => {
+    setCachedOcrData(initialOcrData);
+  }, [initialOcrData]);
+
+  useEffect(() => {
+    setCachedValidation(initialValidation);
+  }, [initialValidation]);
+
+  useEffect(() => {
+    if (initialValidation?.ok) {
+      setValidationPopup({
+        type: 'success',
+        message: initialValidation.message
+      });
+    }
+  }, [initialValidation]);
+
+  useEffect(() => {
+    if (validationPopup?.type !== 'success') {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => setValidationPopup(null), 4000);
+    return () => clearTimeout(timer);
+  }, [validationPopup]);
   
   // Verificar si la configuración actual coincide con algún perfil
   useEffect(() => {
@@ -130,6 +168,8 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     }
   }, [selectedProfile]);
 
+  const dismissValidationPopup = () => setValidationPopup(null);
+
   // Actualizar campos cuando se selecciona un perfil
   const handleProfileSelect = (profileId) => {
     const profile = DNI_PROFILES.getProfileById(profileId);
@@ -186,6 +226,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
     try {
       setIsProcessing(true);
       setProcessingError(null);
+      setValidationPopup(null);
 
       console.log('Procesando DNI con configuración front:', selectedFrontFields);
       console.log('Procesando DNI con configuración back:', selectedBackFields);
@@ -214,6 +255,36 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
         backFields: selectedBackFields
       };
 
+      let ocrDataToUse = cachedOcrData;
+      let validation = cachedValidation;
+
+      if (!ocrDataToUse) {
+        ocrDataToUse = await extractDniText(frontFileToProcess, backFileToProcess);
+      }
+
+      if (!validation) {
+        validation = validateDniConsistency(ocrDataToUse);
+      }
+
+      if (!validation?.ok) {
+        console.warn('Validación MRZ fallida:', validation);
+        setProcessedResult(null);
+        setProcessingError(validation?.message || 'Validación del DNI fallida');
+        setValidationPopup({
+          type: 'error',
+          message:
+            validation?.message ||
+            'Los datos del reverso no coinciden con el anverso. Vuelve a subir ambas imágenes.'
+        });
+        return;
+      }
+
+      setCachedOcrData(ocrDataToUse);
+      setCachedValidation(validation);
+      dniData.preOcrData = ocrDataToUse;
+      dniData.validationResult = validation;
+      console.log('Validación MRZ utilizada:', validation.details);
+
       if (frontFileToProcess) {
         try {
           const rectangles = await detectDniFromFile(frontFileToProcess);
@@ -224,9 +295,13 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
       }
 
       const result = await dniProcessor.processeDNI(dniData);
-      
-      setProcessedResult(result);
       console.log('Datos Normalizados OCR:', result?.ocrData);
+
+      setProcessedResult(result);
+      setValidationPopup({
+        type: 'success',
+        message: validation.message
+      });
 
       const hologramReadable = true; 
       const homogenityPassed = true;
@@ -260,6 +335,10 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
 
       if (result?.ocrData) {
         saveData.ocrData = result.ocrData;
+      }
+
+      if (validation?.details) {
+        saveData.validation = validation.details;
       }
 
       // Guardar en BD
@@ -450,7 +529,36 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
+    <>
+      {validationPopup && (
+        <div
+          className={`fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm rounded-lg shadow-lg px-4 py-3 text-sm sm:text-base flex items-start gap-3 ${
+            validationPopup.type === 'success'
+              ? 'bg-green-600 text-white'
+              : 'bg-red-600 text-white'
+          }`}
+        >
+          <div className="flex-1">
+            <span className="block text-sm font-semibold mb-1">
+              {validationPopup.type === 'success'
+                ? 'Validación correcta'
+                : 'Validación fallida'}
+            </span>
+            <span className="block text-xs sm:text-sm leading-snug">
+              {validationPopup.message}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={dismissValidationPopup}
+            className="ml-2 text-white/80 hover:text-white focus:outline-none"
+            aria-label="Cerrar notificación"
+          >
+            <i className="bi bi-x-circle-fill"></i>
+          </button>
+        </div>
+      )}
+      <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
       <div className="container mx-auto px-4 max-w-7xl">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
@@ -864,6 +972,7 @@ export default function DNIEditor({ frontFile, backFile, onBack, onProcessed }) 
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

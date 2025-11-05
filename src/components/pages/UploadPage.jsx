@@ -16,7 +16,9 @@ export default function UploadPage({
   hasAllFiles,
   onContinueToEditor,
   shouldAutoNavigate = true,
-  isProcessMode = false
+  isProcessMode = false,
+  validationError = null,
+  isValidating = false
 }) {
   const backSectionRef = useRef(null);
   const completionMessageRef = useRef(null);
@@ -219,7 +221,9 @@ export default function UploadPage({
                     {/* Indicador de carga */}
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
-                      <span className="text-primary-600 font-medium">Procesando...</span>
+                      <span className="text-primary-600 font-medium">
+                        {isValidating ? 'Validando documentación...' : 'Procesando...'}
+                      </span>
                     </div>
                   </>
                 ) : (
@@ -231,12 +235,24 @@ export default function UploadPage({
                     {/* Botón manual para continuar */}
                     <button
                       onClick={onContinueToEditor}
-                      className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                      disabled={isValidating}
+                      className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
                       <i className="bi bi-arrow-right mr-2"></i>
-                      Continuar al editor
+                      {isValidating ? 'Validando...' : 'Continuar al editor'}
                     </button>
                   </>
+                )}
+                {validationError && (
+                  <div className="mt-4 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-red-700">
+                    <div className="flex items-center justify-center gap-2">
+                      <i className="bi bi-exclamation-triangle-fill"></i>
+                      <span>{validationError}</span>
+                    </div>
+                    <p className="text-xs text-red-500 mt-2">
+                      Revisa la calidad de las imágenes y vuelve a subirlas para intentarlo de nuevo.
+                    </p>
+                  </div>
                 )}
               </div>
             </div>

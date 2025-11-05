@@ -11,6 +11,8 @@ export const EQUIPO = 'equipoExpedidor';
 export const MRZ = 'mrz';
 export const NOMBRE = 'nombre';
 export const APELLIDOS = 'apellidos';
+export const FIRMA = 'firma';
+
 
 // Regex validación de campos
 export const dniRe = /([0-9]{8}[A-Z])/;
@@ -126,20 +128,18 @@ export const normalizeDniData = (dniData = {}) => {
     }
 
     let value = rawValue.toString().toUpperCase();
-    value = deleteChars(value, '/');
-    value = deleteChars(value, '—');
-    value = deleteChars(value, '-');
-    value = deleteChars(value, ',');
-    value = deleteChars(value, '.');
-    value = deleteChars(value, '+');
-    value = deleteChars(value, '”');
-    value = deleteChars(value, '*');
-    value = deleteChars(value, "'");
-    value = deleteChars(value, '_');
-    value = deleteChars(value, '|');
-    value = deleteChars(value, '!');
-    value = deleteChars(value, '<');
-    value = deleteChars(value, '>');
+
+    if (key === MRZ) {
+      value = value.replace(/\?/g, '<').replace(/[^0-9A-Z<]/g, '');
+      value = value.trim();
+      formatted[key] = value.length ? value : null;
+      return;
+    }
+
+    const removableChars = ['/', '—', '-', ',', '.', '+', '”', '*', "'", '_', '|', '!', '<', '>'];
+    removableChars.forEach((char) => {
+      value = deleteChars(value, char);
+    });
     value = value.replace(/\?/g, '2').trim();
     if (!value.length) {
       formatted[key] = null;
@@ -221,6 +221,10 @@ export const normalizeDniData = (dniData = {}) => {
         value = validateRe(collapsed, nombreRe);
         break;
       }
+      case FIRMA: {
+        value = null;
+        break;
+      }
       default:
         value = value.length ? value : null;
         break;
@@ -230,4 +234,211 @@ export const normalizeDniData = (dniData = {}) => {
   });
 
   return formatted;
+};
+
+const normalizeMrzLine = (line = '') =>
+  line
+    .toUpperCase()
+    .replace(/[^0-9A-Z<]/g, '')
+    .padEnd(30, '<')
+    .slice(0, 30);
+
+const buildMrzLines = (mrzString = '') => {
+  if (!mrzString || typeof mrzString !== 'string') {
+    return null;
+  }
+
+  const trimmed = mrzString.trim();
+  if (!trimmed.length) {
+    return null;
+  }
+
+  const newlineSplit = trimmed
+    .split(/[\r\n]+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (newlineSplit.length >= 3) {
+    return newlineSplit.slice(0, 3).map(normalizeMrzLine);
+  }
+
+  const collapsed = trimmed.toUpperCase().replace(/[^0-9A-Z<]/g, '');
+  if (!collapsed.length) {
+    return null;
+  }
+
+  const lines = [];
+  const chunkSize = 30;
+  for (let i = 0; i < collapsed.length && lines.length < 3; i += chunkSize) {
+    lines.push(collapsed.slice(i, i + chunkSize));
+  }
+
+  while (lines.length < 3) {
+    lines.push('');
+  }
+
+  return lines.slice(0, 3).map(normalizeMrzLine);
+};
+
+export const extractIdentifiersFromMrz = (mrzString = '') => {
+  const lines = buildMrzLines(mrzString);
+  if (!lines) {
+    return null;
+  }
+
+  const normalizedLines = [...lines];
+  const line1Chars = normalizedLines[0].split('');
+
+  const documentNumberSlice = line1Chars.slice(5, 14).join('');
+  const correctedDocumentNumberSlice = documentNumberSlice.replace(/O/g, '0');
+  if (correctedDocumentNumberSlice !== documentNumberSlice) {
+    correctedDocumentNumberSlice.split('').forEach((char, index) => {
+      line1Chars[5 + index] = char;
+    });
+  }
+
+  if (line1Chars[14] === 'O') {
+    line1Chars[14] = '0';
+  }
+
+  normalizedLines[0] = line1Chars.join('');
+  const line2Chars = normalizedLines[1].split('');
+  normalizedLines[1] = line2Chars.join('');
+
+  const documentNumberRaw = normalizedLines[0].slice(5, 14);
+  const documentNumber = documentNumberRaw.replace(/</g, '') || null;
+  const documentNumberCheck = normalizedLines[0][14] ?? null;
+  const numeroSoporteValid =
+    documentNumber && documentNumberCheck
+      ? calcMrzChecksum(documentNumberRaw) === documentNumberCheck
+      : null;
+
+  const optionalRaw = normalizedLines[1].slice(18, 29);
+  const dniCandidate = optionalRaw.replace(/</g, '');
+  const dniValue = validateRe(dniCandidate, dniRe);
+
+  const compositeCheckChar = normalizedLines[1][29] ?? null;
+  let compositeValid = null;
+  if (compositeCheckChar) {
+    const compositeSource =
+      documentNumberRaw +
+      (documentNumberCheck ?? '') +
+      normalizedLines[1].slice(0, 7) +
+      normalizedLines[1].slice(7, 15) +
+      normalizedLines[1].slice(15, 29);
+    compositeValid = calcMrzChecksum(compositeSource) === compositeCheckChar;
+  }
+
+  return {
+    lines: normalizedLines,
+    numeroSoporte: documentNumber,
+    numeroSoporteCheckDigit: documentNumberCheck,
+    numeroSoporteValid,
+    dni: dniValue || null,
+    compositeValid,
+    normalizedMrz: normalizedLines.join('\n')
+  };
+};
+
+const normalizeIdentifierValue = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  return value
+    .toString()
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, '');
+};
+
+export const validateDniConsistency = (ocrData) => {
+  if (!ocrData) {
+    return {
+      ok: false,
+      message: 'No se pudieron validar los datos OCR.'
+    };
+  }
+
+  const front = ocrData.front || {};
+  const back = ocrData.back || {};
+  const mrzInfo = extractIdentifiersFromMrz(back?.mrz || '');
+
+  if (!mrzInfo) {
+    return {
+      ok: false,
+      message: 'No se pudo leer la MRZ del reverso para validar el documento.'
+    };
+  }
+
+  if (mrzInfo.normalizedMrz && ocrData.back) {
+    const currentLines = buildMrzLines(ocrData.back.mrz || '');
+    const currentNormalizedMrz = currentLines ? currentLines.join('\n') : (ocrData.back.mrz || '').trim();
+    if (currentNormalizedMrz !== mrzInfo.normalizedMrz) {
+      ocrData.back.mrz = mrzInfo.normalizedMrz;
+    }
+  }
+
+  const comparisons = [];
+
+  const frontDni = normalizeIdentifierValue(front?.dni);
+  const mrzDni = normalizeIdentifierValue(mrzInfo.dni);
+  if (frontDni && mrzDni) {
+    comparisons.push({
+      field: 'dni',
+      label: 'DNI',
+      front: frontDni,
+      mrz: mrzDni,
+      match: frontDni === mrzDni
+    });
+  }
+
+  const frontSupport = normalizeIdentifierValue(front?.numeroSoporte);
+  const mrzSupport = normalizeIdentifierValue(mrzInfo.numeroSoporte);
+  if (frontSupport && mrzSupport) {
+    const checksumValid = mrzInfo.numeroSoporteValid;
+    comparisons.push({
+      field: NUM_SOPORTE,
+      label: 'Número de soporte',
+      front: frontSupport,
+      mrz: mrzSupport,
+      match: frontSupport === mrzSupport && checksumValid !== false,
+      checksumValid
+    });
+  }
+
+  if (!comparisons.length) {
+    return {
+      ok: false,
+      message: 'Reverso no válido [MRZ no legible]',
+      details: { mrzInfo }
+    };
+  }
+
+  const checksumFailure = comparisons.find(
+    (item) => item.field === NUM_SOPORTE && item.checksumValid === false
+  );
+
+  if (checksumFailure) {
+    return {
+      ok: false,
+      message: 'Reverso no válido',
+      details: { comparisons, mrzInfo }
+    };
+  }
+
+  const mismatch = comparisons.find((item) => item.match === false);
+
+  if (mismatch) {
+    return {
+      ok: false,
+      message: `Anverso y reverso no válidos. Vuelve a subir ambas imágenes.`,
+      details: { comparisons, mrzInfo }
+    };
+  }
+
+  return {
+    ok: true,
+    message: 'Anverso y reverso validados correctamente.',
+    details: { comparisons, mrzInfo }
+  };
 };
