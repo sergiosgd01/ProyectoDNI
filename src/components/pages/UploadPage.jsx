@@ -15,7 +15,7 @@ export default function UploadPage({
   onClearBackFile,
   hasAllFiles,
   onContinueToEditor,
-  shouldAutoNavigate = true,
+  shouldAutoNavigate = false,
   isProcessMode = false,
   validationError = null,
   isValidating = false
