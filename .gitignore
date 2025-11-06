@@ -23,7 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 
-
 .env
 server/.env
 src/.env
+
+# Certificados SSL y claves privadas (SEGURIDAD)
+*.key
+*.pem
+*.crt
+ca.key
+ca.crt
+cert-key.pem
+cert.pem
+
+# Docker y configuraciones sensibles
+docker-compose.yml
+docker-compose.override.yml
