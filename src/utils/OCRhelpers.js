@@ -39,7 +39,10 @@ export const charTable = 'TRWAGMYFPDXBNJZSQVHLCKE';
 export const deleteChars = (string = '', char = '') => string.split(char).join('');
 
 export const validateRe = (string = '', regex) => {
+  // Validar que string no sea null/undefined antes de usar match
+  if (!string || typeof string !== 'string') return null;
   if (!regex) return string;
+  
   const match = string.match(regex);
   return match ? match[0] : null;
 };
@@ -130,6 +133,11 @@ export const normalizeDniData = (dniData = {}) => {
     let value = rawValue.toString().toUpperCase();
 
     if (key === MRZ) {
+      // Validar que value no esté vacío antes de procesar
+      if (!value || !value.trim()) {
+        formatted[key] = null;
+        return;
+      }
       value = value.replace(/\?/g, '<').replace(/[^0-9A-Z<]/g, '');
       value = value.trim();
       formatted[key] = value.length ? value : null;
@@ -344,9 +352,8 @@ const normalizeIdentifierValue = (value) => {
   if (!value) {
     return null;
   }
-
-  return value
-    .toString()
+  const str = value.toString ? value.toString() : String(value);
+  return str
     .toUpperCase()
     .replace(/[^0-9A-Z]/g, '');
 };
@@ -361,7 +368,17 @@ export const validateDniConsistency = (ocrData) => {
 
   const front = ocrData.front || {};
   const back = ocrData.back || {};
-  const mrzInfo = extractIdentifiersFromMrz(back?.mrz || '');
+  
+  // Validar que la MRZ exista y no esté vacía
+  const mrzString = back?.mrz;
+  if (!mrzString || typeof mrzString !== 'string' || !mrzString.trim()) {
+    return {
+      ok: false,
+      message: 'La imagen del reverso no tiene suficiente calidad. La MRZ no es legible. Por favor, sube una imagen más clara.'
+    };
+  }
+
+  const mrzInfo = extractIdentifiersFromMrz(mrzString);
 
   if (!mrzInfo) {
     return {
@@ -409,7 +426,7 @@ export const validateDniConsistency = (ocrData) => {
   if (!comparisons.length) {
     return {
       ok: false,
-      message: 'Reverso no válido [MRZ no legible]',
+      message: 'Las imágenes no tienen suficiente calidad. No se pudieron leer los datos necesarios del DNI.',
       details: { mrzInfo }
     };
   }
@@ -421,7 +438,7 @@ export const validateDniConsistency = (ocrData) => {
   if (checksumFailure) {
     return {
       ok: false,
-      message: 'Reverso no válido',
+      message: 'El número de soporte del reverso no es válido. Verifica que la imagen sea clara.',
       details: { comparisons, mrzInfo }
     };
   }
@@ -431,7 +448,7 @@ export const validateDniConsistency = (ocrData) => {
   if (mismatch) {
     return {
       ok: false,
-      message: `Anverso y reverso no válidos. Vuelve a subir ambas imágenes.`,
+      message: `El anverso y reverso no coinciden. Verifica que ambas fotos sean del mismo DNI.`,
       details: { comparisons, mrzInfo }
     };
   }
