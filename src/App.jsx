@@ -125,7 +125,7 @@ function App() {
 
   const handleStartProcess = () => {
     // Cuando se inicia el proceso por primera vez, permitir auto-navegación
-    setShouldAutoNavigate(true);
+    setShouldAutoNavigate(false);
     goTo(VIEWS.UPLOAD_PROCESS);
   };
 
