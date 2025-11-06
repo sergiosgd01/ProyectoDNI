@@ -5,6 +5,10 @@ import './index.css';
 import './theme/colors.css';  // 🎨 Sistema de colores simplificado 
 import 'bootstrap-icons/font/bootstrap-icons.css';  // Bootstrap Icons
 
+if (import.meta.env.DEV) {
+  import('./tests/ocrTestBank.js');
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

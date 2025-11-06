@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
@@ -9,6 +9,8 @@ import { useNavigation } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
 import { VIEWS } from './constants/views';
 import { DEMO_MODE } from './config/demoMode';
+import { extractDniText } from './components/dni_scripts/dni_censor.jsx';
+import { validateDniConsistency } from './utils/OCRhelpers';
 import './index.css'; 
 
 function App() {
@@ -28,6 +30,80 @@ function App() {
   
   // Estado para controlar el loader de procesamiento (solo en modo demo)
   const [showProcessingLoader, setShowProcessingLoader] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [preOcrData, setPreOcrData] = useState(null);
+  const [validationResult, setValidationResult] = useState(null);
+  const [validationError, setValidationError] = useState(null);
+
+  // Resetear auto-navegación cuando se suben archivos por primera vez
+  useEffect(() => {
+    if (frontFile && !backFile && shouldAutoNavigate === false) {
+      setShouldAutoNavigate(true);
+    }
+  }, [frontFile, backFile, shouldAutoNavigate]);
+
+  useEffect(() => {
+    setPreOcrData(null);
+    setValidationResult(null);
+    setValidationError(null);
+  }, [frontFile, backFile]);
+
+  const performPreValidation = useCallback(async () => {
+    if (!frontFile || !backFile) {
+      const message = 'Debes subir ambas caras del DNI antes de continuar.';
+      setValidationError(message);
+      return { ok: false, message };
+    }
+
+    if (preOcrData && validationResult?.ok) {
+      return {
+        ok: true,
+        ocr: preOcrData,
+        validation: validationResult
+      };
+    }
+
+    try {
+      setIsValidating(true);
+      setValidationError(null);
+
+      const ocr = await extractDniText(frontFile, backFile);
+      const validation = validateDniConsistency(ocr);
+
+      if (!validation?.ok) {
+        setPreOcrData(null);
+        setValidationResult(validation);
+        setValidationError(validation?.message || 'Los datos del DNI no coinciden. Vuelve a subir las imágenes.');
+        return {
+          ok: false,
+          message: validation?.message,
+          validation
+        };
+      }
+
+      setPreOcrData(ocr);
+      setValidationResult(validation);
+      setValidationError(null);
+
+      return {
+        ok: true,
+        ocr,
+        validation
+      };
+    } catch (error) {
+      const message = error?.message || 'Error ejecutando OCR. Intenta de nuevo.';
+      setPreOcrData(null);
+      setValidationResult(null);
+      setValidationError(message);
+      return {
+        ok: false,
+        message,
+        error
+      };
+    } finally {
+      setIsValidating(false);
+    }
+  }, [frontFile, backFile, preOcrData, validationResult]);
 
   // Auto-navegación cuando ambos archivos están listos
   // Si DEMO_MODE está activo, pasar el setter del loader
@@ -37,15 +113,15 @@ function App() {
     currentView, 
     goTo, 
     shouldAutoNavigate,
-    DEMO_MODE.enabled ? setShowProcessingLoader : null  // Solo pasar si demo está activo
-  );
-
-  // Resetear auto-navegación cuando se suben archivos por primera vez
-  useEffect(() => {
-    if (frontFile && !backFile && shouldAutoNavigate === false) {
-      setShouldAutoNavigate(true);
+    DEMO_MODE.enabled ? setShowProcessingLoader : null,  // Solo pasar si demo está activo
+    performPreValidation,
+    (result) => {
+      setShouldAutoNavigate(false);
+      if (result?.message) {
+        setValidationError(result.message);
+      }
     }
-  }, [frontFile, backFile, shouldAutoNavigate]);
+  );
 
   const handleStartProcess = () => {
     // Cuando se inicia el proceso por primera vez, permitir auto-navegación
@@ -60,6 +136,16 @@ function App() {
   };
 
   const handleContinueToEditor = async () => {
+    if (isValidating) {
+      return;
+    }
+
+    const result = await performPreValidation();
+    if (!result?.ok) {
+      setShouldAutoNavigate(false);
+      return;
+    }
+
     // Si está en modo demo, mostrar loader
     if (DEMO_MODE.enabled) {
       setShowProcessingLoader(true);
@@ -99,6 +185,8 @@ function App() {
             onContinueToEditor={handleContinueToEditor}
             shouldAutoNavigate={shouldAutoNavigate}
             isProcessMode={true}
+            validationError={validationError}
+            isValidating={isValidating}
           />
         );
 
@@ -109,6 +197,8 @@ function App() {
             backFile={backFile}
             onBack={handleBackToStep}
             onProcess={handleDNIProcess}
+            initialOcrData={preOcrData}
+            initialValidation={validationResult}
           />
         );
       
