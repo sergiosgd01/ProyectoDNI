@@ -76,6 +76,9 @@ export class DNIProcessor {
         {
           frontFields: dniData.frontFields,
           backFields: dniData.backFields
+        },
+        {
+          precomputedOcr: dniData.preOcrData || null
         }
       );
 
@@ -86,6 +89,7 @@ export class DNIProcessor {
         frontImageUrl,
         backImageUrl,
         ocrData,
+        validation: dniData.validationResult || null,
         timestamp: new Date().toISOString(),
         message: 'Procesamiento completado'
       };

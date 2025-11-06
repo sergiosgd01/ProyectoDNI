@@ -3,10 +3,8 @@
  * Esta función NO usa hooks de React y puede llamarse desde cualquier módulo
  */
 
-// Campos OCR (extraer)
-const FRONT_STATIC_FIELDS = ['dni', 'numeroSoporte'];     
-const BACK_STATIC_FIELDS  = ['mrz'];   
-const OCR_LANGUAGE = 'spa';
+// OCRHelpers - normalización y validación de datos
+import * as OCRHelper from '../../utils/OCRhelpers';
 
 // Atributos presentes en el DNI 4.0 (cara frontal)
 export const POSICIONES = {
@@ -20,11 +18,11 @@ export const POSICIONES = {
     [0.01, 0.19, 0.21, 0.235], //dni pequeño (bandero EU)
     [0.82, 0.67, 0.95, 0.71] // dni con foto
   ],
-  fechaNacimiento: [[0.775, 0.524, 0.985, 0.596]],
   sexo: [[0.397, 0.53, 0.45, 0.592]],
   nacionalidad: [[0.525, 0.528, 0.679, 0.591]],
   fechaExpedicion: [[0.389, 0.615, 0.592, 0.682]],
   fechaCaducidad: [[0.592, 0.615, 0.793, 0.682]],
+  fechaNacimiento: [[0.775, 0.524, 0.985, 0.596]],
   numeroSoporte: [
     [0.392, 0.707, 0.585, 0.77], // numero de soporte
     [0.765, 0.175, 0.88, 0.25] //numero de soporte "ventana"
@@ -165,7 +163,8 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front') 
  * @param {Object} fields.backFields - Campos traseros a censurar
  * @returns {Promise<{frontImageUrl: string, backImageUrl: string}>}
  */
-export async function censorDniComplete(frontFile, backFile, fields) {
+export async function censorDniComplete(frontFile, backFile, fields, options = {}) {
+  const { precomputedOcr = null } = options;
   const frontFieldsToRedact = Object.entries(fields.frontFields || {})
     .filter(([, value]) => value === false)
     .map(([key]) => key);
@@ -183,16 +182,22 @@ export async function censorDniComplete(frontFile, backFile, fields) {
   ]);
 
   let ocrData = null;
-  try {
-    ocrData = await extractDniText(frontFile, backFile, fields);
+  if (precomputedOcr) {
+    ocrData = precomputedOcr;
     if (ocrData && (ocrData.front || ocrData.back)) {
-      console.groupCollapsed('Datos extrídos mediante OCR:')
-      console.log('Datos anverso: ', ocrData.front);
-      console.log('Datos reverso: ', ocrData.back);
+      console.groupCollapsed('Datos RAW OCR (prevalidado):', ocrData);
     }
     console.groupEnd();
-  } catch (ocrError) {
-    console.error('Error ejecutando OCR: ', ocrError);
+  } else {
+    try {
+      ocrData = await extractDniText(frontFile, backFile);
+      if (ocrData && (ocrData.front || ocrData.back)) {
+        console.groupCollapsed('Datos RAW OCR:', ocrData);
+      }
+      console.groupEnd();
+    } catch (ocrError) {
+      console.error('Error ejecutando OCR: ', ocrError);
+    }
   }
 
   return {
@@ -250,6 +255,7 @@ async function runOcrOnField(worker, baseCanvas, rect) {
   return text.replace(/\s+/g, ' ').trim();
 }
 
+// Extracción datos con OCR y normalización de datos
 async function extractSideText(imageFile, fieldNames, side = 'front') {
   if (!imageFile || !fieldNames || fieldNames.length === 0) {
     return null;
@@ -298,21 +304,30 @@ async function extractSideText(imageFile, fieldNames, side = 'front') {
   }
 }
 
+// Campos OCR (extraer)
+const getFrontOcrFields = () => Object.keys(POSICIONES);
+const getBackOcrFields = () => Object.keys(POSICIONES_BACK);
+const OCR_LANGUAGE = 'spa';
  /* 
  * Método principal - extractDniTextStatic: función principal que aplica OCR al DNI.
  *   Procesa los campos del anverso y del reverso declarados,
  *   llamando a extractSideText y a los métodos utils para cada campo.
  *   Devuelve un objeto con los textos extraídos: { front: {...}, back: {...} }.
  */
-
 export async function extractDniText(frontFile, backFile) {
-  const frontResults = frontFile
-    ? await extractSideText(frontFile, FRONT_STATIC_FIELDS, 'front')
+  const frontFieldList = getFrontOcrFields();
+  const backFieldList = getBackOcrFields();
+
+  const frontRaw = frontFile && frontFieldList.length
+    ? await extractSideText(frontFile, frontFieldList, 'front')
     : null;
 
-  const backResults = backFile
-    ? await extractSideText(backFile, BACK_STATIC_FIELDS, 'back')
+  const backRaw = backFile && backFieldList.length
+    ? await extractSideText(backFile, backFieldList, 'back')
     : null;
 
-  return { front: frontResults, back: backResults };
+  return {
+    front: frontRaw ? OCRHelper.normalizeDniData(frontRaw) : null,
+    back: backRaw ? OCRHelper.normalizeDniData(backRaw) : null
+  };
 }
