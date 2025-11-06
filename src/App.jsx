@@ -48,6 +48,63 @@ function App() {
     setValidationError(null);
   }, [frontFile, backFile]);
 
+  // const performPreValidation = useCallback(async () => {
+  //   if (!frontFile || !backFile) {
+  //     const message = 'Debes subir ambas caras del DNI antes de continuar.';
+  //     setValidationError(message);
+  //     return { ok: false, message };
+  //   }
+
+  //   if (preOcrData && validationResult?.ok) {
+  //     return {
+  //       ok: true,
+  //       ocr: preOcrData,
+  //       validation: validationResult
+  //     };
+  //   }
+
+  //   try {
+  //     setIsValidating(true);
+  //     setValidationError(null);
+
+  //     const ocr = await extractDniText(frontFile, backFile);
+  //     const validation = validateDniConsistency(ocr);
+
+  //     if (!validation?.ok) {
+  //       setPreOcrData(null);
+  //       setValidationResult(validation);
+  //       setValidationError(validation?.message || 'Los datos del DNI no coinciden. Vuelve a subir las imágenes.');
+  //       return {
+  //         ok: false,
+  //         message: validation?.message,
+  //         validation
+  //       };
+  //     }
+
+  //     setPreOcrData(ocr);
+  //     setValidationResult(validation);
+  //     setValidationError(null);
+
+  //     return {
+  //       ok: true,
+  //       ocr,
+  //       validation
+  //     };
+  //   } catch (error) {
+  //     const message = error?.message || 'Error ejecutando OCR. Intenta de nuevo.';
+  //     setPreOcrData(null);
+  //     setValidationResult(null);
+  //     setValidationError(message);
+  //     return {
+  //       ok: false,
+  //       message,
+  //       error
+  //     };
+  //   } finally {
+  //     setIsValidating(false);
+  //   }
+  // }, [frontFile, backFile, preOcrData, validationResult]);
+
   const performPreValidation = useCallback(async () => {
     if (!frontFile || !backFile) {
       const message = 'Debes subir ambas caras del DNI antes de continuar.';
@@ -55,6 +112,18 @@ function App() {
       return { ok: false, message };
     }
 
+    // ============================================
+    // VALIDACIÓN OCR DESHABILITADA TEMPORALMENTE
+    // ============================================
+    console.log('⚠️ Validación OCR deshabilitada - Pasando directamente al editor');
+    
+    return {
+      ok: true,
+      ocr: null,
+      validation: { ok: true, message: 'Validación omitida (desarrollo)' }
+    };
+
+    /* CÓDIGO ORIGINAL DE VALIDACIÓN COMENTADO
     if (preOcrData && validationResult?.ok) {
       return {
         ok: true,
@@ -103,7 +172,8 @@ function App() {
     } finally {
       setIsValidating(false);
     }
-  }, [frontFile, backFile, preOcrData, validationResult]);
+    */
+  }, [frontFile, backFile]);
 
   // Auto-navegación cuando ambos archivos están listos
   // Si DEMO_MODE está activo, pasar el setter del loader
