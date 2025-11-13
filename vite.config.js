@@ -8,10 +8,10 @@ export default defineConfig({
   server: {
     host: true,  // Permite acceso desde la red local o ngrok
     port: 5173,
-    https: {
-      key: fs.readFileSync('./cert-key.pem'),
-      cert: fs.readFileSync('./cert.pem'),
-    },
+    // https: {
+    //   key: fs.readFileSync('./cert-key.pem'),
+    //   cert: fs.readFileSync('./cert.pem'),
+    // },
     allowedHosts: [
       '.ngrok-free.dev',
       '.ngrok.io'
