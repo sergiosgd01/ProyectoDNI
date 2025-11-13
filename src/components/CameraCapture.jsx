@@ -5,7 +5,7 @@ function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const guideRef = useRef(null); // ✅ Referencia al rectángulo guía
+  const guideRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [devices, setDevices] = useState([]);
