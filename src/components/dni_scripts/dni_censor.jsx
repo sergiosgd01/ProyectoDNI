@@ -5,6 +5,7 @@
 
 // OCRHelpers - normalización y validación de datos
 import * as OCRHelper from '../../utils/OCRhelpers';
+import { TESSERACT_CONFIG } from '../../config/tesseractConfig';
 
 // Atributos presentes en el DNI 4.0 (cara frontal)
 export const POSICIONES = {
@@ -270,7 +271,16 @@ async function extractSideText(imageFile, fieldNames, side = 'front') {
     console.error('✘ No se pudo cargar tesseract.js. Asegúrate de instalar la dependencia.', error);
     throw error;
   }
-  const worker = await workerModule.createWorker(OCR_LANGUAGE);
+
+  const worker = await workerModule.createWorker(
+    OCR_LANGUAGE,
+    undefined,
+    {
+      workerPath: TESSERACT_CONFIG.workerPath,
+      corePath: TESSERACT_CONFIG.corePath,
+      langPath: TESSERACT_CONFIG.langPath,
+    }
+  );
 
   try {
 
