@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
+import ManualCropModal from './ManualCropModal';
 
 function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
@@ -11,6 +12,8 @@ function CameraCapture({ onCapture, onClose }) {
   const [devices, setDevices] = useState([]);
   const [detectionError, setDetectionError] = useState(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
+  const [showManualCrop, setShowManualCrop] = useState(false);
+  const [capturedFileForCrop, setCapturedFileForCrop] = useState(null);
   const isInitializing = useRef(false);
   const hasInitialized = useRef(false);
 
@@ -254,6 +257,9 @@ function CameraCapture({ onCapture, onClose }) {
           type: 'image/jpeg',
           lastModified: Date.now(),
         });
+
+        // Guardar archivo para posible recorte manual
+        setCapturedFileForCrop(croppedFile);
 
         console.log('✂️ Imagen recortada creada:', {
           width: canvas.width,
@@ -528,6 +534,18 @@ function CameraCapture({ onCapture, onClose }) {
                       <i className="bi bi-camera-fill"></i>
                       Intentar de nuevo
                     </button>
+                    
+                    {/* Botón de recorte manual */}
+                    {capturedFileForCrop && (
+                      <button
+                        onClick={() => setShowManualCrop(true)}
+                        className="bg-blue-600 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                      >
+                        <i className="bi bi-crop"></i>
+                        Recortar manualmente
+                      </button>
+                    )}
+                    
                     <button onClick={handleClose} className="bg-white/20 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
                       <i className="bi bi-x"></i>
                       Cancelar
@@ -555,6 +573,31 @@ function CameraCapture({ onCapture, onClose }) {
         )}
 
         <canvas ref={canvasRef} className="hidden" />
+        
+        {/* Modal de recorte manual */}
+        {showManualCrop && capturedFileForCrop && (
+          <ManualCropModal
+            file={capturedFileForCrop}
+            errorInfo={detectionError}
+            onCrop={(croppedFile) => {
+              console.log('✂️ [CameraCapture] Imagen recortada manualmente');
+              setShowManualCrop(false);
+              setDetectionError(null);
+              setCapturedFileForCrop(null);
+              
+              // Enviar imagen recortada al siguiente paso directamente
+              onCapture?.(croppedFile, { 
+                yolo: { ok: true, manualCrop: true },
+                manualCrop: true 
+              });
+              stopCamera();
+              onClose();
+            }}
+            onCancel={() => {
+              setShowManualCrop(false);
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -645,23 +688,36 @@ function CameraCapture({ onCapture, onClose }) {
                         <p className="text-sm whitespace-pre-line" style={{ color: 'var(--color-text-secondary)' }}>{detectionError.suggestion}</p>
                       </div>
                     )}
-                    <div className="flex gap-3 w-full max-w-md">
-                      <button
-                        onClick={() => {
-                          setDetectionError(null);
-                          if (videoRef.current && videoRef.current.paused) {
-                            videoRef.current.play().catch(console.error);
-                          }
-                        }}
-                        className="btn-primary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2"
-                      >
-                        <i className="bi bi-camera"></i>
-                        Intentar de nuevo
-                      </button>
-                      <button onClick={handleClose} className="btn-secondary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2">
-                        <i className="bi bi-x"></i>
-                        Cancelar
-                      </button>
+                    <div className="flex flex-col gap-3 w-full max-w-md">
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => {
+                            setDetectionError(null);
+                            if (videoRef.current && videoRef.current.paused) {
+                              videoRef.current.play().catch(console.error);
+                            }
+                          }}
+                          className="btn-primary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2"
+                        >
+                          <i className="bi bi-camera"></i>
+                          Intentar de nuevo
+                        </button>
+                        <button onClick={handleClose} className="btn-secondary flex-1 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2">
+                          <i className="bi bi-x"></i>
+                          Cancelar
+                        </button>
+                      </div>
+                      
+                      {/* Botón de recorte manual */}
+                      {capturedFileForCrop && (
+                        <button
+                          onClick={() => setShowManualCrop(true)}
+                          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                        >
+                          <i className="bi bi-crop"></i>
+                          Recortar manualmente
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -695,6 +751,31 @@ function CameraCapture({ onCapture, onClose }) {
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
+        
+        {/* Modal de recorte manual (desktop) */}
+        {showManualCrop && capturedFileForCrop && (
+          <ManualCropModal
+            file={capturedFileForCrop}
+            errorInfo={detectionError}
+            onCrop={(croppedFile) => {
+              console.log('✂️ [CameraCapture] Imagen recortada manualmente');
+              setShowManualCrop(false);
+              setDetectionError(null);
+              setCapturedFileForCrop(null);
+              
+              // Enviar imagen recortada al siguiente paso directamente
+              onCapture?.(croppedFile, { 
+                yolo: { ok: true, manualCrop: true },
+                manualCrop: true 
+              });
+              stopCamera();
+              onClose();
+            }}
+            onCancel={() => {
+              setShowManualCrop(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );

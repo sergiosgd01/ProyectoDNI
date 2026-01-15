@@ -1,4 +1,7 @@
-export async function processWithYolo(file, { url = ' https://blotless-krysta-nontemporally.ngrok-free.dev/process', timeout = 90000 } = {}) {
+export async function processWithYolo(file, { url = 'https://blotless-krysta-nontemporally.ngrok-free.dev/process', timeout = 90000 } = {}) {
+// export async function processWithYolo(file, { url = 'http://localhost:8000/process', timeout = 90000 } = {}) {
+// export async function processWithYolo(file, { url = 'https://surname-fusion-pill-minor.trycloudflare.com/process', timeout = 90000 } = {}) {
+
   // ✅ Validación básica
   if (!file || !(file instanceof File || file instanceof Blob)) {
     return { ok: false, error: 'invalid_file', message: 'Archivo inválido o no proporcionado' };

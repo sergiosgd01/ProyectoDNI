@@ -1,10 +1,13 @@
 import React, { useState, useId, useEffect } from 'react';
 import CameraCapture from './CameraCapture';
+import ManualCropModal from './ManualCropModal';
 import { processWithYolo } from '../services/processWithYolo';
 
 function FileUploadZone({ onFileSelect }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showManualCrop, setShowManualCrop] = useState(false);
+  const [originalFileForCrop, setOriginalFileForCrop] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false); 
   const [processingError, setProcessingError] = useState(null); 
@@ -63,8 +66,11 @@ function FileUploadZone({ onFileSelect }) {
           } 
         });
       } else {
-        // ❌ Error en el procesamiento
+        // ❌ Error en el procesamiento - Mostrar opción de recorte manual
         console.warn('⚠️ [FileUploadZone] Error de procesamiento:', result);
+        
+        // Guardar archivo original para recorte manual
+        setOriginalFileForCrop(file);
         
         setProcessingError({
           type: result.errorType || 'unknown_error',
@@ -199,15 +205,34 @@ function FileUploadZone({ onFileSelect }) {
                 {processingError.minRequired && ` (mínimo: ${(processingError.minRequired * 100).toFixed(0)}%)`}
               </p>
             )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setProcessingError(null);
-              }}
-              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Intentar con otra imagen
-            </button>
+            
+            {/* Botones de acción */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Botón para recorte manual */}
+              {originalFileForCrop && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowManualCrop(true);
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <i className="bi bi-crop"></i>
+                  <span>Recortar manualmente</span>
+                </button>
+              )}
+              
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setProcessingError(null);
+                  setOriginalFileForCrop(null);
+                }}
+                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Intentar con otra imagen
+              </button>
+            </div>
           </div>
         )}
         
@@ -296,6 +321,29 @@ function FileUploadZone({ onFileSelect }) {
         <CameraCapture
           onCapture={handleCameraCapture}
           onClose={() => setShowCamera(false)}
+        />
+      )}
+
+      {/* Modal de recorte manual */}
+      {showManualCrop && originalFileForCrop && (
+        <ManualCropModal
+          file={originalFileForCrop}
+          errorInfo={processingError}
+          onCrop={(croppedFile) => {
+            console.log('✂️ [FileUploadZone] Imagen recortada manualmente');
+            setShowManualCrop(false);
+            setProcessingError(null);
+            setOriginalFileForCrop(null);
+            
+            // Enviar imagen recortada al siguiente paso directamente (sin YOLO)
+            onFileSelect(croppedFile, { 
+              yolo: { ok: true, manualCrop: true },
+              manualCrop: true 
+            });
+          }}
+          onCancel={() => {
+            setShowManualCrop(false);
+          }}
         />
       )}
     </>
