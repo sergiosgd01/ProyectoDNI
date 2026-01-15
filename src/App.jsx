@@ -9,8 +9,6 @@ import { useNavigation } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
 import { VIEWS } from './constants/views';
 import { DEMO_MODE } from './config/demoMode';
-import { extractDniText } from './components/dni_scripts/dni_censor.jsx';
-import { validateDniConsistency } from './utils/OCRhelpers';
 import './index.css'; 
 
 function App() {
