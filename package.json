@@ -16,6 +16,7 @@
     "express": "^5.1.0",
     "jspdf": "^3.0.3",
     "mongoose": "^8.19.1",
+    "onnxruntime-web": "^1.23.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tesseract.js": "^5.1.0"
