@@ -137,7 +137,7 @@ export async function censorDniComplete(frontFile, backFile, fields, options = {
 
   const getLabelsToRedact = (selectedFields) => {
     return Object.entries(selectedFields)
-      .filter(([_, visible]) => visible === false) 
+      .filter(([_, visible]) => visible === true) 
       .flatMap(([key]) => mapUiToYolo[key] || [key.toUpperCase()]);
   };
 
