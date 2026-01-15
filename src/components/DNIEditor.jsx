@@ -3,12 +3,10 @@ import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
-import { dniProcessor } from '../services/dniProcessor';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
-import { validateDniConsistency } from '../utils/OCRhelpers';
-import { extractDniText } from './dni_scripts/dni_censor';
+import {censorDniComplete} from './dni_scripts/dni_censor'
 import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
 import { dniApi } from '../services/dniApi';
@@ -40,7 +38,8 @@ export default function DNIEditor({
     'fechaCaducidad',
     'numeroSoporte',
     'can',
-    'firma'
+    'firma',
+    'cli'
   ];
 
   // Campos disponibles para configuración back
@@ -49,8 +48,10 @@ export default function DNIEditor({
     'domicilio',
     'municipio',
     'provincia',
+    'lugarNacimiento',
     'equipoExpedidor',
-    'progenitores'
+    'progenitores',
+    'ventanaSoporte'
   ];
 
    // Combinar todos los campos
@@ -222,6 +223,175 @@ export default function DNIEditor({
     setSelectedProfile(null);
   };
 
+  const handleProcessDNI = async () => {
+    try {
+      setIsProcessing(true);
+      setProcessingError(null);
+      setValidationPopup(null);
+
+      // Si está en modo demo, cargar las imágenes demo como archivos File
+      let frontFileToProcess = frontFile;
+      let backFileToProcess = backFile;
+
+      if (DEMO_MODE.enabled) {
+        const frontResponse = await fetch('/demo/front-image.jpg');
+        const frontBlob = await frontResponse.blob();
+        frontFileToProcess = new File([frontBlob], 'front-demo.jpg', { type: 'image/jpeg' });
+
+        if (backFile) {
+          const backResponse = await fetch('/demo/back-image.jpg');
+          const backBlob = await backResponse.blob();
+          backFileToProcess = new File([backBlob], 'back-demo.jpg', { type: 'image/jpeg' });
+        }
+      }
+
+      // Preparar datos para el procesador
+      const dniData = {
+        frontFile: frontFileToProcess,
+        backFile: backFileToProcess,
+        frontFields: selectedFrontFields,
+        backFields: selectedBackFields
+      };
+
+      // Detección de campos (modelo yolo)
+      const detections = await detectDniFromFile(frontFileToProcess);
+      let document = detections.find(d => d.label === 'DOC_DNI');
+      if (document && detections.length == 20) {
+        console.log("[+] Anverso detectado - todos los campos ["+detections.length+"/20]")
+      } else if (document) {
+        console.log("[+] Anverso detectado - Campos parciales ["+detections.length+"/20]")
+      } else {
+        console.log("[-] Anverso no detectado - Implemenar aqui censura manual")
+      }
+
+      const back_detections = await detectDniFromFile(backFileToProcess);
+      document = back_detections.find(d => d.label === 'DOC_DNI_REV')
+      if (document && back_detections.length == 7) {
+        console.log("[+] Reverso detectado - todos los campos ["+back_detections.length+"/7]")
+      } else if (document) {
+        console.log("[+] Reverso detectado - Campos parciales ["+back_detections.length+"/7]")
+      } else {
+        console.log("[-] Reverso no detectado - Implementar aqui censura manual")
+      }
+
+      console.log("[+] Campos ANVERSO:", detections.map(d => d.label));
+      console.log("[+] Campos REVERSO:", back_detections.map(d => d.label));
+
+      // Validación (OCR) de campos y censura
+      const result = await censorDniComplete(
+        frontFileToProcess, 
+        backFileToProcess, 
+        { frontFields: selectedFrontFields, backFields: selectedBackFields },
+        { 
+          // Pasamos las detecciones como opciones extra
+          frontDetections: detections, 
+          backDetections: back_detections 
+        }
+      );
+
+
+      const { frontImageUrl, backImageUrl, ocrData, processedFields } = result;
+
+      if(frontImageUrl == null) {
+        console.log("[-] Anverso no detectado - Implementar aqui censura manual")
+      }
+
+      if(backImageUrl == null ){
+        console.log("[-] Reverso no detectado - Implementar aqui censura manual")
+      }
+
+      setProcessedResult({
+        frontImageUrl,
+        backImageUrl,
+        ocrData,
+        processedFields
+      });
+
+      if (ocrData) {
+        setCachedOcrData(ocrData);
+        setValidationPopup({type: 'success',message: 'Censura completados con éxito.'});
+      }
+      if (onProcessed) {
+        onProcessed(result);
+      }
+
+
+      // if (!validation) {
+      //   validation = validateDniConsistency(ocrDataToUse);
+      // }
+      // if (!validation?.ok) {
+      //   console.warn('Validación MRZ fallida:', validation);
+      //   setProcessedResult(null);
+      //   setProcessingError(validation?.message || 'Validación del DNI fallida');
+      //   setValidationPopup({
+      //     type: 'error',
+      //     message:
+      //       validation?.message ||
+      //       'Los datos del reverso no coinciden con el anverso. Vuelve a subir ambas imágenes.'
+      //   });
+      //   return;
+      // }
+
+      // validación de elementos de seguridad y guardado en bd
+      // setProcessedResult(result);
+      // setValidationPopup({
+      //   type: 'success',
+      //   message: validation.message
+      // });
+      // const hologramReadable = true; 
+      // const homogenityPassed = true;
+      // const extractedDniNumber = result?.ocrData?.front?.dni || null;
+      // const normalizedDniNumber = extractedDniNumber
+      //   ? extractedDniNumber.replace(/\s+/g, ' ').trim().split(' ')[0]
+      //   : null;
+      // const resolvedProfile = selectedProfile
+      //   ? DNI_PROFILES.getProfileById(selectedProfile)
+      //   : null;
+      // const isCustomProfile = !resolvedProfile;
+      // const profileUsed = isCustomProfile ? 'personalizado' : resolvedProfile.id;
+
+    //   const saveData = {
+    //     dniNumber: normalizedDniNumber || 'DESCONOCIDO',
+    //     hologramReadable,
+    //     homogenityPassed,
+    //     profileUsed,
+    //     watermarkText: watermarkText || null 
+    //   };
+      
+    //   if (isCustomProfile) {
+    //     const allFields = {
+    //       ...selectedFrontFields,
+    //       ...selectedBackFields
+    //     };
+        
+    //     saveData.customFields = allFields;
+    //   }
+
+    //   if (result?.ocrData) {
+    //     saveData.ocrData = result.ocrData;
+    //   }
+
+    //   if (validation?.details) {
+    //     saveData.validation = validation.details;
+    //   }
+
+    //   // Guardar en BD
+    //   await dniApi.saveDniRecord(saveData);
+
+    //   console.log('✅ DNI guardado en la base de datos');
+      
+    //   if (onProcessed) {
+    //     onProcessed(result);
+    //   }
+
+    } catch (error) {
+      console.error('Error procesando DNI:', error);
+      setProcessingError(error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // const handleProcessDNI = async () => {
   //   try {
   //     setIsProcessing(true);
@@ -255,6 +425,15 @@ export default function DNIEditor({
   //       backFields: selectedBackFields
   //     };
 
+  //     // ============================================
+  //     // VALIDACIÓN OCR DESHABILITADA TEMPORALMENTE
+  //     // ============================================
+  //     console.log('⚠️ Validación OCR deshabilitada - Procesando sin validar');
+      
+  //     let ocrDataToUse = cachedOcrData;
+  //     let validation = { ok: true, message: 'Validación omitida (desarrollo)' };
+
+  //     /* CÓDIGO ORIGINAL DE VALIDACIÓN COMENTADO
   //     let ocrDataToUse = cachedOcrData;
   //     let validation = cachedValidation;
 
@@ -278,12 +457,13 @@ export default function DNIEditor({
   //       });
   //       return;
   //     }
+  //     */
 
   //     setCachedOcrData(ocrDataToUse);
   //     setCachedValidation(validation);
   //     dniData.preOcrData = ocrDataToUse;
   //     dniData.validationResult = validation;
-  //     console.log('Validación MRZ utilizada:', validation.details);
+  //     console.log('Validación MRZ utilizada:', validation);
 
   //     if (frontFileToProcess) {
   //       try {
@@ -300,56 +480,10 @@ export default function DNIEditor({
   //     setProcessedResult(result);
   //     setValidationPopup({
   //       type: 'success',
-  //       message: validation.message
+  //       message: 'DNI procesado correctamente (sin validación OCR)'
   //     });
 
-  //     const hologramReadable = true; 
-  //     const homogenityPassed = true;
-  //     const extractedDniNumber = result?.ocrData?.front?.dni || null;
-  //     const normalizedDniNumber = extractedDniNumber
-  //       ? extractedDniNumber.replace(/\s+/g, ' ').trim().split(' ')[0]
-  //       : null;
-
-  //     const resolvedProfile = selectedProfile
-  //       ? DNI_PROFILES.getProfileById(selectedProfile)
-  //       : null;
-  //     const isCustomProfile = !resolvedProfile;
-  //     const profileUsed = isCustomProfile ? 'personalizado' : resolvedProfile.id;
-
-  //     const saveData = {
-  //       dniNumber: normalizedDniNumber || 'DESCONOCIDO',
-  //       hologramReadable,
-  //       homogenityPassed,
-  //       profileUsed,
-  //       watermarkText: watermarkText || null 
-  //     };
-      
-  //     if (isCustomProfile) {
-  //       const allFields = {
-  //         ...selectedFrontFields,
-  //         ...selectedBackFields
-  //       };
-        
-  //       saveData.customFields = allFields;
-  //     }
-
-  //     if (result?.ocrData) {
-  //       saveData.ocrData = result.ocrData;
-  //     }
-
-  //     if (validation?.details) {
-  //       saveData.validation = validation.details;
-  //     }
-
-  //     // Guardar en BD
-  //     await dniApi.saveDniRecord(saveData);
-
-  //     console.log('✅ DNI guardado en la base de datos');
-      
-  //     if (onProcessed) {
-  //       onProcessed(result);
-  //     }
-
+  //     // ...existing code... (resto del guardado en BD)
   //   } catch (error) {
   //     console.error('❌ Error procesando DNI:', error);
   //     setProcessingError(error.message);
@@ -357,106 +491,6 @@ export default function DNIEditor({
   //     setIsProcessing(false);
   //   }
   // };
-
-  const handleProcessDNI = async () => {
-    try {
-      setIsProcessing(true);
-      setProcessingError(null);
-      setValidationPopup(null);
-
-      console.log('Procesando DNI con configuración front:', selectedFrontFields);
-      console.log('Procesando DNI con configuración back:', selectedBackFields);
-
-      // Si está en modo demo, cargar las imágenes demo como archivos File
-      let frontFileToProcess = frontFile;
-      let backFileToProcess = backFile;
-
-      if (DEMO_MODE.enabled) {
-        const frontResponse = await fetch('/demo/front-image.jpg');
-        const frontBlob = await frontResponse.blob();
-        frontFileToProcess = new File([frontBlob], 'front-demo.jpg', { type: 'image/jpeg' });
-
-        if (backFile) {
-          const backResponse = await fetch('/demo/back-image.jpg');
-          const backBlob = await backResponse.blob();
-          backFileToProcess = new File([backBlob], 'back-demo.jpg', { type: 'image/jpeg' });
-        }
-      }
-
-      // Preparar datos para el procesador
-      const dniData = {
-        frontFile: frontFileToProcess,
-        backFile: backFileToProcess,
-        frontFields: selectedFrontFields,
-        backFields: selectedBackFields
-      };
-
-      // ============================================
-      // VALIDACIÓN OCR DESHABILITADA TEMPORALMENTE
-      // ============================================
-      console.log('⚠️ Validación OCR deshabilitada - Procesando sin validar');
-      
-      let ocrDataToUse = cachedOcrData;
-      let validation = { ok: true, message: 'Validación omitida (desarrollo)' };
-
-      /* CÓDIGO ORIGINAL DE VALIDACIÓN COMENTADO
-      let ocrDataToUse = cachedOcrData;
-      let validation = cachedValidation;
-
-      if (!ocrDataToUse) {
-        ocrDataToUse = await extractDniText(frontFileToProcess, backFileToProcess);
-      }
-
-      if (!validation) {
-        validation = validateDniConsistency(ocrDataToUse);
-      }
-
-      if (!validation?.ok) {
-        console.warn('Validación MRZ fallida:', validation);
-        setProcessedResult(null);
-        setProcessingError(validation?.message || 'Validación del DNI fallida');
-        setValidationPopup({
-          type: 'error',
-          message:
-            validation?.message ||
-            'Los datos del reverso no coinciden con el anverso. Vuelve a subir ambas imágenes.'
-        });
-        return;
-      }
-      */
-
-      setCachedOcrData(ocrDataToUse);
-      setCachedValidation(validation);
-      dniData.preOcrData = ocrDataToUse;
-      dniData.validationResult = validation;
-      console.log('Validación MRZ utilizada:', validation);
-
-      if (frontFileToProcess) {
-        try {
-          const rectangles = await detectDniFromFile(frontFileToProcess);
-          console.log("[Detector] Coordenadas detectadas durante el procesamiento:", rectangles);
-        } catch (detectorError) {
-          console.error("[Detector] Error ejecutando detección previa al procesamiento:", detectorError);
-        }
-      }
-
-      const result = await dniProcessor.processeDNI(dniData);
-      console.log('Datos Normalizados OCR:', result?.ocrData);
-
-      setProcessedResult(result);
-      setValidationPopup({
-        type: 'success',
-        message: 'DNI procesado correctamente (sin validación OCR)'
-      });
-
-      // ...existing code... (resto del guardado en BD)
-    } catch (error) {
-      console.error('❌ Error procesando DNI:', error);
-      setProcessingError(error.message);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   // Función para combinar ambas imágenes en JPG con marca de agua
   const handleDownloadCombined = async () => {
