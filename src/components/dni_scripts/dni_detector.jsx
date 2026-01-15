@@ -1,346 +1,227 @@
 import React, { useEffect, useRef, useState } from "react";
+// Asegúrate de tener: npm install onnxruntime-web
 
-const MODEL_PATH = "/models/model_prov.onnx";
+const MODEL_PATH = "/models/best.onnx";
 const MODEL_INPUT_SIZE = 640;
+const CONFIDENCE_THRESHOLD = 0.5;
+const IOU_THRESHOLD = 0.45;
+
+// Tus clases en el orden exacto del entrenamiento (YAML)
+const CLASS_NAMES = [
+  'APELLIDOS', 'CAN', 'CLI', 'DOC_DNI', 'DOC_DNI_REV', 'DOMICILIO', 
+  'EMISIÓN', 'EQUIPO', 'ES', 'ESP', 'ESP_HOLO', 'FIRMA', 'FOTOGRAFIA', 
+  'HIJO_DE', 'LUGAR_NACIMIENTO', 'MRZ', 'NACIMIENTO', 'NACIONALIDAD', 
+  'NOMBRE', 'NUM_DNI', 'NUM_DNI_MIN', 'OPT_VAR', 'SEXO', 
+  'SOPORTE', 'SOPORTE_MIN', 'VALIDEZ'
+];
 
 let sharedSession = null;
-let sharedSessionPromise = null;
 
+// --- 1. CARGA DEL MODELO ---
 const ensureSession = async () => {
-  if (sharedSession) {
-    return sharedSession;
-  }
+  if (sharedSession) return sharedSession;
+  if (!window.ort) throw new Error("ONNX Runtime no encontrado");
 
-  if (!window.ort) {
-    console.warn("[Detector] ONNX Runtime todavía no está disponible en window.ort");
-    return null;
-  }
-
-  if (!sharedSessionPromise) {
-    console.log("[Detector] Inicializando modelo ONNX (compartido)...");
-    sharedSessionPromise = window.ort.InferenceSession.create(MODEL_PATH, {
-      executionProviders: ["wasm"],
-      executionMode: "sequential"
-    })
-      .then((sess) => {
-        sharedSession = sess;
-        console.log("[Detector] Modelo cargado correctamente");
-        return sess;
-      })
-      .catch((error) => {
-        sharedSessionPromise = null;
-        throw error;
-      });
-  }
-
-  return sharedSessionPromise;
+  sharedSession = await window.ort.InferenceSession.create(MODEL_PATH, {
+    executionProviders: ["wasm"], 
+    graphOptimizationLevel: "all"
+  });
+  return sharedSession;
 };
 
-
-/**
- * Normaliza la salida del modelo para obtener rectángulos listos para recorte.
- * Devuelve coordenadas en píxeles contra el canvas de entrada.
- */
-const parseDetections = (outputTensor, imageWidth, imageHeight) => {
-  if (!outputTensor || !outputTensor.data || !outputTensor.data.length) {
-    return [];
-  }
-
-  const { data, dims } = outputTensor;
-
-  const stride = dims && dims.length ? dims[dims.length - 1] : 4;
-  const totalDetections = Math.floor(data.length / stride);
-  const rectangles = [];
-
-  for (let i = 0; i < totalDetections; i += 1) {
-    const offset = i * stride;
-    const x1 = data[offset];
-    const y1 = data[offset + 1];
-    const x2 = data[offset + 2];
-    const y2 = data[offset + 3];
-    const confidence = stride > 4 ? data[offset + 4] : undefined;
-    const labelIndex = stride > 5 ? data[offset + 5] : undefined;
-
-    if (![x1, y1, x2, y2].every(Number.isFinite)) {
-      continue;
-    }
-
-    const isNormalized =
-      Math.max(Math.abs(x1), Math.abs(y1), Math.abs(x2), Math.abs(y2)) <= 1.0001;
-
-    const xMin = isNormalized ? x1 * imageWidth : x1;
-    const yMin = isNormalized ? y1 * imageHeight : y1;
-    const xMax = isNormalized ? x2 * imageWidth : x2;
-    const yMax = isNormalized ? y2 * imageHeight : y2;
-
-    const width = Math.max(0, xMax - xMin);
-    const height = Math.max(0, yMax - yMin);
-
-    if (width === 0 || height === 0) {
-      continue;
-    }
-
-    rectangles.push({
-      x: Math.max(0, Math.round(xMin)),
-      y: Math.max(0, Math.round(yMin)),
-      width: Math.round(width),
-      height: Math.round(height),
-      x2: Math.max(0, Math.round(xMax)),
-      y2: Math.max(0, Math.round(yMax)),
-      confidence,
-      labelIndex
-    });
-  }
-
-  return rectangles;
-};
-
-const mapRectanglesToSource = (rectangles, meta, sourceWidth, sourceHeight) => {
-  if (!meta) {
-    return rectangles;
-  }
-
-  const { scale, padX, padY } = meta;
-  if (!scale || scale <= 0) {
-    return rectangles;
-  }
-
-  return rectangles
-    .map((rect) => {
-      const x1 = (rect.x - padX) / scale;
-      const y1 = (rect.y - padY) / scale;
-      const x2 = (rect.x2 - padX) / scale;
-      const y2 = (rect.y2 - padY) / scale;
-
-      const xMin = Math.max(0, Math.min(sourceWidth, x1));
-      const yMin = Math.max(0, Math.min(sourceHeight, y1));
-      const xMax = Math.max(0, Math.min(sourceWidth, x2));
-      const yMax = Math.max(0, Math.min(sourceHeight, y2));
-
-      const width = Math.max(0, xMax - xMin);
-      const height = Math.max(0, yMax - yMin);
-
-      if (width === 0 || height === 0) {
-        return null;
-      }
-
-      return {
-        ...rect,
-        x: Math.round(xMin),
-        y: Math.round(yMin),
-        x2: Math.round(xMax),
-        y2: Math.round(yMax),
-        width: Math.round(width),
-        height: Math.round(height)
-      };
-    })
-    .filter(Boolean);
-};
-
-const letterboxCanvas = (sourceCanvas, targetSize = MODEL_INPUT_SIZE) => {
+// --- 2. PREPROCESAMIENTO ---
+const preprocessing = (sourceCanvas, targetSize) => {
   const canvas = document.createElement("canvas");
   canvas.width = targetSize;
   canvas.height = targetSize;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "black";
+
+  ctx.fillStyle = "rgb(255, 182, 193)"; // Fondo rosa
   ctx.fillRect(0, 0, targetSize, targetSize);
 
   const scale = Math.min(targetSize / sourceCanvas.width, targetSize / sourceCanvas.height);
-  const drawWidth = Math.round(sourceCanvas.width * scale);
-  const drawHeight = Math.round(sourceCanvas.height * scale);
-  const padX = Math.floor((targetSize - drawWidth) / 2);
-  const padY = Math.floor((targetSize - drawHeight) / 2);
+  const w = Math.round(sourceCanvas.width * scale);
+  const h = Math.round(sourceCanvas.height * scale);
+  const x = Math.floor((targetSize - w) / 2);
+  const y = Math.floor((targetSize - h) / 2);
 
-  ctx.drawImage(
-    sourceCanvas,
-    0,
-    0,
-    sourceCanvas.width,
-    sourceCanvas.height,
-    padX,
-    padY,
-    drawWidth,
-    drawHeight
-  );
+  ctx.drawImage(sourceCanvas, 0, 0, sourceCanvas.width, sourceCanvas.height, x, y, w, h);
 
-  return {
-    canvas,
-    meta: {
-      scale,
-      padX,
-      padY,
-      targetSize
+  const imageData = ctx.getImageData(0, 0, targetSize, targetSize);
+  const { data } = imageData; 
+  const float32Data = new Float32Array(3 * targetSize * targetSize);
+
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    float32Data[j] = data[i] / 255.0;                         
+    float32Data[j + targetSize * targetSize] = data[i + 1] / 255.0;     
+    float32Data[j + 2 * targetSize * targetSize] = data[i + 2] / 255.0; 
+  }
+
+  const tensor = new window.ort.Tensor("float32", float32Data, [1, 3, targetSize, targetSize]);
+  return { tensor, meta: { scale, x, y } };
+};
+
+// --- 3. POSTPROCESAMIENTO MULTI-CLASE ---
+
+const calculateIoU = (box1, box2) => {
+  const x1 = Math.max(box1.x, box2.x);
+  const y1 = Math.max(box1.y, box2.y);
+  const x2 = Math.min(box1.x + box1.width, box2.x + box2.width);
+  const y2 = Math.min(box1.y + box1.height, box2.y + box2.height);
+  const intersection = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  return intersection / ((box1.width * box1.height) + (box2.width * box2.height) - intersection);
+};
+
+/**
+ * NMS "Per Class": 
+ * Evita que una caja de 'SOPORTE' (grande) elimine una de 'FOTOGRAFIA' (pequeña)
+ * solo porque se solapan. Solo comparamos cajas de la MISMA clase.
+ */
+const runNMS = (boxes) => {
+  if (boxes.length === 0) return [];
+  
+  // Agrupar por classId
+  const boxesByClass = {};
+  boxes.forEach(box => {
+    if (!boxesByClass[box.classId]) boxesByClass[box.classId] = [];
+    boxesByClass[box.classId].push(box);
+  });
+
+  const finalBoxes = [];
+
+  // Ejecutar NMS independientemente para cada clase
+  Object.keys(boxesByClass).forEach(classId => {
+    const classBoxes = boxesByClass[classId];
+    classBoxes.sort((a, b) => b.confidence - a.confidence);
+    
+    const active = new Array(classBoxes.length).fill(true);
+    for (let i = 0; i < classBoxes.length; i++) {
+      if (active[i]) {
+        finalBoxes.push(classBoxes[i]);
+        for (let j = i + 1; j < classBoxes.length; j++) {
+          if (active[j] && calculateIoU(classBoxes[i], classBoxes[j]) > IOU_THRESHOLD) {
+            active[j] = false;
+          }
+        }
+      }
     }
-  };
+  });
+
+  return finalBoxes;
 };
 
-const tensorFromCanvas = (canvas) => {
-  const ctx = canvas.getContext("2d");
-  const { width, height } = canvas;
-  const imageData = ctx.getImageData(0, 0, width, height);
-  const data = Float32Array.from(imageData.data).filter((_, i) => i % 4 !== 3);
-  return new window.ort.Tensor("float32", data, [1, 3, height, width]);
+const postprocessing = (outputTensor, meta) => {
+  const modelOutput = outputTensor.data; 
+  // dims: [1, 4 + 26 clases, 8400] -> [1, 30, 8400]
+  const [_, rows, cols] = outputTensor.dims; 
+  
+  let boxes = [];
+
+  // Iteramos sobre las 8400 "anchors"
+  for (let i = 0; i < cols; i++) {
+    // 1. Encontrar la clase con mayor probabilidad para esta caja
+    let maxScore = -Infinity;
+    let maxClassId = -1;
+
+    // Las probabilidades de clase empiezan en la fila 4 hasta la fila 29
+    for (let c = 0; c < CLASS_NAMES.length; c++) {
+      const score = modelOutput[(4 + c) * cols + i];
+      if (score > maxScore) {
+        maxScore = score;
+        maxClassId = c;
+      }
+    }
+
+    // 2. Si supera el umbral, procesamos la caja
+    if (maxScore > CONFIDENCE_THRESHOLD) {
+      const cx = modelOutput[i];
+      const cy = modelOutput[cols + i];
+      const w = modelOutput[2 * cols + i];
+      const h = modelOutput[3 * cols + i];
+
+      let x = (cx - w / 2 - meta.x) / meta.scale;
+      let y = (cy - h / 2 - meta.y) / meta.scale;
+      const width = w / meta.scale;
+      const height = h / meta.scale;
+
+      boxes.push({
+        classId: maxClassId,
+        label: CLASS_NAMES[maxClassId], // Agregamos el nombre legible
+        confidence: maxScore,
+        x, y, width, height
+      });
+    }
+  }
+
+  return runNMS(boxes);
 };
 
-const inferDetections = async (session, inputCanvas) => {
-  if (!session) {
-    throw new Error("Sesión de modelo no disponible");
-  }
-
-  if (!inputCanvas) {
-    throw new Error("Canvas de entrada requerido");
-  }
-
-  const ctx = inputCanvas.getContext("2d");
-  if (!ctx) {
-    throw new Error("No se pudo obtener el contexto 2D del canvas de entrada");
-  }
-
-  const { canvas: processedCanvas, meta } = letterboxCanvas(inputCanvas, MODEL_INPUT_SIZE);
-  const tensor = tensorFromCanvas(processedCanvas);
-
-  const feeds = { images: tensor }; // Ajusta 'images' al nombre del input de tu modelo
+// --- 4. FUNCIÓN CORE ---
+const runYoloInference = async (canvas) => {
+  const session = await ensureSession();
+  const { tensor, meta } = preprocessing(canvas, MODEL_INPUT_SIZE);
+  
+  const feeds = { images: tensor };
   const results = await session.run(feeds);
-
-  const letterboxRects = parseDetections(results.output0, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE);
-  const mappedRects = mapRectanglesToSource(
-    letterboxRects,
-    meta,
-    inputCanvas.width,
-    inputCanvas.height
-  );
-
-  return mappedRects;
+  
+  return postprocessing(results.output0, meta);
 };
 
+// --- 5. COMPONENTE REACT (DEBUGGER VISUAL) ---
 const DniDetector = ({ inputCanvas, onDetection }) => {
-  const [session, setSession] = useState(null);
   const canvasRef = useRef(null);
 
   useEffect(() => {
-    const initModel = async () => {
-      console.log("[Detector] Inicializando modelo ONNX...");
+    if (!inputCanvas) return;
+    const process = async () => {
       try {
-        const sess = await ensureSession();
-        if (!sess) return;
-        setSession(sess);
-      } catch (error) {
-        console.error("[Detector] Error cargando el modelo:", error);
-      }
-    };
-
-    initModel();
-  }, []);
-
-  useEffect(() => {
-    if (!inputCanvas || !session) return;
-
-    const detectDNI = async () => {
-      console.log("[Detector] Ejecutando detección...");
-
-      try {
-        const rectangles = await inferDetections(session, inputCanvas);
-        console.log("[Detector] Bounding boxes detectadas:", rectangles);
-        rectangles.forEach((rect, idx) => {
-          console.log(
-            `[Detector] Rect ${idx}: x=${rect.x}, y=${rect.y}, width=${rect.width}, height=${rect.height}`
-          );
-        });
+        const boxes = await runYoloInference(inputCanvas);
+        console.log("[React] Detecciones:", boxes);
 
         const canvas = canvasRef.current;
-        if (!canvas) {
-          console.warn("[Detector] Canvas de salida no disponible para dibujar");
-          if (onDetection) onDetection(rectangles, null);
-          return;
-        }
-
         canvas.width = inputCanvas.width;
         canvas.height = inputCanvas.height;
-        const ctx2 = canvas.getContext("2d");
-        ctx2.drawImage(inputCanvas, 0, 0);
-
-        rectangles.forEach(({ x, y, width, height }) => {
-          ctx2.strokeStyle = "red";
-          ctx2.lineWidth = 2;
-          ctx2.strokeRect(x, y, width, height);
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(inputCanvas, 0, 0);
+        
+        // Dibujado elegante
+        ctx.lineWidth = 2;
+        ctx.font = "14px Arial";
+        
+        boxes.forEach(box => {
+          // Color aleatorio consistente basado en ID de clase
+          const colorHue = (box.classId * 137.508) % 360; 
+          ctx.strokeStyle = `hsl(${colorHue}, 70%, 50%)`;
+          ctx.strokeRect(box.x, box.y, box.width, box.height);
+          
+          // Etiqueta
+          ctx.fillStyle = `hsl(${colorHue}, 70%, 50%)`;
+          ctx.fillRect(box.x, box.y - 18, ctx.measureText(box.label).width + 10, 18);
+          ctx.fillStyle = "white";
+          ctx.fillText(box.label, box.x + 5, box.y - 4);
         });
 
-        if (onDetection) onDetection(rectangles, canvas);
-      } catch (error) {
-        console.error("[Detector] Error durante la detección:", error);
-      } finally {
-        console.log("[Detector] Detección finalizada");
-      }
+        if (onDetection) onDetection(boxes);
+      } catch (err) { console.error(err); }
     };
+    process();
+  }, [inputCanvas, onDetection]);
 
-    detectDNI();
-  }, [session, inputCanvas, onDetection]);
-
-  return <canvas ref={canvasRef} style={{ border: "1px solid green", marginTop: "10px" }} />;
+  return <canvas ref={canvasRef} className="max-w-full border" />;
 };
 
-const loadImageFromFile = (file) =>
-  new Promise((resolve, reject) => {
-    if (!file) {
-      reject(new Error("Archivo no proporcionado"));
-      return;
-    }
-
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = (error) => {
-      URL.revokeObjectURL(url);
-      reject(error);
-    };
-    img.src = url;
-  });
-
-const drawImageToCanvas = (image) => {
-  const canvas = document.createElement("canvas");
-  const width = image.naturalWidth || image.width;
-  const height = image.naturalHeight || image.height;
-
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(image, 0, 0, width, height);
-  return canvas;
-};
-
-export const detectDniOnCanvas = async (inputCanvas, { log = true } = {}) => {
-  if (!inputCanvas) {
-    throw new Error("Canvas no proporcionado");
-  }
-
-  const session = await ensureSession();
-  if (!session) {
-    if (log) {
-      console.warn("[Detector] Detección omitida porque ONNX Runtime no está cargado");
-    }
-    return [];
-  }
-  const rectangles = await inferDetections(session, inputCanvas);
-
-  if (log) {
-    console.log("[Detector] Coordenadas detectadas:", rectangles);
-    rectangles.forEach((rect, idx) => {
-      console.log(
-        `[Detector] Rect ${idx}: x=${rect.x}, y=${rect.y}, width=${rect.width}, height=${rect.height}`
-      );
-    });
-  }
-
-  return rectangles;
-};
-
-export const detectDniFromFile = async (file, options) => {
-  const image = await loadImageFromFile(file);
-  const canvas = drawImageToCanvas(image);
-  return detectDniOnCanvas(canvas, options);
+// --- 6. EXPORTACIÓN PARA USO EN LÓGICA DE NEGOCIO ---
+export const detectDniFromFile = async (file) => {
+  if (!file) throw new Error("No file provided");
+  const img = await createImageBitmap(file);
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  
+  // Retorna array de objetos: [{ label: 'NOMBRE', x: 100, ... }, { label: 'FOTO', ... }]
+  return runYoloInference(canvas);
 };
 
 export default DniDetector;
