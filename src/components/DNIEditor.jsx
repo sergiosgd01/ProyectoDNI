@@ -24,7 +24,7 @@ export default function DNIEditor({
   const [cachedOcrData, setCachedOcrData] = useState(initialOcrData);
   const [cachedValidation, setCachedValidation] = useState(initialValidation);
   
-  const [showManualCensor, setShowManualCensor] = useState(false);
+  const [manualCensorList, setManualCensorList] = useState(null);
   
   // Scroll inicial al principio de la página
   useScrollToTop();
@@ -228,20 +228,17 @@ export default function DNIEditor({
 
   const handleManualCensorComplete = (result) => {
     console.log('[+] Censura manual completada:', result);
-    setShowManualCensor(false);
-    
-    setProcessedResult({
-      frontImageUrl: result.frontImageUrl,
-      backImageUrl: result.backImageUrl,
+    setManualCensorList(null);
+
+    // Mezclamos lo que ya estaba procesado automáticamente
+    setProcessedResult(prev => ({
+      ...prev,
+      frontImageUrl: result.frontImageUrl || prev?.frontImageUrl,
+      backImageUrl: result.backImageUrl || prev?.backImageUrl,
       success: true,
       manualCensor: true
-    });
+    }));
   };
-
-  const invert = (obj) =>
-  Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, !v])
-  );
 
   const handleProcessDNI = async () => {
     try {
@@ -250,10 +247,10 @@ export default function DNIEditor({
       setValidationPopup(null);
       setProcessedResult(null);
 
-      // Si está en modo demo, cargar las imágenes demo como archivos File
       let frontFileToProcess = frontFile;
-      let backFileToProcess = backFile;
+      let backFileToProcess = backFile || null;
 
+      // DEMO MODE
       if (DEMO_MODE.enabled) {
         const frontResponse = await fetch('/demo/front-image.jpg');
         const frontBlob = await frontResponse.blob();
@@ -266,95 +263,70 @@ export default function DNIEditor({
         }
       }
 
-      // Preparar datos para el procesador
-      const dniData = {
-        frontFile: frontFileToProcess,
-        backFile: backFileToProcess,
-        frontFields: selectedFrontFields,
-        backFields: selectedBackFields
+      const manualFiles = {};
+      const result = {
+        success: true,
+        manualCensor: true
       };
 
-      let manualCensorRequired = false;
+      /* ======================
+        ANVERSO
+      ====================== */
+      const frontDetections = await detectDniFromFile(frontFileToProcess);
+      const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
 
-      // Detección de campos (modelo yolo)
-      const detections = await detectDniFromFile(frontFileToProcess);
-      let document = detections.find(d => d.label === 'DOC_DNI');
-      if (document && detections.length == 20) {
-        console.log("[+] Anverso detectado - todos los campos ["+detections.length+"/20]")
-      } else if (document) {
-        console.log("[+] Anverso detectado - Campos parciales ["+detections.length+"/20]")
+      if (!frontDocument) {
+        console.log('[-] Anverso no detectado → Censura manual');
+        manualFiles.front = frontFileToProcess;
       } else {
-        console.log("[-] Anverso no detectado - Censura manual")
-        setShowManualCensor(true);
-        manualCensorRequired = true;
-      }
-
-      const back_detections = await detectDniFromFile(backFileToProcess);
-      document = back_detections.find(d => d.label === 'DOC_DNI_REV')
-      if (document && back_detections.length == 7) {
-        console.log("[+] Reverso detectado - todos los campos ["+back_detections.length+"/7]")
-      } else if (document) {
-        console.log("[+] Reverso detectado - Campos parciales ["+back_detections.length+"/7]")
-      } else {
-        console.log("[-] Reverso no detectado - Censura manual")
-        setShowManualCensor(true);
-        manualCensorRequired = true;
-      }
-      
-      console.log(manualCensorRequired)
-      if (!manualCensorRequired) {
-        console.log("[+] Campos ANVERSO:", detections.map(d => d.label));
-        console.log("[+] Campos REVERSO:", back_detections.map(d => d.label));
-
-        // Validación (OCR) de campos y censura
-        const result = await censorDniComplete(
-          frontFileToProcess, 
-          backFileToProcess, 
-          { frontFields: selectedFrontFields, backFields: selectedBackFields },
-          { 
-            // Pasamos las detecciones como opciones extra
-            frontDetections: detections, 
-            backDetections: back_detections 
-          }
+        // Censura automática frontal
+        const frontResult = await censorDniComplete(
+          frontFileToProcess,
+          backFileToProcess,
+          { frontFields: selectedFrontFields, backFields: {} },
+          { frontDetections, backDetections: [] }
         );
-
-
-        const { frontImageUrl, backImageUrl, ocrData, processedFields } = result;
-
-        if(frontImageUrl == null) {
-          console.log("[-] Anverso no detectado - Implementar aqui censura manual")
-        }
-
-        if(backImageUrl == null ){
-          console.log("[-] Reverso no detectado - Implementar aqui censura manual")
-        }
-
-        setProcessedResult({
-          frontImageUrl,
-          backImageUrl,
-          ocrData,
-          processedFields
-        });
-
-        if (ocrData) {
-          setCachedOcrData(ocrData);
-          setValidationPopup({type: 'success',message: 'Censura completados con éxito.'});
-        }
-        if (onProcessed) {
-          onProcessed(result);
-        }
-      } else {
-        setProcessedResult({
-          frontImageUrl: null,
-          backImageUrl: null,
-          success: true,
-          manualCensor: true
-        });
+        result.frontImageUrl = frontResult.frontImageUrl;
       }
+
+      /* ======================
+        REVERSO (si existe)
+      ====================== */
+      let backDetections = [];
+      if (backFileToProcess) {
+        backDetections = await detectDniFromFile(backFileToProcess);
+        const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
+
+        if (!backDocument) {
+          console.log('[-] Reverso no detectado → Censura manual');
+          manualFiles.back = backFileToProcess;
+        } else {
+          // Censura automática reverso
+          const backResult = await censorDniComplete(
+            frontFileToProcess,
+            backFileToProcess,
+            { frontFields: {}, backFields: selectedBackFields },
+            { frontDetections: [], backDetections }
+          );
+          result.backImageUrl = backResult.backImageUrl;
+        }
+      }
+
+      /* ======================
+        SI HAY CAMPOS MANUALES
+      ====================== */
+      if (Object.keys(manualFiles).length > 0) {
+        setManualCensorList(manualFiles);
+        setProcessedResult(result); // <-- conserva lo que sí se procesó automáticamente
+        return;
+      }
+
+      // Si todo fue automático
+      setProcessedResult(result);
+
     } catch (error) {
       console.error('Error procesando DNI:', error);
-      setProcessingError(error.message);
-      setProcessedResult(null);
+      setProcessingError(error.message || 'Error inesperado');
     } finally {
       setIsProcessing(false);
     }
@@ -1012,17 +984,11 @@ export default function DNIEditor({
       </div>
       </div>
 
-      {/* Modal de censura manual */}
-      {showManualCensor && (
+      {manualCensorList && (
         <ManualCensorModal
-          frontFile={frontFile}
-          backFile={backFile}
+          fieldsToCensor={manualCensorList}
           onComplete={handleManualCensorComplete}
-          onCancel={() => {
-            setShowManualCensor(false);
-            setProcessedResult(null); // Reset processed result cuando se cancela
-            setIsProcessing(false); // Asegurar que isProcessing está en false
-          }}
+          onCancel={() => setManualCensorList(null)}
         />
       )}
     </>
