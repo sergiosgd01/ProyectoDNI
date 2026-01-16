@@ -28,9 +28,6 @@ function ManualCensorModal({
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState(null);
   const [currentRect, setCurrentRect] = useState(null);
-  
-  // Grosor del pincel/rectángulo
-  const [brushSize, setBrushSize] = useState(3);
 
   // Modal de confirmación cuando falta censurar alguna cara
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -407,6 +404,25 @@ function ManualCensorModal({
         </div>
       </div>
 
+      {/* Mensaje de advertencia cuando falla la detección automática */}
+      <div className="bg-yellow-900/40 border-b border-yellow-700/50 p-3 md:p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-start space-x-3">
+            <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
+              <i className="bi bi-exclamation-triangle-fill text-white text-sm"></i>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-yellow-100 text-sm md:text-base font-medium mb-1">
+                Detección automática no disponible
+              </p>
+              <p className="text-yellow-200/80 text-xs md:text-sm leading-relaxed">
+                No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Selector de cara */}
       <div className="bg-gray-800 border-b border-gray-700 p-2 md:p-3">
         <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
@@ -469,16 +485,6 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Instrucciones */}
-      <div className="bg-red-900/30 border-b border-red-700/50 p-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-center space-x-3">
-          <i className="bi bi-pencil-fill text-red-400"></i>
-          <p className="text-red-200 text-sm">
-            Dibuja rectángulos arrastrando sobre los datos que quieras ocultar
-          </p>
-        </div>
-      </div>
-
       {/* Canvas container */}
       <div 
         ref={containerRef}
@@ -504,63 +510,7 @@ function ManualCensorModal({
         )}
       </div>
 
-      {/* Barra de herramientas */}
-      <div className="bg-gray-800 border-t border-gray-700 p-2">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-3">
-          {/* Deshacer */}
-          <button
-            onClick={handleUndo}
-            disabled={getCurrentRectangles().length === 0}
-            className={`p-2 rounded-lg transition-colors ${
-              getCurrentRectangles().length > 0
-                ? 'bg-gray-700 text-white hover:bg-gray-600'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            }`}
-            title="Deshacer"
-          >
-            <i className="bi bi-arrow-counterclockwise text-lg"></i>
-          </button>
-          
-          {/* Indicador de grosor - Solo móvil */}
-          <div className="flex md:hidden items-center gap-2 px-3 py-1 bg-gray-700 rounded-lg">
-            <span className="text-gray-400 text-xs">Grosor:</span>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setBrushSize(size)}
-                  className={`rounded-full transition-all ${
-                    brushSize === size
-                      ? 'ring-2 ring-blue-400'
-                      : 'hover:opacity-80'
-                  }`}
-                  style={{
-                    width: 8 + size * 4,
-                    height: 8 + size * 4,
-                    backgroundColor: brushSize === size ? '#3B82F6' : '#4B5563'
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-          
-          {/* Limpiar todo */}
-          <button
-            onClick={handleClearAll}
-            disabled={getCurrentRectangles().length === 0}
-            className={`p-2 rounded-lg transition-colors ${
-              getCurrentRectangles().length > 0
-                ? 'bg-red-600 text-white hover:bg-red-500'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-            }`}
-            title="Limpiar todo"
-          >
-            <i className="bi bi-trash text-lg"></i>
-          </button>
-        </div>
-      </div>
-
-      {/* Footer con acciones */}
+      {/* Footer con acciones unificadas */}
       <div className="bg-gray-900 p-3 md:p-4 border-t border-gray-700">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
           {/* Info */}
@@ -578,19 +528,49 @@ function ManualCensorModal({
             )}
           </div>
 
-          {/* Botones */}
+          {/* Botones unificados */}
           <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto order-1 sm:order-2">
+            {/* Deshacer */}
+            <button
+              onClick={handleUndo}
+              disabled={getCurrentRectangles().length === 0}
+              className={`p-2 rounded-lg transition-colors ${
+                getCurrentRectangles().length > 0
+                  ? 'bg-gray-700 text-white hover:bg-gray-600'
+                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              }`}
+              title="Deshacer última"
+            >
+              <i className="bi bi-arrow-counterclockwise text-lg"></i>
+            </button>
+            
+            {/* Limpiar todo */}
+            <button
+              onClick={handleClearAll}
+              disabled={getCurrentRectangles().length === 0}
+              className={`p-2 rounded-lg transition-colors ${
+                getCurrentRectangles().length > 0
+                  ? 'bg-red-600 text-white hover:bg-red-500'
+                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              }`}
+              title="Limpiar todo"
+            >
+              <i className="bi bi-trash text-lg"></i>
+            </button>
+
+            {/* Cancelar */}
             <button
               onClick={onCancel}
-              className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm flex-1 sm:flex-initial"
+              className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm"
             >
               Cancelar
             </button>
 
+            {/* Finalizar */}
             <button
               onClick={handleComplete}
               disabled={totalRectangles === 0}
-              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
+              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 ${
                 totalRectangles > 0
                   ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg'
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'

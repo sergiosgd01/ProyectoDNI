@@ -248,6 +248,7 @@ export default function DNIEditor({
       setIsProcessing(true);
       setProcessingError(null);
       setValidationPopup(null);
+      setProcessedResult(null);
 
       // Si está en modo demo, cargar las imágenes demo como archivos File
       let frontFileToProcess = frontFile;
@@ -353,6 +354,7 @@ export default function DNIEditor({
     } catch (error) {
       console.error('Error procesando DNI:', error);
       setProcessingError(error.message);
+      setProcessedResult(null);
     } finally {
       setIsProcessing(false);
     }
@@ -530,6 +532,40 @@ export default function DNIEditor({
 
   return (
     <>
+      {/* Overlay de carga global */}
+      {isProcessing && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+            <div className="mb-6">
+              <div 
+                className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200 mx-auto"
+                style={{ borderTopColor: colors.primary }}
+              ></div>
+            </div>
+            <h3 className="text-2xl font-bold mb-2" style={{ color: colors.primary }}>
+              Procesando DNI
+            </h3>
+            <p className="text-gray-600 text-sm mb-4">
+              Estamos analizando y censurando los campos seleccionados...
+            </p>
+            <div className="flex items-center justify-center gap-1">
+              <div 
+                className="w-2 h-2 rounded-full animate-bounce" 
+                style={{ backgroundColor: colors.primary, animationDelay: '0ms' }}
+              ></div>
+              <div 
+                className="w-2 h-2 rounded-full animate-bounce" 
+                style={{ backgroundColor: colors.primary, animationDelay: '150ms' }}
+              ></div>
+              <div 
+                className="w-2 h-2 rounded-full animate-bounce" 
+                style={{ backgroundColor: colors.primary, animationDelay: '300ms' }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {validationPopup && (
         <div
           className={`fixed top-4 right-4 z-50 max-w-xs sm:max-w-sm rounded-lg shadow-lg px-4 py-3 text-sm sm:text-base flex items-start gap-3 ${
@@ -577,12 +613,6 @@ export default function DNIEditor({
             <div className="flex items-center mb-4 flex-shrink-0">
               <i className="bi bi-eye text-gray-600 text-lg sm:text-xl mr-2"></i>
               <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Vista previa</h3>
-              {isProcessing && (
-                <div className="ml-auto flex items-center" style={{ color: colors.secondary }}>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 mr-2" style={{ borderColor: colors.secondary }}></div>
-                  <span className="text-sm">Procesando...</span>
-                </div>
-              )}
             </div>
             
             {/* MOSTRAR resultado procesado si existe */}
@@ -772,7 +802,13 @@ export default function DNIEditor({
 
             {/* Lista de campos con checkboxes */}
             <div className="mb-4 flex-1 flex flex-col">
-              <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base flex-shrink-0">Campos individuales</h4>
+              <div className="mb-3 flex-shrink-0">
+                <h4 className="font-medium text-gray-700 mb-1 text-sm sm:text-base">Campos individuales</h4>
+                <p className="text-xs text-gray-500 flex items-center">
+                  <i className="bi bi-info-circle mr-1.5"></i>
+                  Marque los campos que desea <strong className="mx-1 text-red-600">censurar (ocultar)</strong> del documento
+                </p>
+              </div>
               
               {/* Campos Front */}
               <div className="mb-4">
@@ -792,12 +828,12 @@ export default function DNIEditor({
                              isFieldSelected(fieldName) ? 'shadow-md' : ''
                            }`}
                                style={{
-                                 backgroundColor: isFieldSelected(fieldName) ? colors.primary : 'white',
-                                 borderColor: isFieldSelected(fieldName) ? colors.primary : colors.border.default
+                                 backgroundColor: isFieldSelected(fieldName) ? '#EF4444' : 'white',
+                                 borderColor: isFieldSelected(fieldName) ? '#EF4444' : colors.border.default
                                }}
                                onMouseEnter={(e) => {
                                  if (!isFieldSelected(fieldName)) {
-                                   e.target.style.borderColor = colors.primary;
+                                   e.target.style.borderColor = '#EF4444';
                                  }
                                }}
                                onMouseLeave={(e) => {
@@ -807,8 +843,8 @@ export default function DNIEditor({
                                }}
                           >
                             {isFieldSelected(fieldName) && (
-                              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             )}
                           </div>
@@ -842,12 +878,12 @@ export default function DNIEditor({
                              isFieldSelected(fieldName) ? 'shadow-md' : ''
                            }`}
                                style={{
-                                 backgroundColor: isFieldSelected(fieldName) ? colors.primary : 'white',
-                                 borderColor: isFieldSelected(fieldName) ? colors.primary : colors.border.default
+                                 backgroundColor: isFieldSelected(fieldName) ? '#EF4444' : 'white',
+                                 borderColor: isFieldSelected(fieldName) ? '#EF4444' : colors.border.default
                                }}
                                onMouseEnter={(e) => {
                                  if (!isFieldSelected(fieldName)) {
-                                   e.target.style.borderColor = colors.primary;
+                                   e.target.style.borderColor = '#EF4444';
                                  }
                                }}
                                onMouseLeave={(e) => {
@@ -857,8 +893,8 @@ export default function DNIEditor({
                                }}
                           >
                             {isFieldSelected(fieldName) && (
-                              <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                               </svg>
                             )}
                           </div>
@@ -881,15 +917,17 @@ export default function DNIEditor({
               <div className="flex gap-2">
                 <button
                   onClick={handleSelectAll}
-                  className="px-2 py-1 sm:px-3 sm:py-2 bg-blue-100 text-blue-700 text-xs sm:text-sm rounded-lg hover:bg-blue-200 transition-colors"
+                  className="px-2 py-1 sm:px-3 sm:py-2 bg-red-100 text-red-700 text-xs sm:text-sm rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1.5"
                 >
-                  Todos
+                  <i className="bi bi-x-circle-fill"></i>
+                  Censurar todo
                 </button>
                 <button
                   onClick={handleDeselectAll}
-                  className="px-2 py-1 sm:px-3 sm:py-2 bg-gray-100 text-gray-700 text-xs sm:text-sm rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-2 py-1 sm:px-3 sm:py-2 bg-green-100 text-green-700 text-xs sm:text-sm rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1.5"
                 >
-                  Ninguno
+                  <i className="bi bi-check-circle-fill"></i>
+                  Mostrar todo
                 </button>
               </div>
             </div>
@@ -980,7 +1018,11 @@ export default function DNIEditor({
           frontFile={frontFile}
           backFile={backFile}
           onComplete={handleManualCensorComplete}
-          onCancel={() => setShowManualCensor(false)}
+          onCancel={() => {
+            setShowManualCensor(false);
+            setProcessedResult(null); // Reset processed result cuando se cancela
+            setIsProcessing(false); // Asegurar que isProcessing está en false
+          }}
         />
       )}
     </>
