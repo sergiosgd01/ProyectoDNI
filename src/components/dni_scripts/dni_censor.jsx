@@ -2,7 +2,20 @@ import * as OCRHelper from '../../utils/OCRhelpers';
 import { TESSERACT_CONFIG } from '../../config/tesseractConfig';
 
 // Helper para cargar imagen
+// const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+//   const img = new Image();
+//   img.onload = () => resolve(img);
+//   img.onerror = reject;
+//   img.src = URL.createObjectURL(file);
+// });
 const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+
+  console.log("Archivo recibido:", file);
+  if (!file) {
+    reject(new Error("Archivo no válido para URL.createObjectURL"));
+    return;
+  }
+
   const img = new Image();
   img.onload = () => resolve(img);
   img.onerror = reject;
