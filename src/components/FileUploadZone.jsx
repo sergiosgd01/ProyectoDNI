@@ -215,7 +215,7 @@ function FileUploadZone({ onFileSelect }) {
                     e.stopPropagation();
                     setShowManualCrop(true);
                   }}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                  className="px-6 py-2 bg-primary-400 text-black rounded-lg hover:bg-primary-500 transition-colors flex items-center justify-center space-x-2"
                 >
                   <i className="bi bi-crop"></i>
                   <span>Recortar manualmente</span>

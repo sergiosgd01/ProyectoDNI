@@ -15,7 +15,7 @@ const MainSection = ({
       ) : (
         <div className="space-y-4">
           {/* Vista previa de la imagen */}
-          <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-green-200">
+          <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-primary-200">
             <div className="relative">
               <img 
                 src={URL.createObjectURL(selectedFile)} 
@@ -35,15 +35,15 @@ const MainSection = ({
           </div>
 
           {/* Información de confirmación */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center justify-center text-green-700 mb-3">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+            <div className="flex items-center justify-center text-primary-700 mb-3">
               <i className="bi bi-check-circle-fill mr-2 text-lg"></i>
               <span className="font-semibold">
                 ¡Parte {stepInfo?.side || ''} seleccionada!
               </span>
             </div>
             
-            <p className="text-green-600 text-sm text-center mb-3">
+            <p className="text-primary-600 text-sm text-center mb-3">
               {stepInfo?.current === 1 ? 
                 'Perfecto. Ahora procederemos a cargar la parte trasera de tu DNI.' :
                 'Excelente. Tienes ambas partes cargadas. Procederás al editor para seleccionar los campos.'
@@ -52,10 +52,10 @@ const MainSection = ({
             
             {stepInfo && (
               <div className="flex items-center justify-center">
-                <span className="bg-green-600 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
+                <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
                   {stepInfo.current}/{stepInfo.total}
                 </span>
-                <span className="text-green-600 text-sm">
+                <span className="text-primary-600 text-sm">
                   {stepInfo.current === 1 ? 'Continuarás con la parte trasera' : 'Listo para el editor'}
                 </span>
               </div>

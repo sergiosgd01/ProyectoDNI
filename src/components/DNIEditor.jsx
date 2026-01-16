@@ -571,7 +571,7 @@ export default function DNIEditor({
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">
-            ✏️ Configurar DNI
+            Configurar DNI
           </h1>
           <p className="text-sm sm:text-lg text-gray-600 max-w-4xl mx-auto leading-tight">
             Elige un perfil predefinido o personaliza qué campos mostrar
@@ -590,8 +590,8 @@ export default function DNIEditor({
             {/* MOSTRAR resultado procesado si existe */}
             {processedResult ? (
               <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-center text-green-800 text-sm">
+                <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-3">
+                  <div className="flex items-center text-secondary-800 text-sm">
                     <i className="bi bi-check-circle-fill mr-2"></i>
                     DNI procesado correctamente
                   </div>
@@ -599,7 +599,7 @@ export default function DNIEditor({
 
                 {/* Mostrar imágenes procesadas */}
                 <div className="mb-4">
-                  <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                  <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                     DELANTE - PROCESADO
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
@@ -613,7 +613,7 @@ export default function DNIEditor({
 
                 {processedResult.backImageUrl && (
                   <div className="mb-4">
-                    <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                    <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                       DETRÁS - PROCESADO
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
@@ -637,7 +637,7 @@ export default function DNIEditor({
                           text: watermarkText
                         }
                       )}
-                      style={{ backgroundColor: colors.secondary }}
+                      style={{ backgroundColor: colors.button.primary }}
                       className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
                     >
                       <i className="bi bi-download mr-1"></i>
@@ -652,7 +652,7 @@ export default function DNIEditor({
                             text: watermarkText
                           }
                         )}
-                        style={{ backgroundColor: colors.secondary }}
+                        style={{ backgroundColor: colors.button.secondary }}
                         className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
                       >
                         <i className="bi bi-download mr-1"></i>
@@ -666,14 +666,14 @@ export default function DNIEditor({
                     <div className="flex gap-2">
                       <button
                         onClick={handleDownloadCombined}
-                        className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg text-center hover:bg-blue-700 transition-colors text-sm font-medium"
+                        className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg text-center hover:bg-primary-500 transition-colors text-sm font-medium"
                       >
                         <i className="bi bi-file-earmark-image mr-1"></i>
                         Completo JPG
                       </button>
                       <button
                         onClick={handleDownloadCombinedPDF}
-                        className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg text-center hover:bg-red-700 transition-colors text-sm font-medium"
+                        className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg text-center hover:bg-red-700 transition-colors text-sm font-medium"
                       >
                         <i className="bi bi-file-earmark-pdf mr-1"></i>
                         Completo PDF
@@ -686,9 +686,9 @@ export default function DNIEditor({
               <>
                 {/* Mostrar imágenes originales */}
                 <div className="mb-4 flex-shrink-0">
-                  <div className="bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                  <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                     DELANTE
-                  </div>
+                  </div>.
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                     <img
                       src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
@@ -700,7 +700,7 @@ export default function DNIEditor({
 
                 {backFile && (
                   <div className="mb-4 flex-shrink-0">
-                    <div className="bg-green-100 text-green-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
+                    <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                       DETRÁS
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
@@ -726,9 +726,9 @@ export default function DNIEditor({
             )}
 
             {/* Información del perfil seleccionado */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mt-4">
-              <h4 className="font-semibold text-blue-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
-              <div className="space-y-1 text-xs sm:text-sm text-blue-700">
+            <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 sm:p-4 mt-4">
+              <h4 className="font-semibold text-primary-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
+              <div className="space-y-1 text-xs sm:text-sm text-primary-700">
                 <div>
                   <strong>Perfil:</strong> {
                     selectedProfile 
@@ -739,7 +739,7 @@ export default function DNIEditor({
                 <div><strong>Campos seleccionados:</strong> {selectedCount} de {totalFields}</div>
                 <div>
                   <strong>Estado:</strong> 
-                  <span className={processedResult ? "text-green-600" : "text-blue-600"}>
+                  <span className={processedResult ? "text-secondary-600" : "text-primary-600"}>
                     {processedResult ? ' Procesado' : ' Listo para procesar'}
                   </span>
                 </div>
@@ -765,8 +765,8 @@ export default function DNIEditor({
             </div>
 
             {/* Indicador de campos extraídos */}
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4 flex-shrink-0">
-              <div className="flex items-center text-green-800 text-xs sm:text-sm">
+            <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-3 mb-4 flex-shrink-0">
+              <div className="flex items-center text-secondary-800 text-xs sm:text-sm">
                 <i className="bi bi-check-circle-fill mr-2"></i>
                 {totalFields} campos disponibles para configuración
               </div>
@@ -896,7 +896,7 @@ export default function DNIEditor({
                 </button>
                 <button
                   onClick={handleDeselectAll}
-                  className="px-2 py-1 sm:px-3 sm:py-2 bg-green-100 text-green-700 text-xs sm:text-sm rounded-lg hover:bg-green-200 transition-colors flex items-center gap-1.5"
+                  className="px-2 py-1 sm:px-3 sm:py-2 bg-primary-100 text-primary-700 text-xs sm:text-sm rounded-lg hover:bg-primary-200 transition-colors flex items-center gap-1.5"
                 >
                   <i className="bi bi-check-circle-fill"></i>
                   Mostrar todo
@@ -918,7 +918,7 @@ export default function DNIEditor({
                   onClick={handleProcessDNI}
                   disabled={isProcessing}
                   style={{ 
-                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.primary,
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.secondary,
                     cursor: isProcessing ? 'not-allowed' : 'pointer'
                   }}
                   className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
@@ -944,7 +944,7 @@ export default function DNIEditor({
                   }}
                   disabled={isProcessing}
                   style={{ 
-                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.primary,
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.secondary,
                     cursor: isProcessing ? 'not-allowed' : 'pointer'
                   }}
                   className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
@@ -973,7 +973,7 @@ export default function DNIEditor({
               {/* Botón de regreso */}
               <button
                 onClick={onBack}
-                className="w-full inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-gray-600 text-white font-semibold text-sm sm:text-base rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                className="w-full inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-gray-500 text-white font-semibold text-sm sm:text-base rounded-lg hover:bg-gray-700 transition-colors duration-200"
               >
                 <i className="bi bi-arrow-left mr-1 sm:mr-2 text-sm sm:text-base"></i>
                 Cambiar fotos

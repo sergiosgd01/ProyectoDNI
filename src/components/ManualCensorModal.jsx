@@ -237,7 +237,7 @@ function ManualCensorModal({ fieldsToCensor, onComplete, onCancel }) {
         {frontFile && (
           <button
             onClick={() => setCurrentSide('front')}
-            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${currentSide === 'front' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${currentSide === 'front' ? 'bg-primary-500 text-white' : 'bg-gray-700 text-gray-300'}`}
           >
             <i className="bi bi-credit-card-front"></i> Anverso {frontRectangles.length > 0 && `(${frontRectangles.length})`}
           </button>
@@ -245,7 +245,7 @@ function ManualCensorModal({ fieldsToCensor, onComplete, onCancel }) {
         {backFile && (
           <button
             onClick={() => setCurrentSide('back')}
-            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${currentSide === 'back' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}
+            className={`px-6 py-2 rounded-lg flex items-center gap-2 ${currentSide === 'back' ? 'bg-secondary-500 text-white' : 'bg-gray-700 text-gray-300'}`}
           >
             <i className="bi bi-credit-card-back"></i> Reverso {backRectangles.length > 0 && `(${backRectangles.length})`}
           </button>
@@ -282,7 +282,7 @@ function ManualCensorModal({ fieldsToCensor, onComplete, onCancel }) {
           <button
             onClick={processAndComplete}
             disabled={!hasAnyCensorship}
-            className={`px-8 py-2 rounded-lg font-bold ${hasAnyCensorship ? 'bg-green-600 text-white shadow-lg' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
+            className={`px-8 py-2 rounded-lg font-bold ${hasAnyCensorship ? 'bg-secondary-600 text-white shadow-lg' : 'bg-gray-700 text-gray-500 cursor-not-allowed'}`}
           >
             Finalizar y Guardar
           </button>

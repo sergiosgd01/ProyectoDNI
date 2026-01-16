@@ -39,6 +39,7 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
           placeholder="Ej: Uso exclusivo para Hotel"
           className="w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
           style={{
+            background: colors.background.primary,
             borderColor: colors.border.default,
             focusRingColor: colors.secondary
           }}

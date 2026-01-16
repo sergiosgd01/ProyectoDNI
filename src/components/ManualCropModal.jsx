@@ -121,7 +121,7 @@ function ManualCropModal({
     ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    ctx.strokeStyle = '#3B82F6';
+    ctx.strokeStyle = '#dd9ea0ff';
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
     ctx.beginPath();
@@ -130,7 +130,7 @@ function ManualCropModal({
     ctx.closePath();
     ctx.stroke();
 
-    ctx.strokeStyle = '#60A5FA';
+    ctx.strokeStyle = '#E53338';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
@@ -141,7 +141,7 @@ function ManualCropModal({
 
     ctx.setLineDash([]);
     points.forEach((point, index) => {
-      ctx.fillStyle = '#3B82F6';
+      ctx.fillStyle = '#E53338';
       ctx.beginPath();
       ctx.arc(point.x, point.y, 12, 0, 2 * Math.PI);
       ctx.fill();
@@ -151,7 +151,7 @@ function ManualCropModal({
       ctx.arc(point.x, point.y, 6, 0, 2 * Math.PI);
       ctx.fill();
 
-      ctx.fillStyle = '#3B82F6';
+      ctx.fillStyle = '#E53338';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -531,17 +531,17 @@ function ManualCropModal({
       </div>
 
       {/* Instrucciones mejoradas */}
-      <div className="bg-blue-900/40 border-b border-blue-700/50 p-3 md:p-4">
+      <div className="bg-primary-900/40 border-b border-primary-700/50 p-3 md:p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+            <div className="flex-shrink-0 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center mt-0.5">
               <i className="bi bi-info-lg text-white text-sm"></i>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-blue-100 text-sm md:text-base font-medium mb-1">
+              <p className="text-primary-100 text-sm md:text-base font-medium mb-1">
                 Ajusta las 4 esquinas del DNI moviendo los puntos azules
               </p>
-              <p className="text-blue-200/70 text-xs md:text-sm">
+              <p className="text-primary-200/70 text-xs md:text-sm">
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva
               </p>
             </div>
@@ -580,7 +580,7 @@ function ManualCropModal({
           {/* Info de selección */}
           <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
             {points ? (
-              <span className="text-green-400 flex items-center">
+              <span className="text-secondary-400 flex items-center">
                 <i className="bi bi-check-circle mr-1.5"></i>
                 <span className="hidden sm:inline">Listo para recortar</span>
                 <span className="sm:hidden">Listo</span>
@@ -618,7 +618,7 @@ function ManualCropModal({
               disabled={!points}
               className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
                 points
-                  ? 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg'
+                  ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-lg'
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
               }`}
             >
