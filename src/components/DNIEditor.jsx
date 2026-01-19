@@ -765,7 +765,7 @@ export default function DNIEditor({
             </div>
 
             {/* Indicador de campos extraídos */}
-            <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-3 mb-4 flex-shrink-0">
+            <div className="bg-primary-50 border border-secondary-200 rounded-lg p-3 mb-4 flex-shrink-0">
               <div className="flex items-center text-secondary-800 text-xs sm:text-sm">
                 <i className="bi bi-check-circle-fill mr-2"></i>
                 {totalFields} campos disponibles para configuración
@@ -918,7 +918,7 @@ export default function DNIEditor({
                   onClick={handleProcessDNI}
                   disabled={isProcessing}
                   style={{ 
-                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.secondary,
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
                     cursor: isProcessing ? 'not-allowed' : 'pointer'
                   }}
                   className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
