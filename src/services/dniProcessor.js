@@ -6,6 +6,7 @@
  */
 
 import { censorDniComplete } from '../components/dni_scripts/dni_censor';
+import { validateDniConsistency } from '../utils/OCRhelpers';
 
 
 export class DNIProcessor {
@@ -139,10 +140,9 @@ export class DNIProcessor {
   revokeImageUrl(url) {
     if (url && url.startsWith('blob:')) {
       URL.revokeObjectURL(url);
-      console.log('🗑️ URL temporal liberada');
+      console.log('URL temporal liberada');
     }
   }
 }
 
-// Exportar instancia única (singleton)
 export const dniProcessor = new DNIProcessor();
