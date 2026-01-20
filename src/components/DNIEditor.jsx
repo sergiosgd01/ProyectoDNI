@@ -591,7 +591,7 @@ export default function DNIEditor({
             {/* MOSTRAR resultado procesado si existe */}
             {processedResult ? (
               <div className="space-y-4">
-                <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-3">
+                <div className="bg-primary-50 border border-secondary-200 rounded-lg p-3">
                   <div className="flex items-center text-secondary-800 text-sm">
                     <i className="bi bi-check-circle-fill mr-2"></i>
                     DNI procesado correctamente
@@ -601,12 +601,12 @@ export default function DNIEditor({
                 {/* Mostrar imágenes procesadas */}
                 <div className="mb-4">
                   <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                    DELANTE - PROCESADO
+                    ANVERSO - PROCESADO
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                     <img
                       src={processedResult.frontImageUrl}
-                      alt="DNI delante procesado"
+                      alt="DNI anverso procesado"
                       className="w-full h-auto rounded-lg shadow-md"
                     />
                   </div>
@@ -615,12 +615,12 @@ export default function DNIEditor({
                 {processedResult.backImageUrl && (
                   <div className="mb-4">
                     <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                      DETRÁS - PROCESADO
+                      REVERSO - PROCESADO
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={processedResult.backImageUrl}
-                        alt="DNI detrás procesado"
+                        alt="DNI reverso procesado"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
                     </div>
@@ -688,12 +688,12 @@ export default function DNIEditor({
                 {/* Mostrar imágenes originales */}
                 <div className="mb-4 flex-shrink-0">
                   <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                    DELANTE
+                    ANVERSO
                   </div>
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                     <img
                       src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
-                      alt="DNI delante"
+                      alt="DNI anverso"
                       className="w-full h-auto rounded-lg shadow-md"
                     />
                   </div>
@@ -702,12 +702,12 @@ export default function DNIEditor({
                 {backFile && (
                   <div className="mb-4 flex-shrink-0">
                     <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                      DETRÁS
+                      REVERSO
                     </div>
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : URL.createObjectURL(backFile)}
-                        alt="DNI detrás"
+                        alt="DNI reverso"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
                     </div>
@@ -945,7 +945,7 @@ export default function DNIEditor({
                   }}
                   disabled={isProcessing}
                   style={{ 
-                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.secondary,
+                    backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
                     cursor: isProcessing ? 'not-allowed' : 'pointer'
                   }}
                   className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
