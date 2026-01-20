@@ -22,7 +22,7 @@ export default function HomePage({ onStartProcess }) {
               <i className="bi bi-credit-card-2-front text-4xl text-primary-600"></i>
             </div>
             <h2 className="text-4xl font-bold text-gray-800 mb-4">
-              📄 Subir DNI
+              Subir DNI
             </h2>
             <p className="text-lg text-gray-600 mb-8">
               Digitaliza tu DNI de forma segura y extrae los datos que necesites

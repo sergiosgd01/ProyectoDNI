@@ -3,7 +3,7 @@
 :root {
   /* 🔥 COLORES PRINCIPALES */
   --color-primary: #eaaf0f;
-  --color-secondary: #00b28c;
+  --color-secondary: #E53338;
   
   /* 🌫️ NEUTRALES */
   --color-gray-50: #f9fafb;
@@ -46,7 +46,7 @@
 }
 
 .bg-gradient-primary-light {
-  background: linear-gradient(135deg, #fef3c7, #d1fae5);
+  background: linear-gradient(135deg, #fef3c7, #cf0505);
 }
 
 .text-gradient {

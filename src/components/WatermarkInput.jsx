@@ -9,18 +9,18 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
     <div 
       className="border-2 rounded-lg p-4 mb-4"
       style={{
-        backgroundColor: `${colors.secondary}15`,
+        backgroundColor: `${colors.primary}15`,
         borderColor: `${colors.secondary}50`
       }}
     >
       <div className="flex items-center mb-2">
         <i 
           className="bi bi-droplet mr-2"
-          style={{ color: colors.secondary }}
+          style={{ color: colors.primary }}
         ></i>
         <h4 
           className="font-semibold text-sm"
-          style={{ color: colors.secondary }}
+          style={{ color: colors.primary }}
         >
           Marca de agua personalizada
         </h4>
@@ -39,6 +39,7 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
           placeholder="Ej: Uso exclusivo para Hotel"
           className="w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
           style={{
+            background: colors.background.primary,
             borderColor: colors.border.default,
             focusRingColor: colors.secondary
           }}
