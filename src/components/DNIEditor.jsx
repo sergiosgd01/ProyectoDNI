@@ -10,7 +10,7 @@ import {censorDniComplete} from './dni_scripts/dni_censor'
 import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
 import ManualCensorModal from './ManualCensorModal';
-import { dniApi } from '../services/dniApi';
+import {validateDniConsistencyFlags} from '../utils/OCRhelpers'
 
 export default function DNIEditor({
   frontFile,
@@ -230,7 +230,6 @@ export default function DNIEditor({
     console.log('[+] Censura manual completada:', result);
     setManualCensorList(null);
 
-    // Mezclamos lo que ya estaba procesado automáticamente
     setProcessedResult(prev => ({
       ...prev,
       frontImageUrl: result.frontImageUrl || prev?.frontImageUrl,
@@ -269,9 +268,6 @@ export default function DNIEditor({
         manualCensor: true
       };
 
-      /* ======================
-        ANVERSO
-      ====================== */
       const frontDetections = await detectDniFromFile(frontFileToProcess);
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
 
@@ -279,19 +275,16 @@ export default function DNIEditor({
         console.log('[-] Anverso no detectado → Censura manual');
         manualFiles.front = frontFileToProcess;
       } else {
-        // Censura automática frontal
         const frontResult = await censorDniComplete(
           frontFileToProcess,
           backFileToProcess,
           { frontFields: selectedFrontFields, backFields: {} },
           { frontDetections, backDetections: [] }
         );
-        result.frontImageUrl = frontResult.frontImageUrl;
+        result.frontImageUrl = frontResult.frontImageUrl; //imagen censurada
+        result.frontOcrData = frontResult.ocrData.front; //datos ocr
       }
 
-      /* ======================
-        REVERSO (si existe)
-      ====================== */
       let backDetections = [];
       if (backFileToProcess) {
         backDetections = await detectDniFromFile(backFileToProcess);
@@ -301,27 +294,35 @@ export default function DNIEditor({
           console.log('[-] Reverso no detectado → Censura manual');
           manualFiles.back = backFileToProcess;
         } else {
-          // Censura automática reverso
           const backResult = await censorDniComplete(
             frontFileToProcess,
             backFileToProcess,
             { frontFields: {}, backFields: selectedBackFields },
             { frontDetections: [], backDetections }
           );
-          result.backImageUrl = backResult.backImageUrl;
+          result.backImageUrl = backResult.backImageUrl; //imagen censurada
+          result.backOcrData = backResult.ocrData.back;  //datos ocr
         }
       }
 
-      /* ======================
-        SI HAY CAMPOS MANUALES
-      ====================== */
+      //validación de datos - en caso de censura automática
+      const ocrDataForValidation = {
+        front: result.frontOcrData || {},
+        back: result.backOcrData || {}
+      };
+
+      console.log('OCR data:', ocrDataForValidation)
+
+      const validationFlags = validateDniConsistencyFlags(ocrDataForValidation);
+      result.validation = validationFlags;
+      console.log('Flags de validación DNI:', validationFlags);
+
       if (Object.keys(manualFiles).length > 0) {
         setManualCensorList(manualFiles);
-        setProcessedResult(result); // <-- conserva lo que sí se procesó automáticamente
+        setProcessedResult(result);
         return;
       }
-
-      // Si todo fue automático
+      
       setProcessedResult(result);
 
     } catch (error) {
@@ -688,7 +689,7 @@ export default function DNIEditor({
                 <div className="mb-4 flex-shrink-0">
                   <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
                     DELANTE
-                  </div>.
+                  </div>
                   <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                     <img
                       src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}

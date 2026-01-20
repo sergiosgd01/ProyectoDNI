@@ -72,7 +72,7 @@ async function extractSideText(imageFile, fieldNames, dynamicBoxes) {
 
   const { createWorker } = await import('tesseract.js');
   
-  // Inicialización moderna
+  // Inicialización OCR con tesseract
   const worker = await createWorker('spa', 1, {
     workerPath: TESSERACT_CONFIG.workerPath,
     corePath: TESSERACT_CONFIG.corePath,
@@ -168,8 +168,24 @@ export async function censorDniComplete(frontFile, backFile, fields, options = {
    * para no desperdiciar recursos procesando imágenes (Firma/Foto).
    */
   const ocrLabels = [
-    'NOMBRE', 'APELLIDOS', 'NUM_DNI', 'NACIMIENTO', 
-    'NACIONALIDAD', 'NUM_SOPORTE', 'MRZ', 'DIRECCION'
+  // Anverso
+  'NOMBRE',
+  'APELLIDOS',
+  'NUM_DNI',
+  'NACIMIENTO',
+  'SEXO',
+  'NACIONALIDAD',
+  'EMISIÓN',
+  'VALIDEZ',
+  'NUM_SOPORTE',
+  'CAN',
+  // Reverso
+  'MRZ',
+  'DIRECCION',
+  'DOMICILIO',
+  'LUGAR_NACIMIENTO',
+  'EQUIPO',
+  'SOPORTE_MIN'
   ];
 
   const [frontRaw, backRaw] = await Promise.all([
