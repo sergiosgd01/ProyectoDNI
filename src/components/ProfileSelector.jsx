@@ -1,5 +1,5 @@
 import React from 'react';
-import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
+import { DNI_PROFILES } from '../constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 
 export default function ProfileSelector({ selectedProfile, onProfileSelect, selectedFrontFields, selectedBackFields }) {
@@ -17,13 +17,13 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
   const renderFieldsIndicator = (profile) => {
     const frontFields = profile.frontFields || {};
     const backFields = profile.backFields || {};
-    
+
     const totalFrontFields = Object.keys(frontFields).length;
     const totalBackFields = Object.keys(backFields).length;
     const totalFields = totalFrontFields + totalBackFields;
-    
+
     const selectedCount = DNI_PROFILES.getFieldsCount(frontFields, backFields);
-    
+
     return (
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-gray-600">
@@ -31,9 +31,9 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
         </span>
         <div className="flex items-center">
           <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full transition-all duration-300"
-              style={{ 
+              style={{
                 width: `${(selectedCount / totalFields) * 100}%`,
                 backgroundColor: colors.primary
               }}
@@ -53,20 +53,19 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
         <i className="bi bi-person-gear mr-2"></i>
         Perfiles predefinidos
       </h4>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         {profiles.map((profile) => {
           const isSelected = selectedProfile === profile.id;
-          
+
           return (
             <button
               key={profile.id}
               onClick={() => onProfileSelect(profile.id)}
-              className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${
-                isSelected 
-                  ? 'shadow-md' 
+              className={`p-4 rounded-lg border-2 transition-all duration-200 text-left ${isSelected
+                  ? 'shadow-md'
                   : 'bg-gray-50 border-gray-200 hover:border-yellow-400 hover:shadow-sm'
-              }`}
+                }`}
               style={{
                 backgroundColor: isSelected ? colors.getLight('primary') : undefined,
                 borderColor: isSelected ? colors.primary : undefined,
@@ -81,11 +80,11 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
                   <i className="bi bi-check-circle-fill text-lg" style={{ color: colors.primary }}></i>
                 )}
               </div>
-              
+
               <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                 {profile.description}
               </p>
-              
+
               {renderFieldsIndicator(profile)}
             </button>
           );
@@ -93,9 +92,9 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
       </div>
 
       {isCustomProfile() && (
-        <div 
+        <div
           className="rounded-lg p-4 border-2"
-          style={{ 
+          style={{
             backgroundColor: colors.getLight('primary'),
             borderColor: colors.primary
           }}

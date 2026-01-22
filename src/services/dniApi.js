@@ -1,5 +1,5 @@
 // src/services/dniApi.js
-const API_BASE_URL = "http://localhost:5000/api/dni";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/dni";
 
 export const dniApi = {
   /**
@@ -9,6 +9,7 @@ export const dniApi = {
    */
   async saveDniRecord(data) {
     try {
+      console.log(`🌐 [API] POST ${API_BASE_URL}/save`);
       const response = await fetch(`${API_BASE_URL}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -16,6 +17,7 @@ export const dniApi = {
       });
 
       if (!response.ok) {
+        console.error(`❌ [API] Error status: ${response.status}`);
         throw new Error(`Error al guardar DNI: ${response.status}`);
       }
 
