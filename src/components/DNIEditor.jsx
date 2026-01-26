@@ -267,7 +267,7 @@ export default function DNIEditor({
       const manualFiles = {};
       const result = {
         success: true,
-        manualCensor: true
+        manualCensor: false
       };
 
       const frontDetections = await detectDniFromFile(frontFileToProcess);
@@ -326,15 +326,17 @@ export default function DNIEditor({
           dniNumber: ocrDataForValidation.front?.NUM_DNI || `UNKNOWN-${Date.now()}`,
           frontImageUrl: result.frontImageUrl,
           backImageUrl: result.backImageUrl,
+          profileUsed: selectedProfile || 'personalizado',
+          hiddenFields: {
+            frontFields: selectedFrontFields,
+            backFields: selectedBackFields
+          },
           ocrFrontData: ocrDataForValidation.front,
           ocrBackData: ocrDataForValidation.back,
           validation: validationFlags,
-          manualCensor: result.manualCensor || false,
-          profileUsed: selectedProfile,
-          customFields: {
-            front: selectedFrontFields,
-            back: selectedBackFields
-          },
+          manualCensor: Object.keys(manualFiles).length > 0,
+          hologramReadable: null,
+          homogenityPassed: null,
           watermarkText: watermarkText
         });
         console.log("✅ Guardado exitoso");
