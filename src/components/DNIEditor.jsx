@@ -322,7 +322,13 @@ export default function DNIEditor({
 
       const validationFlags = validateDniConsistencyFlags(ocrDataForValidation);
       result.validation = validationFlags;
+      const flagsArray = Object.values(validationFlags); // [true, false, true, true]
+      const total = flagsArray.length;
+      const correctCount = flagsArray.filter(flag => flag === true).length;
+      const accuracyPercentage = (correctCount / total) * 100;
+
       console.log('Flags de validación DNI:', validationFlags);
+      console.log('Porcentaje de acierto:', accuracyPercentage.toFixed(2) + '%');
 
       // --- GUARDAR EN BACKEND ---
       try {
@@ -341,7 +347,7 @@ export default function DNIEditor({
           validation: validationFlags,
           manualCensor: Object.keys(manualFiles).length > 0,
           hologramReadable: null,
-          homogenityPassed: null,
+          homogenityPassed: accuracyPercentage,
           watermarkText: watermarkText
         });
         console.log("✅ Guardado exitoso");
