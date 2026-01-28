@@ -272,9 +272,11 @@ export default function DNIEditor({
 
       const frontDetections = await detectDniFromFile(frontFileToProcess);
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
-
       if (!frontDocument) {
         console.log('[-] Anverso no detectado → Censura manual');
+        manualFiles.front = frontFileToProcess;
+      } else if (frontDetections.length < 20) {
+        console.log('[-] No se detectaron todos los campos → Censura manual');
         manualFiles.front = frontFileToProcess;
       } else {
         const frontResult = await censorDniComplete(
@@ -295,6 +297,9 @@ export default function DNIEditor({
         if (!backDocument) {
           console.log('[-] Reverso no detectado → Censura manual');
           manualFiles.back = backFileToProcess;
+        } else if (backDetections.length < 7) {
+          console.log('[-] No se detectaron todos los campos → Censura manual');
+          manualFiles.front = frontFileToProcess;
         } else {
           const backResult = await censorDniComplete(
             frontFileToProcess,
