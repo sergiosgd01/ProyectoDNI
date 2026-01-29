@@ -20,7 +20,8 @@ export default function DNIEditor({
   onBack,
   onProcessed,
   initialOcrData = null,
-  initialValidation = null
+  initialValidation = null,
+  manualDetection = false
 }) {
   const colors = useColors();
   const [cachedOcrData, setCachedOcrData] = useState(initialOcrData);
@@ -346,6 +347,7 @@ export default function DNIEditor({
           ocrBackData: ocrDataForValidation.back,
           validation: validationFlags,
           manualCensor: Object.keys(manualFiles).length > 0,
+          manualDetection: manualDetection,
           hologramReadable: null,
           homogenityPassed: accuracyPercentage,
           watermarkText: watermarkText

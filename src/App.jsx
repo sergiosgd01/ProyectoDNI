@@ -9,23 +9,25 @@ import { useNavigation } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
 import { VIEWS } from './constants/views';
 import { DEMO_MODE } from './config/demoMode';
-import './index.css'; 
+import './index.css';
 
 function App() {
   const { currentView, goTo, goHome } = useNavigation();
-  const { 
-    frontFile, 
-    backFile, 
-    handleFrontFileSelect, 
+  const {
+    frontFile,
+    backFile,
+    handleFrontFileSelect,
     handleBackFileSelect,
     clearFrontFile,
     clearBackFile,
-    hasAllFiles 
+    hasAllFiles,
+    frontMetadata,
+    backMetadata
   } = useDNIFiles();
 
   // Estado para controlar si debe hacer auto-navegación al editor
   const [shouldAutoNavigate, setShouldAutoNavigate] = useState(true);
-  
+
   // Estado para controlar el loader de procesamiento (solo en modo demo)
   const [showProcessingLoader, setShowProcessingLoader] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -114,7 +116,7 @@ function App() {
     // VALIDACIÓN OCR DESHABILITADA TEMPORALMENTE
     // ============================================
     console.log('⚠️ Validación OCR deshabilitada - Pasando directamente al editor');
-    
+
     return {
       ok: true,
       ocr: null,
@@ -176,10 +178,10 @@ function App() {
   // Auto-navegación cuando ambos archivos están listos
   // Si DEMO_MODE está activo, pasar el setter del loader
   useAutoNavigation(
-    frontFile, 
-    backFile, 
-    currentView, 
-    goTo, 
+    frontFile,
+    backFile,
+    currentView,
+    goTo,
     shouldAutoNavigate,
     DEMO_MODE.enabled ? setShowProcessingLoader : null,  // Solo pasar si demo está activo
     performPreValidation,
@@ -217,15 +219,15 @@ function App() {
     // Si está en modo demo, mostrar loader
     if (DEMO_MODE.enabled) {
       setShowProcessingLoader(true);
-      
+
       // Esperar a que termine la animación del loader
       await new Promise(resolve => {
         setTimeout(resolve, DEMO_MODE.timings.processingSteps);
       });
-      
+
       setShowProcessingLoader(false);
     }
-    
+
     // Ir al editor (con o sin demo)
     goTo(VIEWS.EDITOR);
   };
@@ -234,7 +236,7 @@ function App() {
     switch (currentView) {
       case VIEWS.HOME:
         return (
-          <HomePage 
+          <HomePage
             onStartProcess={handleStartProcess}
           />
         );
@@ -259,20 +261,24 @@ function App() {
         );
 
       case VIEWS.EDITOR:
+        // Determinar si hubo detección manual en alguna de las caras
+        const isManualDetection = frontMetadata?.manualCrop || backMetadata?.manualCrop || false;
+
         return (
           <DNIEditor
             frontFile={frontFile}
             backFile={backFile}
+            manualDetection={isManualDetection}
             onBack={handleBackToStep}
             onProcess={handleDNIProcess}
             initialOcrData={preOcrData}
             initialValidation={validationResult}
           />
         );
-      
+
       default:
         return (
-          <HomePage 
+          <HomePage
             onStartProcess={handleStartProcess}
           />
         );
@@ -290,11 +296,11 @@ function App() {
       {DEMO_MODE.enabled && showProcessingLoader && (
         <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
       )}
-      
-      <Header 
+
+      <Header
         onShowHome={goHome}
       />
-      
+
       {renderContent()}
     </div>
   );
