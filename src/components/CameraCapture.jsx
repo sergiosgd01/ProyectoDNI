@@ -55,8 +55,8 @@ function CameraCapture({ onCapture, onClose }) {
 
         const constraints = {
           video: {
-            width: { ideal: 1280, max: 1920 },
-            height: { ideal: 720, max: 1080 },
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
           },
         };
 
@@ -143,7 +143,7 @@ function CameraCapture({ onCapture, onClose }) {
     initializeCamera();
   }, [selectedDeviceId, initializeCamera]);
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const guide = guideRef.current;
@@ -167,7 +167,28 @@ function CameraCapture({ onCapture, onClose }) {
       return;
     }
 
-    // 🎯 OBTENER POSICIÓN EXACTA DEL RECTÁNGULO GUÍA EN PANTALLA
+    // 📸 INTENTO DE CAPTURA ALTA RESOLUCIÓN (ImageCapture API)
+    const track = streamRef.current.getVideoTracks()[0];
+    let highResBlob = null;
+
+    if ('ImageCapture' in window && track && track.readyState === 'live') {
+      try {
+        console.log('📸 Intentando capturar con ImageCapture (Full Resolution)...');
+        const imageCapture = new ImageCapture(track);
+        highResBlob = await imageCapture.takePhoto();
+        console.log('✅ Foto de alta resolución capturada:', highResBlob.size, highResBlob.type);
+      } catch (err) {
+        console.warn('⚠️ Falló ImageCapture, usando fallback a canvas:', err);
+      }
+    }
+
+    // Si tenemos foto Full Res, la usamos directamente
+    if (highResBlob) {
+      processCapturedBlob(highResBlob, videoWidth, videoHeight); // Usamos dimensiones del video como referencia, aunque la foto sea mayor
+      return;
+    }
+
+    // 🎯 FALLBACK: OBTENER POSICIÓN EXACTA DEL RECTÁNGULO GUÍA EN PANTALLA
     const videoRect = video.getBoundingClientRect();
     const guideRect = guide.getBoundingClientRect();
 
@@ -232,114 +253,110 @@ function CameraCapture({ onCapture, onClose }) {
     );
 
     // MOSTRAR IMAGEN RECORTADA EN CONSOLA
-    const previewDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+    const previewDataUrl = canvas.toDataURL('image/jpeg', 0.95);
     console.log('🖼️ VISTA PREVIA DE LA IMAGEN RECORTADA:');
-    console.log('%c ', `
-      font-size: 1px;
-      padding: ${Math.min(finalCropHeight / 4, 200)}px ${Math.min(finalCropWidth / 4, 300)}px;
-      background-image: url(${previewDataUrl});
-      background-size: contain;
-      background-repeat: no-repeat;
-      background-position: center;
-    `);
-    console.log('👆 Haz clic derecho en la imagen de arriba → "Open Image in New Tab" para verla completa');
     console.log('📊 Tamaño recortado:', `${finalCropWidth.toFixed(0)}x${finalCropHeight.toFixed(0)} px`);
 
-    // Convertir a blob y procesar con YOLO
+    // Convertir a blob y procesar
     canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          console.error('Error al crear el blob de la imagen');
-          return;
-        }
+      (blob) => {
+        if (blob) processCapturedBlob(blob, canvas.width, canvas.height);
+      },
+      'image/jpeg',
+      0.95
+    );
+  };
 
-        const croppedFile = new File([blob], 'dni-camera-cropped.jpg', {
-          type: 'image/jpeg',
-          lastModified: Date.now(),
-        });
+  // Nueva función para procesar el blob (sea de ImageCapture o Canvas)
+  const processCapturedBlob = async (blob, width, height) => {
+    if (!blob) {
+      console.error('Error al crear el blob de la imagen');
+      return;
+    }
 
-        // Guardar archivo para posible recorte manual
-        setCapturedFileForCrop(croppedFile);
+    const croppedFile = new File([blob], 'dni-camera-capture.jpg', {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
 
-        console.log('✂️ Imagen recortada creada:', {
-          width: canvas.width,
-          height: canvas.height,
-          size: `${(blob.size / 1024).toFixed(2)} KB`
-        });
+    // Guardar archivo para posible recorte manual
+    setCapturedFileForCrop(croppedFile);
 
-        // Crear overlay de procesamiento temporal
-        console.log('🎬 [capturePhoto] Creando overlay de procesamiento...');
-        let processingOverlay = null;
-        if (isMobile) {
-          processingOverlay = document.createElement('div');
-          processingOverlay.className = 'absolute inset-0 flex items-center justify-center bg-black/80 z-30';
-          processingOverlay.innerHTML = `
+    console.log('✂️ Imagen para procesar:', {
+      width,
+      height,
+      size: `${(blob.size / 1024).toFixed(2)} KB`
+    });
+
+    // Crear overlay de procesamiento temporal
+    console.log('🎬 [capturePhoto] Creando overlay de procesamiento...');
+    let processingOverlay = null;
+    if (isMobile) {
+      processingOverlay = document.createElement('div');
+      processingOverlay.className = 'absolute inset-0 flex items-center justify-center bg-black/80 z-30';
+      processingOverlay.innerHTML = `
             <div class="text-center text-white">
               <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-3"></div>
               <p>Analizando DNI...</p>
             </div>
           `;
-          videoRef.current?.parentElement?.appendChild(processingOverlay);
-          console.log('✅ [capturePhoto] Overlay temporal creado');
-        }
+      videoRef.current?.parentElement?.appendChild(processingOverlay);
+      console.log('✅ [capturePhoto] Overlay temporal creado');
+    }
 
-        setDetectionError(null);
-        console.log('🔄 [capturePhoto] Error de detección limpiado');
+    setDetectionError(null);
+    console.log('🔄 [capturePhoto] Error de detección limpiado');
 
-        try {
-          console.log('📤 [capturePhoto] Enviando imagen a YOLO...');
-          const resp = await processWithYolo(croppedFile);
+    try {
+      console.log('📤 [capturePhoto] Enviando imagen a YOLO...');
+      const resp = await processWithYolo(croppedFile);
 
-          // Remover overlay temporal
-          if (processingOverlay && processingOverlay.parentElement) {
-            processingOverlay.parentElement.removeChild(processingOverlay);
-            console.log('🗑️ [capturePhoto] Overlay temporal eliminado');
-          }
+      // Remover overlay temporal
+      if (processingOverlay && processingOverlay.parentElement) {
+        processingOverlay.parentElement.removeChild(processingOverlay);
+        console.log('🗑️ [capturePhoto] Overlay temporal eliminado');
+      }
 
-          if (resp.ok && resp.blob) {
-            // ✅ ÉXITO: DNI detectado y procesado correctamente
-            const processedFile = new File([resp.blob], 'dni-camera-processed.jpg', {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
+      if (resp.ok && resp.blob) {
+        // ✅ ÉXITO: DNI detectado y procesado correctamente
+        const processedFile = new File([resp.blob], 'dni-camera-processed.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        });
 
-            console.log('✅ [capturePhoto] YOLO procesado exitosamente, confianza:', resp.confidence);
-            onCapture?.(processedFile, { yolo: { ok: true, confidence: resp.confidence } });
-            stopCamera();
-            onClose();
-          } else {
-            // ❌ ERROR: Problemas con la detección
-            console.warn(`⚠️ [capturePhoto] Error de detección: ${resp.errorType}`, resp);
-            
-            setDetectionError({
-              type: resp.errorType,
-              message: resp.message,
-              suggestion: resp.suggestion,
-              confidence: resp.confidence,
-              minRequired: resp.minRequired
-            });
-            console.log('❌ [capturePhoto] detectionError establecido');
-          }
-        } catch (err) {
-          // Remover overlay temporal en caso de error
-          if (processingOverlay && processingOverlay.parentElement) {
-            processingOverlay.parentElement.removeChild(processingOverlay);
-            console.log('🗑️ [capturePhoto] Overlay temporal eliminado (error)');
-          }
-          
-          console.error('[CameraCapture] Error inesperado:', err);
-          
-          setDetectionError({
-            type: 'unexpected_error',
-            message: 'Error inesperado al procesar la imagen',
-            suggestion: 'Intenta nuevamente o reinicia la aplicación.'
-          });
-          console.log('❌ [capturePhoto] Error inesperado capturado');
-        }
-      },
-      'image/jpeg',
-      0.95
-    );
+        console.log('✅ [capturePhoto] YOLO procesado exitosamente, confianza:', resp.confidence);
+        onCapture?.(processedFile, { yolo: { ok: true, confidence: resp.confidence } });
+        stopCamera();
+        onClose();
+      } else {
+        // ❌ ERROR: Problemas con la detección
+        console.warn(`⚠️ [capturePhoto] Error de detección: ${resp.errorType}`, resp);
+
+        setDetectionError({
+          type: resp.errorType,
+          message: resp.message,
+          suggestion: resp.suggestion,
+          confidence: resp.confidence,
+          minRequired: resp.minRequired
+        });
+        console.log('❌ [capturePhoto] detectionError establecido');
+      }
+    } catch (err) {
+      // Remover overlay temporal en caso de error
+      if (processingOverlay && processingOverlay.parentElement) {
+        processingOverlay.parentElement.removeChild(processingOverlay);
+        console.log('🗑️ [capturePhoto] Overlay temporal eliminado (error)');
+      }
+
+      console.error('[CameraCapture] Error inesperado:', err);
+
+      setDetectionError({
+        type: 'unexpected_error',
+        message: 'Error inesperado al procesar la imagen',
+        suggestion: 'Intenta nuevamente o reinicia la aplicación.'
+      });
+      console.log('❌ [capturePhoto] Error inesperado capturado');
+    }
   };
 
   const handleDeviceChange = (deviceId) => {
@@ -407,7 +424,7 @@ function CameraCapture({ onCapture, onClose }) {
     <>
       {/* Overlay oscuro */}
       <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
-      
+
       {/* Contenedor centrado */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         {/* Rectángulo guía - REF AQUÍ */}
@@ -489,12 +506,12 @@ function CameraCapture({ onCapture, onClose }) {
               )}
 
               {/* Video siempre visible */}
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted 
-                className={`w-full h-full object-cover ${detectionError ? 'invisible' : 'visible'}`} 
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className={`w-full h-full object-cover ${detectionError ? 'invisible' : 'visible'}`}
               />
 
               {!isLoading && !detectionError && <DNIGuide />}
@@ -534,7 +551,7 @@ function CameraCapture({ onCapture, onClose }) {
                       <i className="bi bi-camera-fill"></i>
                       Intentar de nuevo
                     </button>
-                    
+
                     {/* Botón de recorte manual */}
                     {capturedFileForCrop && (
                       <button
@@ -545,7 +562,7 @@ function CameraCapture({ onCapture, onClose }) {
                         Recortar manualmente
                       </button>
                     )}
-                    
+
                     <button onClick={handleClose} className="bg-white/20 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
                       <i className="bi bi-x"></i>
                       Cancelar
@@ -573,7 +590,7 @@ function CameraCapture({ onCapture, onClose }) {
         )}
 
         <canvas ref={canvasRef} className="hidden" />
-        
+
         {/* Modal de recorte manual */}
         {showManualCrop && capturedFileForCrop && (
           <ManualCropModal
@@ -584,11 +601,11 @@ function CameraCapture({ onCapture, onClose }) {
               setShowManualCrop(false);
               setDetectionError(null);
               setCapturedFileForCrop(null);
-              
+
               // Enviar imagen recortada al siguiente paso directamente
-              onCapture?.(croppedFile, { 
+              onCapture?.(croppedFile, {
                 yolo: { ok: true, manualCrop: true },
-                manualCrop: true 
+                manualCrop: true
               });
               stopCamera();
               onClose();
@@ -656,12 +673,12 @@ function CameraCapture({ onCapture, onClose }) {
                 )}
 
                 {/* Video siempre visible */}
-                <video 
-                  ref={videoRef} 
-                  autoPlay 
-                  playsInline 
-                  muted 
-                  className={`w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain ${detectionError ? 'invisible' : 'visible'}`} 
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className={`w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain ${detectionError ? 'invisible' : 'visible'}`}
                 />
 
                 {!isLoading && !detectionError && <DNIGuide />}
@@ -707,7 +724,7 @@ function CameraCapture({ onCapture, onClose }) {
                           Cancelar
                         </button>
                       </div>
-                      
+
                       {/* Botón de recorte manual */}
                       {capturedFileForCrop && (
                         <button
@@ -751,7 +768,7 @@ function CameraCapture({ onCapture, onClose }) {
         </div>
 
         <canvas ref={canvasRef} className="hidden" />
-        
+
         {/* Modal de recorte manual (desktop) */}
         {showManualCrop && capturedFileForCrop && (
           <ManualCropModal
@@ -762,11 +779,11 @@ function CameraCapture({ onCapture, onClose }) {
               setShowManualCrop(false);
               setDetectionError(null);
               setCapturedFileForCrop(null);
-              
+
               // Enviar imagen recortada al siguiente paso directamente
-              onCapture?.(croppedFile, { 
+              onCapture?.(croppedFile, {
                 yolo: { ok: true, manualCrop: true },
-                manualCrop: true 
+                manualCrop: true
               });
               stopCamera();
               onClose();
