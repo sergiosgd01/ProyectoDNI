@@ -1027,7 +1027,8 @@ export default function DNIEditor({
 
       {manualCensorList && (
         <ManualCensorModal
-          fieldsToCensor={manualCensorList}
+          frontFile={manualCensorList?.front}
+          backFile={manualCensorList?.back}
           onComplete={handleManualCensorComplete}
           onCancel={() => setManualCensorList(null)}
         />

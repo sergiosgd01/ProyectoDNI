@@ -21,9 +21,9 @@ function Header({ onShowHome }) {
           {/* Logo y nombre */}
           <div className="flex items-center cursor-pointer" onClick={onShowHome}>
             <div className="w-10 h-10 flex items-center justify-center mr-3">
-              <img 
-                src="/logo-web.png" 
-                alt="Logo Protector DNI" 
+              <img
+                src="/logo-web.png"
+                alt="Logo Protector DNI"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -36,9 +36,8 @@ function Header({ onShowHome }) {
           {/* Navegación y controles */}
           <div className="flex items-center space-x-4">
 
-            {/* Selector de idioma personalizado */}
-            <div className="relative w-48">
-              {/* Botón que muestra el idioma actual */}
+            {/* Selector de idioma eliminado temporalmente */}
+            {/* <div className="relative w-48">
               <button
                 onClick={() => setOpen(prev => !prev)}
                 className="flex items-center justify-start w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -48,7 +47,6 @@ function Header({ onShowHome }) {
                 <i className="bi bi-chevron-down text-gray-400 ml-auto"></i>
               </button>
 
-              {/* Menú desplegable */}
               {open && (
                 <div className="absolute mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-20">
                   {languages.map(lang => (
@@ -66,7 +64,7 @@ function Header({ onShowHome }) {
                   ))}
                 </div>
               )}
-            </div>
+            </div> */}
 
           </div>
         </div>
