@@ -18,7 +18,8 @@ function ManualCensorModal({
   const objectUrlRef = useRef(null);
 
   // Estado para controlar qué cara se está editando
-  const [currentSide, setCurrentSide] = useState('front'); // 'front' o 'back'
+  // Inicializar con el primer archivo disponible
+  const [currentSide, setCurrentSide] = useState(frontFile ? 'front' : 'back'); // 'front' o 'back'
 
   // Rectángulos dibujados para cada cara
   const [frontRectangles, setFrontRectangles] = useState([]);
@@ -35,6 +36,27 @@ function ManualCensorModal({
 
   // Estado para destacar el botón que falta por editar
   const [highlightSide, setHighlightSide] = useState(null);
+
+  // Detectar si es móvil y si ya ha tocado el canvas
+  const [isMobile, setIsMobile] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  // Detectar dispositivo móvil
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.matchMedia('(max-width: 768px)').matches;
+      setIsMobile(mobile);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Resetear interacción cuando cambia de lado (Anverso/Reverso)
+  useEffect(() => {
+    setHasInteracted(false);
+  }, [currentSide]);
 
   // Bloquear scroll del body cuando el modal está abierto
   useEffect(() => {
@@ -192,11 +214,16 @@ function ManualCensorModal({
     const pos = getCanvasPosition(event);
     if (!pos) return;
 
+    // Marcar que el usuario ha interactuado (para ocultar mensaje en móviles)
+    if (isMobile && !hasInteracted) {
+      setHasInteracted(true);
+    }
+
     setIsDrawing(true);
     setStartPoint(pos);
     setCurrentRect(null);
     event.preventDefault();
-  }, []);
+  }, [isMobile, hasInteracted]);
 
   // Durante el dibujo
   const handleMouseMove = useCallback((event) => {
@@ -416,68 +443,69 @@ function ManualCensorModal({
                 Detección automática no disponible
               </p>
               <p className="text-yellow-200/80 text-xs md:text-sm leading-relaxed">
-                No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.
+                No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar{frontFile && backFile ? ' en ambas caras del documento' : ''}.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Selector de cara */}
+      {/* Selector de cara - Solo mostrar opciones disponibles */}
       <div className="bg-gray-800 border-b border-gray-700 p-2 md:p-3">
         <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
-          <button
-            onClick={() => {
-              handleSwitchSide('front');
-              setHighlightSide(null);
-            }}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'front'
+          {frontFile && (
+            <button
+              onClick={() => {
+                handleSwitchSide('front');
+                setHighlightSide(null);
+              }}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'front'
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              } ${highlightSide === 'front'
-                ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
-                : ''
-              }`}
-          >
-            <i className="bi bi-credit-card-front"></i>
-            <span>Anverso</span>
-            {frontRectangles.length > 0 && (
-              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {frontRectangles.length}
-              </span>
-            )}
-            {highlightSide === 'front' && (
-              <i className="bi bi-arrow-left-circle-fill text-yellow-400 ml-1 animate-bounce"></i>
-            )}
-          </button>
+                } ${highlightSide === 'front'
+                  ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
+                  : ''
+                }`}
+            >
+              <i className="bi bi-credit-card-front"></i>
+              <span>Anverso</span>
+              {frontRectangles.length > 0 && (
+                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {frontRectangles.length}
+                </span>
+              )}
+              {highlightSide === 'front' && (
+                <i className="bi bi-arrow-left-circle-fill text-yellow-400 ml-1 animate-bounce"></i>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              handleSwitchSide('back');
-              setHighlightSide(null);
-            }}
-            disabled={!backFile}
-            className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'back'
+          {backFile && (
+            <button
+              onClick={() => {
+                handleSwitchSide('back');
+                setHighlightSide(null);
+              }}
+              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'back'
                 ? 'bg-blue-600 text-white'
-                : backFile
-                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-              } ${highlightSide === 'back'
-                ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
-                : ''
-              }`}
-          >
-            <i className="bi bi-credit-card-back"></i>
-            <span>Reverso</span>
-            {highlightSide === 'back' && (
-              <i className="bi bi-arrow-left-circle-fill text-yellow-400 ml-1 animate-bounce"></i>
-            )}
-            {backRectangles.length > 0 && (
-              <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                {backRectangles.length}
-              </span>
-            )}
-          </button>
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                } ${highlightSide === 'back'
+                  ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
+                  : ''
+                }`}
+            >
+              <i className="bi bi-credit-card-back"></i>
+              <span>Reverso</span>
+              {highlightSide === 'back' && (
+                <i className="bi bi-arrow-left-circle-fill text-yellow-400 ml-1 animate-bounce"></i>
+              )}
+              {backRectangles.length > 0 && (
+                <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {backRectangles.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -502,6 +530,18 @@ function ManualCensorModal({
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
             />
+
+            {/* Mensaje instructivo para móviles */}
+            {isMobile && !hasInteracted && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="bg-blue-600/90 text-white px-4 py-3 rounded-lg shadow-2xl max-w-xs mx-4 text-center animate-pulse">
+                  <i className="bi bi-hand-index-thumb text-3xl mb-2 block"></i>
+                  <p className="font-medium text-sm">
+                    Pulsa sobre la imagen para empezar a censurar el documento
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -531,8 +571,8 @@ function ManualCensorModal({
               onClick={handleUndo}
               disabled={getCurrentRectangles().length === 0}
               className={`p-2 rounded-lg transition-colors ${getCurrentRectangles().length > 0
-                  ? 'bg-gray-700 text-white hover:bg-gray-600'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                ? 'bg-gray-700 text-white hover:bg-gray-600'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 }`}
               title="Deshacer última"
             >
@@ -544,8 +584,8 @@ function ManualCensorModal({
               onClick={handleClearAll}
               disabled={getCurrentRectangles().length === 0}
               className={`p-2 rounded-lg transition-colors ${getCurrentRectangles().length > 0
-                  ? 'bg-red-600 text-white hover:bg-red-500'
-                  : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                ? 'bg-red-600 text-white hover:bg-red-500'
+                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
                 }`}
               title="Limpiar todo"
             >
@@ -565,8 +605,8 @@ function ManualCensorModal({
               onClick={handleComplete}
               disabled={totalRectangles === 0}
               className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 ${totalRectangles > 0
-                  ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg'
+                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
             >
               <i className="bi bi-check-lg"></i>
