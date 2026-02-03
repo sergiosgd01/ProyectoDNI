@@ -1,5 +1,5 @@
 // src/services/dniApi.js
-const API_BASE_URL = "https://naughty-kettie-universidad-de-extremadura-de1061f0.koyeb.app/api/dni";
+const API_BASE_URL = "https://dni-backend-six.vercel.app/api/dni";
 // const API_BASE_URL = "http://localhost:5000/api/dni";
 
 export const dniApi = {
