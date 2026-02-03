@@ -331,6 +331,10 @@ export default function DNIEditor({
       console.log('Flags de validación DNI:', validationFlags);
       console.log('Porcentaje de acierto:', accuracyPercentage.toFixed(2) + '%');
 
+      //Validacion de elementos de seguridad
+      const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
+      const hologramDetected = frontDetections.some(d => HOLOGRAM_CLASSES.includes(d.label));
+
       // --- GUARDAR EN BACKEND ---
       try {
         console.log("💾 Guardando en backend...");
@@ -348,7 +352,7 @@ export default function DNIEditor({
           validation: validationFlags,
           manualCensor: Object.keys(manualFiles).length > 0,
           manualDetection: manualDetection,
-          hologramReadable: null,
+          hologramReadable: hologramDetected,
           homogenityPassed: accuracyPercentage,
           watermarkText: watermarkText
         });
