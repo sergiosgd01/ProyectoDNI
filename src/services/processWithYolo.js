@@ -1,6 +1,4 @@
-export async function processWithYolo(file, { url = 'https://blotless-krysta-nontemporally.ngrok-free.dev/process', timeout = 90000 } = {}) {
-// export async function processWithYolo(file, { url = 'http://localhost:8000/process', timeout = 90000 } = {}) {
-// export async function processWithYolo(file, { url = 'https://surname-fusion-pill-minor.trycloudflare.com/process', timeout = 90000 } = {}) {
+export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_API_URL || 'http://localhost:8000/process', timeout = 90000 } = {}) {
 
   // ✅ Validación básica
   if (!file || !(file instanceof File || file instanceof Blob)) {
@@ -26,7 +24,7 @@ export async function processWithYolo(file, { url = 'https://blotless-krysta-non
       // ✅ Manejo de errores específicos del backend
       try {
         const json = await res.json();
-        
+
         // Si el backend devuelve un objeto detail con estructura de error
         if (json.detail && typeof json.detail === 'object') {
           return {
@@ -39,7 +37,7 @@ export async function processWithYolo(file, { url = 'https://blotless-krysta-non
             minRequired: json.detail.min_required || null
           };
         }
-        
+
         // Formato de error simple
         return {
           ok: false,
@@ -79,7 +77,7 @@ export async function processWithYolo(file, { url = 'https://blotless-krysta-non
     };
   } catch (err) {
     clearTimeout(id);
-    
+
     // ✅ Detectar timeout específicamente
     if (err.name === 'AbortError') {
       return {
@@ -90,7 +88,7 @@ export async function processWithYolo(file, { url = 'https://blotless-krysta-non
         action: 'retry'
       };
     }
-    
+
     return {
       ok: false,
       errorType: 'network_error',

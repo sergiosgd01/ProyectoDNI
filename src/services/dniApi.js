@@ -1,7 +1,5 @@
 // src/services/dniApi.js
-const API_BASE_URL = "https://api.defiendetuidentidad.es/api/dni";
-// const API_BASE_URL = "https://dni-backend-six.vercel.app/api/dni";
-// const API_BASE_URL = "http://localhost:5000/api/dni";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/dni";
 
 export const dniApi = {
   /**
