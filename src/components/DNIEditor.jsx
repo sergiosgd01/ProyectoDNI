@@ -340,8 +340,8 @@ export default function DNIEditor({
         console.log("💾 Guardando en backend...");
         await dniApi.saveDniRecord({
           dniNumber: ocrDataForValidation.front?.NUM_DNI || `UNKNOWN-${Date.now()}`,
-          frontImageUrl: result.frontImageUrl,
-          backImageUrl: result.backImageUrl,
+          // frontImageUrl: result.frontImageUrl,  <-- REMOVED per user request
+          // backImageUrl: result.backImageUrl,    <-- REMOVED per user request
           profileUsed: selectedProfile || 'personalizado',
           hiddenFields: {
             frontFields: selectedFrontFields,
