@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-// Asegúrate de tener: npm install onnxruntime-web
+import * as ort from 'onnxruntime-web';
 
 const MODEL_PATH = "/models/best.onnx";
 const MODEL_INPUT_SIZE = 640;
@@ -20,12 +20,8 @@ let sharedSession = null;
 // --- 1. CARGA DEL MODELO ---
 const ensureSession = async () => {
   if (sharedSession) return sharedSession;
-  if (!window.ort) throw new Error("ONNX Runtime no encontrado");
 
-  // Configurar rutas WASM para el CDN
-  window.ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
-
-  sharedSession = await window.ort.InferenceSession.create(MODEL_PATH, {
+  sharedSession = await ort.InferenceSession.create(MODEL_PATH, {
     executionProviders: ["wasm"],
     graphOptimizationLevel: "all"
   });
@@ -60,7 +56,7 @@ const preprocessing = (sourceCanvas, targetSize) => {
     float32Data[j + 2 * targetSize * targetSize] = data[i + 2] / 255.0;
   }
 
-  const tensor = new window.ort.Tensor("float32", float32Data, [1, 3, targetSize, targetSize]);
+  const tensor = new ort.Tensor("float32", float32Data, [1, 3, targetSize, targetSize]);
   return { tensor, meta: { scale, x, y } };
 };
 
