@@ -8,10 +8,10 @@ const IOU_THRESHOLD = 0.45;
 
 // Tus clases en el orden exacto del entrenamiento (YAML)
 const CLASS_NAMES = [
-  'APELLIDOS', 'CAN', 'CLI', 'DOC_DNI', 'DOC_DNI_REV', 'DOMICILIO', 
-  'EMISIÓN', 'EQUIPO', 'ES', 'ESP', 'ESP_HOLO', 'FIRMA', 'FOTOGRAFIA', 
-  'HIJO_DE', 'LUGAR_NACIMIENTO', 'MRZ', 'NACIMIENTO', 'NACIONALIDAD', 
-  'NOMBRE', 'NUM_DNI', 'NUM_DNI_MIN', 'OPT_VAR', 'SEXO', 
+  'APELLIDOS', 'CAN', 'CLI', 'DOC_DNI', 'DOC_DNI_REV', 'DOMICILIO',
+  'EMISIÓN', 'EQUIPO', 'ES', 'ESP', 'ESP_HOLO', 'FIRMA', 'FOTOGRAFIA',
+  'HIJO_DE', 'LUGAR_NACIMIENTO', 'MRZ', 'NACIMIENTO', 'NACIONALIDAD',
+  'NOMBRE', 'NUM_DNI', 'NUM_DNI_MIN', 'OPT_VAR', 'SEXO',
   'SOPORTE', 'SOPORTE_MIN', 'VALIDEZ'
 ];
 
@@ -22,8 +22,11 @@ const ensureSession = async () => {
   if (sharedSession) return sharedSession;
   if (!window.ort) throw new Error("ONNX Runtime no encontrado");
 
+  // Configurar rutas WASM para el CDN
+  window.ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
+
   sharedSession = await window.ort.InferenceSession.create(MODEL_PATH, {
-    executionProviders: ["wasm"], 
+    executionProviders: ["wasm"],
     graphOptimizationLevel: "all"
   });
   return sharedSession;
@@ -48,13 +51,13 @@ const preprocessing = (sourceCanvas, targetSize) => {
   ctx.drawImage(sourceCanvas, 0, 0, sourceCanvas.width, sourceCanvas.height, x, y, w, h);
 
   const imageData = ctx.getImageData(0, 0, targetSize, targetSize);
-  const { data } = imageData; 
+  const { data } = imageData;
   const float32Data = new Float32Array(3 * targetSize * targetSize);
 
   for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-    float32Data[j] = data[i] / 255.0;                         
-    float32Data[j + targetSize * targetSize] = data[i + 1] / 255.0;     
-    float32Data[j + 2 * targetSize * targetSize] = data[i + 2] / 255.0; 
+    float32Data[j] = data[i] / 255.0;
+    float32Data[j + targetSize * targetSize] = data[i + 1] / 255.0;
+    float32Data[j + 2 * targetSize * targetSize] = data[i + 2] / 255.0;
   }
 
   const tensor = new window.ort.Tensor("float32", float32Data, [1, 3, targetSize, targetSize]);
@@ -79,7 +82,7 @@ const calculateIoU = (box1, box2) => {
  */
 const runNMS = (boxes) => {
   if (boxes.length === 0) return [];
-  
+
   // Agrupar por classId
   const boxesByClass = {};
   boxes.forEach(box => {
@@ -93,7 +96,7 @@ const runNMS = (boxes) => {
   Object.keys(boxesByClass).forEach(classId => {
     const classBoxes = boxesByClass[classId];
     classBoxes.sort((a, b) => b.confidence - a.confidence);
-    
+
     const active = new Array(classBoxes.length).fill(true);
     for (let i = 0; i < classBoxes.length; i++) {
       if (active[i]) {
@@ -111,10 +114,10 @@ const runNMS = (boxes) => {
 };
 
 const postprocessing = (outputTensor, meta) => {
-  const modelOutput = outputTensor.data; 
+  const modelOutput = outputTensor.data;
   // dims: [1, 4 + 26 clases, 8400] -> [1, 30, 8400]
-  const [_, rows, cols] = outputTensor.dims; 
-  
+  const [_, rows, cols] = outputTensor.dims;
+
   let boxes = [];
 
   // Iteramos sobre las 8400 "anchors"
@@ -160,10 +163,10 @@ const postprocessing = (outputTensor, meta) => {
 const runYoloInference = async (canvas) => {
   const session = await ensureSession();
   const { tensor, meta } = preprocessing(canvas, MODEL_INPUT_SIZE);
-  
+
   const feeds = { images: tensor };
   const results = await session.run(feeds);
-  
+
   return postprocessing(results.output0, meta);
 };
 
@@ -183,17 +186,17 @@ const DniDetector = ({ inputCanvas, onDetection }) => {
         canvas.height = inputCanvas.height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(inputCanvas, 0, 0);
-        
+
         // Dibujado elegante
         ctx.lineWidth = 2;
         ctx.font = "14px Arial";
-        
+
         boxes.forEach(box => {
           // Color aleatorio consistente basado en ID de clase
-          const colorHue = (box.classId * 137.508) % 360; 
+          const colorHue = (box.classId * 137.508) % 360;
           ctx.strokeStyle = `hsl(${colorHue}, 70%, 50%)`;
           ctx.strokeRect(box.x, box.y, box.width, box.height);
-          
+
           // Etiqueta
           ctx.fillStyle = `hsl(${colorHue}, 70%, 50%)`;
           ctx.fillRect(box.x, box.y - 18, ctx.measureText(box.label).width + 10, 18);
@@ -219,7 +222,7 @@ export const detectDniFromFile = async (file) => {
   canvas.height = img.height;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, 0, 0);
-  
+
   // Retorna array de objetos: [{ label: 'NOMBRE', x: 100, ... }, { label: 'FOTO', ... }]
   return runYoloInference(canvas);
 };
