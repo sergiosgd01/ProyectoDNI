@@ -1,4 +1,5 @@
 // Campos normalizados
+import logger from './logger';
 export const NUM_DNI = 'dni';
 export const EMISION = 'fechaExpedicion';
 export const VALIDEZ = 'fechaCaducidad';
@@ -42,7 +43,7 @@ export const validateRe = (string = '', regex) => {
   // Validar que string no sea null/undefined antes de usar match
   if (!string || typeof string !== 'string') return null;
   if (!regex) return string;
-  
+
   const match = string.match(regex);
   return match ? match[0] : null;
 };
@@ -373,7 +374,7 @@ export const validateDniConsistencyFlags = (ocrData) => {
   if (mrzString && typeof mrzString === 'string' && mrzString.trim()) {
     mrzInfo = extractIdentifiersFromMrz(mrzString);
     result.mrz = !!mrzInfo;
-    console.log('MRZ extraído:', mrzInfo);
+    logger.sensitive('MRZ extraído', mrzInfo);
   }
 
   // --- Comparaciones MRZ ---

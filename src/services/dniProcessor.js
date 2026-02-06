@@ -7,10 +7,11 @@
 
 import { censorDniComplete } from '../components/dni_scripts/dni_censor';
 import { validateDniConsistency } from '../utils/OCRhelpers';
+import logger from '../utils/logger';
 
 
 export class DNIProcessor {
-  
+
   /**
    * Procesa las imágenes del DNI con los campos seleccionados
    * @param {Object} dniData - Datos del DNI a procesar
@@ -33,8 +34,8 @@ export class DNIProcessor {
    */
   async processeDNI(dniData) {
     try {
-      console.log('Iniciando procesamiento de DNI...');
-      console.log('Datos recibidos:', {
+      logger.log('Iniciando procesamiento de DNI...');
+      logger.sensitive('Datos recibidos', {
         hasFront: !!dniData.frontFile,
         hasBack: !!dniData.backFile,
         frontFields: dniData.frontFields,
@@ -47,13 +48,14 @@ export class DNIProcessor {
       // CONECTAR COMPONENTE EXTERNO
       // Solo necesita usar: dniData.frontFile, dniData.backFile, dniData.frontFields y dniData.backFields
       const result = await this.callExternalProcessor(dniData);
-      
-      console.log('DNI procesado exitosamente');
+
+      logger.log('DNI procesado exitosamente');
       return result;
 
     } catch (error) {
-      console.error('Error procesando DNI:', error);
-      throw new Error(`Error en el procesamiento: ${error.message}`);
+      logger.error('Error en processeDNI:', error);
+      // Mensaje genérico sin exponer detalles internos
+      throw new Error('No se pudo procesar el DNI. Por favor, verifica las imágenes e inténtalo de nuevo.');
     }
   }
 
@@ -64,11 +66,11 @@ export class DNIProcessor {
    * @returns {Promise<Object>} Resultado del procesamiento real
    */
   async callExternalProcessor(dniData) {
-    console.log('Procesando DNI con censura...');
+    logger.log('Procesando DNI con censura...');
 
     try {
-      console.log('Campos frontales a censurar:', dniData.frontFields);
-      console.log('Campos traseros a censurar:', dniData.backFields);
+      logger.sensitive('Campos frontales a censurar', dniData.frontFields);
+      logger.sensitive('Campos traseros a censurar', dniData.backFields);
 
       // Procesar ambas caras del DNI con campos separados
       const { frontImageUrl, backImageUrl, ocrData } = await censorDniComplete(
@@ -83,7 +85,7 @@ export class DNIProcessor {
         }
       );
 
-      console.log('Procesamiento completado');
+      logger.log('Procesamiento completado');
 
       return {
         success: true,
@@ -130,7 +132,7 @@ export class DNIProcessor {
       throw new Error('backFile debe ser un objeto File válido');
     }
 
-    console.log('Validación de entrada completada');
+    logger.log('Validación de entrada completada');
   }
 
   /**

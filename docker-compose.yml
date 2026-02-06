@@ -4,8 +4,8 @@ services:
     container_name: mongo_db
     restart: unless-stopped
     environment:
-      MONGO_INITDB_ROOT_USERNAME: dniadmin
-      MONGO_INITDB_ROOT_PASSWORD: dnipassword
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
       MONGO_INITDB_DATABASE: proyecto_dni
     ports:
       - "27017:27017"

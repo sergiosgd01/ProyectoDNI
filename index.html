@@ -1,20 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo-web.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <title>DNI Protector</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script async src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"
-            onload="console.log('ONNX Runtime cargado correctamente')">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/logo-web.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Content Security Policy para prevenir XSS -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+                   script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://docs.opencv.org https://unpkg.com https://tessdata.projectnaptha.com; 
+                   img-src 'self' data: blob:; 
+                   connect-src 'self' http://localhost:5000 https://ia.defiendetuidentidad.es https://api.defiendetuidentidad.es https://cdn.jsdelivr.net https://unpkg.com blob:; 
+                   style-src 'self' 'unsafe-inline'; 
+                   font-src 'self';
+                   worker-src 'self' blob:;
+                   child-src 'self' blob:;">
+
+  <title>DNI Protector</title>
+</head>
+
+<body>
+  <div id="root"></div>
+  <!-- ONNX Runtime - SRI removido temporalmente por conflicto -->
+  <script async src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" crossorigin="anonymous"
+    onload="console.log('ONNX Runtime cargado correctamente')">
     </script>
-    <script async src="https://docs.opencv.org/4.5.2/opencv.js" 
-            onload="console.log('OpenCV.js cargado correctamente')">
-    </script>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <!-- OpenCV.js -->
+  <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="console.log('OpenCV.js cargado correctamente')">
+  </script>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>

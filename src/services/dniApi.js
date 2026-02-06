@@ -1,4 +1,5 @@
 // src/services/dniApi.js
+import logger from '../utils/logger';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api/dni";
 
 export const dniApi = {
@@ -20,40 +21,12 @@ export const dniApi = {
       }
 
       const result = await response.json();
-      console.log("✅ Registro guardado correctamente:", result);
+      logger.sensitive('Registro guardado correctamente', result);
       return result;
     } catch (error) {
-      console.error("❌ Error en dniApi.saveDniRecord:", error);
-      throw error;
+      logger.error("❌ Error en dniApi.saveDniRecord:", error);
+      // Lanzar error genérico sin exponer detalles internos
+      throw new Error('No se pudo guardar el registro. Por favor, inténtalo de nuevo.');
     }
-  },
-
-  /**
-   * Obtiene todos los DNIs registrados
-   */
-  async getAll() {
-    const res = await fetch(API_BASE_URL);
-    return res.json();
-  },
-
-  /**
-   * Obtiene un DNI por su número
-   */
-  async getByNumber(dniNumber) {
-    const res = await fetch(`${API_BASE_URL}/${dniNumber}`);
-    return res.json();
-  },
-
-  /**
-   * Elimina un DNI por número
-   */
-  async deleteByNumber(dniNumber) {
-    const res = await fetch(`${API_BASE_URL}/${dniNumber}`, { method: "DELETE" });
-    return res.json();
-  },
-
-  async getHistory(dniNumber) {
-    const res = await fetch(`${API_BASE_URL}/history/${dniNumber}`);
-    return res.json();
-  },
+  }
 };
