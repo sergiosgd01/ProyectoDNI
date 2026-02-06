@@ -10,7 +10,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
                    script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://docs.opencv.org https://unpkg.com https://tessdata.projectnaptha.com; 
                    img-src 'self' data: blob:; 
-                   connect-src 'self' https://ia.defiendetuidentidad.es https://api.defiendetuidentidad.es https://cdn.jsdelivr.net https://unpkg.com blob:; 
+                   connect-src 'self' https://ia.defiendetuidentidad.es https://api.defiendetuidentidad.es https://cdn.jsdelivr.net https://unpkg.com data: blob:; 
                    style-src 'self' 'unsafe-inline'; 
                    font-src 'self';
                    worker-src 'self' blob:;
@@ -21,13 +21,10 @@
 
 <body>
   <div id="root"></div>
-  <!-- ONNX Runtime - SRI removido temporalmente por conflicto -->
-  <script async src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" crossorigin="anonymous"
-    onload="console.log('ONNX Runtime cargado correctamente')">
-    </script>
+  <!-- ONNX Runtime -->
+  <script async src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js" crossorigin="anonymous"></script>
   <!-- OpenCV.js -->
-  <script async src="https://docs.opencv.org/4.5.2/opencv.js" onload="console.log('OpenCV.js cargado correctamente')">
-  </script>
+  <script async src="https://docs.opencv.org/4.5.2/opencv.js"></script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 
