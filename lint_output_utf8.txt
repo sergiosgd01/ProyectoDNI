@@ -1,0 +1,52 @@
+﻿
+> web-dni@0.0.0 lint
+> eslint .
+
+
+C:\Users\sergi\Dev\ProyectoDNI\src\App.jsx
+   33:24  error  'setIsValidating' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  265:9   error  Unexpected lexical declaration in case block                                                     no-case-declarations
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\CameraCapture.jsx
+  256:11  error  'previewDataUrl' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\DNIEditor.jsx
+   21:3   error    'onProcessed' is defined but never used                                                                             no-unused-vars
+   27:10  error    'cachedOcrData' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                       no-unused-vars
+   28:10  error    'cachedValidation' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                    no-unused-vars
+  165:6   warning  React Hook useEffect has a missing dependency: 'selectedProfile'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\Header.jsx
+  5:10  error  'selectedLanguage' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u     no-unused-vars
+  5:28  error  'setSelectedLanguage' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+  7:10  error  'open' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                 no-unused-vars
+  7:16  error  'setOpen' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u              no-unused-vars
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\ManualCensorModal.jsx
+  159:6  warning  React Hook useEffect has a missing dependency: 'redrawCanvas'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\ManualCropModal.jsx
+  11:3  error  'errorInfo' is assigned a value but never used  no-unused-vars
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\dni_scripts\dni_censor.jsx
+   28:65  error  'side' is assigned a value but never used  no-unused-vars
+   46:29  error  'cv' is not defined                        no-undef
+   47:29  error  'cv' is not defined                        no-undef
+   48:13  error  'cv' is not defined                        no-undef
+   48:57  error  'cv' is not defined                        no-undef
+   55:3   error  'cv' is not defined                        no-undef
+  153:17  error  '_' is defined but never used              no-unused-vars
+
+C:\Users\sergi\Dev\ProyectoDNI\src\components\dni_scripts\dni_detector.jsx
+    1:36  error  'useState' is defined but never used. Allowed unused vars must match /^[A-Z_]/u                                                 no-unused-vars
+  115:13  error  'rows' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u                                            no-unused-vars
+  213:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\sergi\Dev\ProyectoDNI\src\services\dniProcessor.js
+  9:10  error  'validateDniConsistency' is defined but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\sergi\Dev\ProyectoDNI\src\utils\OCRhelpers.js
+  255:7  error  'buildMrzLines' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+Ô£û 25 problems (23 errors, 2 warnings)
+

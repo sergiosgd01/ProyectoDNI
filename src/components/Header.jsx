@@ -1,71 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import 'flag-icons/css/flag-icons.min.css';
 
 function Header({ onShowHome }) {
-  const [selectedLanguage, setSelectedLanguage] = useState('es');
+  const [scrolled, setScrolled] = useState(false);
 
-  const languages = [
-    { code: 'es', name: 'Español', flag: 'fi fi-es' },
-    { code: 'en', name: 'English', flag: 'fi fi-us' },
-    { code: 'pt', name: 'Português', flag: 'fi fi-pt' }
-  ];
+  // Detectar scroll para cambiar estilo del header
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
-  const current = languages.find(lang => lang.code === selectedLanguage);
-  const [open, setOpen] = useState(false);
+  const handleNavClick = (e, targetId) => {
+    e.preventDefault();
+    if (onShowHome) onShowHome(); // Asegurarse de estar en la vista principal
+
+    // Pequeño delay para permitir que el renderizado de la "home" ocurra si estábamos en el proceso
+    setTimeout(() => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        const headerOffset = 80;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 100);
+  };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
+    <header className={`fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 py-3 transition-shadow duration-300 ${scrolled ? 'shadow-md' : 'shadow-sm'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+        <div className="flex justify-between items-center">
 
           {/* Logo y nombre */}
-          <div className="flex items-center cursor-pointer" onClick={onShowHome}>
-            <div className="w-10 h-10 flex items-center justify-center mr-3">
+          <div className="flex items-center cursor-pointer group" onClick={onShowHome}>
+            <div className="flex items-center justify-center mr-3 w-10 h-10">
               <img
                 src="/logo-web.png"
                 alt="Logo Protector DNI"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900">Protector DNI</h1>
-              <p className="text-xs text-gray-500">Protege tu identidad</p>
+              <h1 className="text-xl font-bold text-gray-900 leading-tight">Protector DNI</h1>
+              <p className="text-xs text-primary-600 font-medium tracking-wide uppercase">Seguridad Digital</p>
             </div>
           </div>
 
-          {/* Navegación y controles */}
+          {/* Navegación Desktop */}
+          <nav className="hidden md:flex items-center space-x-8">
+            <a href="#upload-section" onClick={(e) => handleNavClick(e, 'upload-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Cómo funciona
+            </a>
+            <a href="#security-section" onClick={(e) => handleNavClick(e, 'security-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              Seguridad
+            </a>
+            <a href="#faq-section" onClick={(e) => handleNavClick(e, 'faq-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+              FAQ
+            </a>
+          </nav>
+
+          {/* CTA Header */}
           <div className="flex items-center space-x-4">
-
-            {/* Selector de idioma eliminado temporalmente */}
-            {/* <div className="relative w-48">
-              <button
-                onClick={() => setOpen(prev => !prev)}
-                className="flex items-center justify-start w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <span className={`${current.flag} w-5 h-5 mr-2`}></span>
-                <span>{current.name}</span>
-                <i className="bi bi-chevron-down text-gray-400 ml-auto"></i>
-              </button>
-
-              {open && (
-                <div className="absolute mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-20">
-                  {languages.map(lang => (
-                    <div
-                      key={lang.code}
-                      onClick={() => {
-                        setSelectedLanguage(lang.code);
-                        setOpen(false);
-                      }}
-                      className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-100 space-x-2"
-                    >
-                      <span className={`${lang.flag} w-5 h-5`}></span>
-                      <span>{lang.name}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div> */}
-
+            <button
+              onClick={(e) => handleNavClick(e, 'upload-section')}
+              className="hidden sm:inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-primary-600 rounded-full hover:bg-primary-700 hover:shadow-lg hover:-translate-y-0.5"
+            >
+              Procesar DNI
+            </button>
+            <button
+              onClick={(e) => handleNavClick(e, 'upload-section')}
+              className="sm:hidden inline-flex items-center justify-center p-2 text-primary-600 bg-primary-50 rounded-full hover:bg-primary-100"
+            >
+              <i className="bi bi-upload text-lg"></i>
+            </button>
           </div>
         </div>
       </div>

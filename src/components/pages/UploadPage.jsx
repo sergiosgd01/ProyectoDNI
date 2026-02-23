@@ -6,10 +6,10 @@ import FAQ from '../FAQ';
 import Footer from '../Footer';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 
-export default function UploadPage({ 
-  frontFile, 
-  backFile, 
-  onFrontFileSelect, 
+export default function UploadPage({
+  frontFile,
+  backFile,
+  onFrontFileSelect,
   onBackFileSelect,
   onClearFrontFile,
   onClearBackFile,
@@ -18,11 +18,12 @@ export default function UploadPage({
   shouldAutoNavigate = false,
   isProcessMode = false,
   validationError = null,
-  isValidating = false
+  isValidating = false,
+  onGoHome
 }) {
   const backSectionRef = useRef(null);
   const completionMessageRef = useRef(null);
-  
+
   const previousFrontFile = useRef(frontFile);
   const previousBackFile = useRef(backFile);
   const initialLoadCompleted = useRef(false);
@@ -31,7 +32,7 @@ export default function UploadPage({
   useScrollToTop();
 
   const isMobileView = () => {
-    return window.innerWidth < 768; 
+    return window.innerWidth < 768;
   };
 
   // Función para hacer scroll suave a la sección trasera
@@ -44,16 +45,16 @@ export default function UploadPage({
           block: 'start',
           inline: 'nearest'
         });
-        
+
         // Agregar efecto visual temporal de destacado
         backSectionRef.current.classList.add('ring-2', 'ring-blue-400', 'ring-opacity-50');
         setTimeout(() => {
           if (backSectionRef.current) {
             backSectionRef.current.classList.remove('ring-2', 'ring-blue-400', 'ring-opacity-50');
           }
-        }, 2000); 
-        
-      }, 400); 
+        }, 2000);
+
+      }, 400);
     }
   }, []);
 
@@ -67,7 +68,7 @@ export default function UploadPage({
           block: 'center',
           inline: 'nearest'
         });
-        
+
         // Agregar efecto visual temporal de destacado
         completionMessageRef.current.classList.add('ring-2', 'ring-secondary-400', 'ring-opacity-50');
         setTimeout(() => {
@@ -75,8 +76,8 @@ export default function UploadPage({
             completionMessageRef.current.classList.remove('ring-2', 'ring-secondary-400', 'ring-opacity-50');
           }
         }, 3000);
-        
-      }, 400); 
+
+      }, 400);
     }
   }, []);
 
@@ -94,11 +95,11 @@ export default function UploadPage({
     const wasEmpty = !previousFrontFile.current;
     const nowHasFile = !!frontFile;
     const isNewUpload = wasEmpty && nowHasFile && !backFile;
-    
+
     if (isNewUpload) {
       scrollToBackSection();
     }
-    
+
     previousFrontFile.current = frontFile;
   }, [frontFile, backFile, scrollToBackSection]);
 
@@ -111,23 +112,34 @@ export default function UploadPage({
     const wasEmpty = !previousBackFile.current;
     const nowHasFile = !!backFile;
     const isNewUpload = wasEmpty && nowHasFile && frontFile && hasAllFiles;
-    
+
     if (isNewUpload) {
       scrollToCompletionMessage();
     }
-    
+
     previousBackFile.current = backFile;
   }, [frontFile, backFile, scrollToCompletionMessage, hasAllFiles]);
 
   return (
     <>
       {!isProcessMode && <ProjectInfo />}
-      
+
       {/* Vista combinada: ambos pasos lado a lado */}
-      <section className="py-16 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-7xl">
+      <section className="py-8 sm:py-16 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-7xl relative">
+          {/* Botón Volver al Inicio integrado de forma profesional */}
+          <div className="mb-4 sm:absolute sm:-top-8 sm:left-0 z-10">
+            <button
+              onClick={onGoHome}
+              className="group inline-flex items-center px-4 py-2 bg-white/60 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+            >
+              <i className="bi bi-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+              Volver al inicio
+            </button>
+          </div>
+
           {/* Header general */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 mt-4 sm:mt-0">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
               Subir ambas partes del DNI
             </h2>
@@ -161,7 +173,7 @@ export default function UploadPage({
                   Sube una foto de la <strong>parte frontal</strong> de tu DNI
                 </p>
               </div>
-              
+
               <MainSection
                 key="front-section"
                 selectedFile={frontFile}
@@ -188,7 +200,7 @@ export default function UploadPage({
                   Sube una foto de la <strong>parte posterior</strong> de tu DNI
                 </p>
               </div>
-              
+
               <MainSection
                 key="back-section"
                 selectedFile={backFile}
@@ -211,13 +223,13 @@ export default function UploadPage({
                   <i className="bi bi-check-circle-fill text-2xl mr-3"></i>
                   <span className="text-lg font-bold">¡Ambas partes cargadas correctamente!</span>
                 </div>
-                
+
                 {shouldAutoNavigate ? (
                   <>
                     <p className="text-secondary-600 mb-4">
                       Dirigiéndote automáticamente al editor para seleccionar los campos...
                     </p>
-                    
+
                     {/* Indicador de carga */}
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
@@ -231,7 +243,7 @@ export default function UploadPage({
                     <p className="text-secondary-600 mb-4">
                       ¿Quieres continuar con estas fotos o cambiar alguna?
                     </p>
-                    
+
                     {/* Botón manual para continuar */}
                     <button
                       onClick={onContinueToEditor}

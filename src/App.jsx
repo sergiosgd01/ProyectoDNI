@@ -257,6 +257,7 @@ function App() {
             isProcessMode={true}
             validationError={validationError}
             isValidating={isValidating}
+            onGoHome={goHome}
           />
         );
 
@@ -273,6 +274,7 @@ function App() {
             onProcess={handleDNIProcess}
             initialOcrData={preOcrData}
             initialValidation={validationResult}
+            onGoHome={goHome}
           />
         );
 
@@ -297,9 +299,10 @@ function App() {
         <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
       )}
 
-      <Header
-        onShowHome={goHome}
-      />
+      {/* Renderizar Header solo en la vista inicial */}
+      {currentView === VIEWS.HOME && (
+        <Header onShowHome={goHome} />
+      )}
 
       {renderContent()}
     </div>

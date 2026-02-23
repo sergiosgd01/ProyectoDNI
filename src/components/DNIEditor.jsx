@@ -21,7 +21,8 @@ export default function DNIEditor({
   onProcessed,
   initialOcrData = null,
   initialValidation = null,
-  manualDetection = false
+  manualDetection = false,
+  onGoHome
 }) {
   const colors = useColors();
   const [cachedOcrData, setCachedOcrData] = useState(initialOcrData);
@@ -614,9 +615,31 @@ export default function DNIEditor({
         </div>
       )}
       <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
-        <div className="container mx-auto px-4 max-w-7xl">
+        <div className="container mx-auto px-4 max-w-7xl relative">
+          {/* Navegación - Controles flotantes */}
+          <div className="mb-8 flex flex-wrap gap-3 sm:absolute sm:-top-4 sm:left-4 z-10">
+            {onGoHome && (
+              <button
+                onClick={onGoHome}
+                className="group inline-flex items-center px-4 py-2 bg-white/70 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+              >
+                <i className="bi bi-house-door mr-2"></i>
+                Inicio
+              </button>
+            )}
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="group inline-flex items-center px-4 py-2 bg-white/70 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+              >
+                <i className="bi bi-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+                Cambiar fotos
+              </button>
+            )}
+          </div>
+
           {/* Header */}
-          <div className="text-center mb-6 sm:mb-8">
+          <div className="text-center mb-6 sm:mb-8 mt-4 sm:mt-0">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">
               Configurar DNI
             </h1>

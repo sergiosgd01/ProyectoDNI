@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as ort from 'onnxruntime-web';
 
+// Configurar ruta base de los archivos .wasm para evitar problemas con el servidor de desarrollo Vite
+// (Error: expected magic word 00 61 73 6d, found 3c 21 64 6f)
+ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.1/dist/";
+
 const MODEL_PATH = "/models/best.onnx";
 const MODEL_INPUT_SIZE = 640;
 const CONFIDENCE_THRESHOLD = 0.5;
