@@ -274,13 +274,15 @@ export default function DNIEditor({
 
       const frontDetections = await detectDniFromFile(frontFileToProcess);
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
+      console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
       if (!frontDocument) {
-        console.log('[-] Anverso no detectado → Censura manual');
+        console.warn('⚠️ [ANVERSO] → CENSURA MANUAL (no se detectó el documento DOC_DNI)');
         manualFiles.front = frontFileToProcess;
-      } else if (frontDetections.length < 20) {
-        console.log('[-] No se detectaron todos los campos → Censura manual');
+      } else if (frontDetections.length < 15) {
+        console.warn(`⚠️ [ANVERSO] → CENSURA MANUAL (solo ${frontDetections.length} detecciones, mínimo 15)`);
         manualFiles.front = frontFileToProcess;
       } else {
+        console.log('✅ [ANVERSO] → CENSURA AUTOMÁTICA');
         const frontResult = await censorDniComplete(
           frontFileToProcess,
           backFileToProcess,
@@ -289,20 +291,23 @@ export default function DNIEditor({
         );
         result.frontImageUrl = frontResult.frontImageUrl; //imagen censurada
         result.frontOcrData = frontResult.ocrData.front; //datos ocr
+        console.log('✅ [ANVERSO] Censura automática completada');
       }
 
       let backDetections = [];
       if (backFileToProcess) {
         backDetections = await detectDniFromFile(backFileToProcess);
         const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
+        console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
 
         if (!backDocument) {
-          console.log('[-] Reverso no detectado → Censura manual');
+          console.warn('⚠️ [REVERSO] → CENSURA MANUAL (no se detectó el documento DOC_DNI_REV)');
           manualFiles.back = backFileToProcess;
-        } else if (backDetections.length < 7) {
-          console.log('[-] No se detectaron todos los campos → Censura manual');
-          manualFiles.front = frontFileToProcess;
+        } else if (backDetections.length < 6) {
+          console.warn(`⚠️ [REVERSO] → CENSURA MANUAL (solo ${backDetections.length} detecciones, mínimo 6)`);
+          manualFiles.back = backFileToProcess;
         } else {
+          console.log('✅ [REVERSO] → CENSURA AUTOMÁTICA');
           const backResult = await censorDniComplete(
             frontFileToProcess,
             backFileToProcess,
@@ -311,6 +316,7 @@ export default function DNIEditor({
           );
           result.backImageUrl = backResult.backImageUrl; //imagen censurada
           result.backOcrData = backResult.ocrData.back;  //datos ocr
+          console.log('✅ [REVERSO] Censura automática completada');
         }
       }
 
@@ -366,10 +372,14 @@ export default function DNIEditor({
       // --------------------------
 
       if (Object.keys(manualFiles).length > 0) {
+        console.log(`📋 [RESULTADO] Censura manual necesaria para: ${Object.keys(manualFiles).join(', ')}`);
+        console.log(`📋 [RESULTADO] Ya censurado automáticamente: ${[result.frontImageUrl ? 'anverso' : null, result.backImageUrl ? 'reverso' : null].filter(Boolean).join(', ') || 'ninguno'
+          }`);
         setManualCensorList(manualFiles);
         setProcessedResult(result);
         return;
       }
+      console.log('🎉 [RESULTADO] Censura 100% automática — no se necesita intervención manual');
 
       setProcessedResult(result);
 
@@ -697,60 +707,72 @@ export default function DNIEditor({
                   )}
 
                   {/* Botones de descarga */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
+                  <div className="flex flex-col gap-3 mt-2">
+                    {/* Fila 1: Anverso y Reverso */}
+                    <div className="flex gap-3">
                       <button
                         onClick={() => downloadImageWithWatermark(
                           processedResult.frontImageUrl,
                           'dni-front-processed.jpg',
-                          {
-                            text: watermarkText
-                          }
+                          { text: watermarkText }
                         )}
-                        style={{ backgroundColor: colors.button.primary }}
-                        className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
+                        className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
+                        style={{
+                          background: `linear-gradient(135deg, #f5c842 0%, #eaaf0f 60%, #d49a00 100%)`,
+                          focusRingColor: '#eaaf0f',
+                          color: '#1a1000'
+                        }}
                       >
-                        <i className="bi bi-download mr-1"></i>
-                        Descargar Anverso
+                        <i className="bi bi-cloud-arrow-down-fill text-base group-hover:translate-y-0.5 transition-transform duration-200" />
+                        <span>Descargar Anverso</span>
                       </button>
+
                       {processedResult.backImageUrl && (
                         <button
                           onClick={() => downloadImageWithWatermark(
                             processedResult.backImageUrl,
                             'dni-back-processed.jpg',
-                            {
-                              text: watermarkText
-                            }
+                            { text: watermarkText }
                           )}
-                          style={{ backgroundColor: colors.button.secondary }}
-                          className="flex-1 text-white py-2 px-4 rounded-lg text-center hover:opacity-90 transition-opacity text-sm font-medium"
+                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
+                          style={{
+                            background: `linear-gradient(135deg, #ff5f63 0%, #E53338 60%, #c0272b 100%)`
+                          }}
                         >
-                          <i className="bi bi-download mr-1"></i>
-                          Descargar Reverso
+                          <i className="bi bi-cloud-arrow-down-fill text-base group-hover:translate-y-0.5 transition-transform duration-200" />
+                          <span>Descargar Reverso</span>
                         </button>
                       )}
                     </div>
 
-                    {/* Botones para descargar combinado (JPG y PDF) */}
+                    {/* Fila 2: Completo JPG y PDF (solo si hay reverso) */}
                     {processedResult.backImageUrl && (
-                      <div className="flex gap-2">
+                      <div className="flex gap-3">
                         <button
                           onClick={handleDownloadCombined}
-                          className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg text-center hover:bg-primary-500 transition-colors text-sm font-medium"
+                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                          style={{
+                            background: `linear-gradient(135deg, #6b7280 0%, #4b5563 60%, #374151 100%)`
+                          }}
                         >
-                          <i className="bi bi-file-earmark-image mr-1"></i>
-                          Completo JPG
+                          <i className="bi bi-file-earmark-image-fill text-base group-hover:scale-110 transition-transform duration-200" />
+                          <span>Completo JPG</span>
                         </button>
+
                         <button
                           onClick={handleDownloadCombinedPDF}
-                          className="flex-1 bg-gray-700 text-white py-2 px-4 rounded-lg text-center hover:bg-red-700 transition-colors text-sm font-medium"
+                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700"
+                          style={{
+                            background: `linear-gradient(135deg, #c0392b 0%, #96231b 60%, #7b1c15 100%)`
+                          }}
                         >
-                          <i className="bi bi-file-earmark-pdf mr-1"></i>
-                          Completo PDF
+                          <i className="bi bi-file-earmark-pdf-fill text-base group-hover:scale-110 transition-transform duration-200" />
+                          <span>Completo PDF</span>
                         </button>
                       </div>
                     )}
                   </div>
+
                 </div>
               ) : (
                 <>
@@ -1057,7 +1079,10 @@ export default function DNIEditor({
           frontFile={manualCensorList?.front}
           backFile={manualCensorList?.back}
           onComplete={handleManualCensorComplete}
-          onCancel={() => setManualCensorList(null)}
+          onCancel={() => {
+            setManualCensorList(null);
+            setProcessedResult(null); // Resetear para volver a mostrar imágenes originales
+          }}
         />
       )}
     </>
