@@ -3,28 +3,28 @@ import React from 'react';
 function FAQ() {
   const faqs = [
     {
-      question: "¿Es seguro subir mi DNI?",
-      answer: "Completamente seguro. Tu DNI nunca sale de tu dispositivo, todo el procesamiento es local en tu navegador. Las imágenes no se envían a ningún servidor externo."
+      question: "¿Es seguro subir la foto de mi DNI?",
+      answer: "Sí, es completamente seguro. Tu foto nunca sale de tu móvil u ordenador. Todo el proceso ocurre en tu propio dispositivo de manera privada y no se envía ninguna foto por internet a ninguna otra parte."
     },
     {
-      question: "¿Qué datos se guardan de mi DNI?",
-      answer: "Solo guardamos el número de DNI codificado de forma anónima para estadísticas de uso de la web (cuántas veces se utiliza la herramienta). No se almacena ninguna imagen, ni datos personales, ni información sensible. El resto de datos del DNI no se procesan ni guardan en absoluto."
+      question: "¿Se guarda algún dato mío?",
+      answer: "No guardamos tu foto, nombre ni ningún dato personal tuyo. Únicamente registramos de forma totalmente privada (e indescifrable) tu número de documento para poder llevar la cuenta general de cuánta gente usa la aplicación, pero de ninguna manera sabremos quién eres."
     },
     {
-      question: "¿Qué formatos de imagen son compatibles?",
-      answer: "Soportamos todos los formatos de imagen comunes: JPG, PNG, GIF, BMP y WebP."
+      question: "¿Qué formatos de imagen acepta la aplicación?",
+      answer: "La aplicación admite los formatos de foto más habituales: JPG, PNG y WEBP (con un tamaño máximo de 10 MB por foto)."
     },
     {
-      question: "¿Funciona sin conexión a internet?",
-      answer: "Sí, una vez cargada la página, la herramienta funciona completamente offline ya que todo el procesamiento es local."
+      question: "¿Tiene algún coste utilizar esta herramienta?",
+      answer: "No, la herramienta es completamente gratuita y puedes utilizarla libremente todas las veces que la necesites sin registrarte."
     },
     {
       question: "¿Puedo personalizar la marca de agua?",
-      answer: "Sí, puedes personalizar el texto de la marca de agua para cada uso específico que le vayas a dar al documento."
+      answer: "Sí, puedes escribir el texto de la marca de agua que mejor se adapte para cada trámite o gestión que vayas a realizar con tu documento (por ejemplo, 'Copia válida para alquilar piso')."
     },
     {
-      question: "¿Qué datos puedo ocultar?",
-      answer: "Puedes ocultar selectivamente cualquier campo del DNI: nombre, apellidos, DNI, fechas, códigos QR, número de trámite, etc."
+      question: "¿Qué partes del DNI puedo ocultar?",
+      answer: "Puedes ocultar o difuminar fácilmente cualquier dato del DNI que no quieras mostrar como tu nombre, apellidos, firma, fechas o lugar de nacimiento. Tú eliges en todo momento qué información quieres que sea visible."
     }
   ];
 

@@ -149,11 +149,6 @@ export default function HomePage({ onStartProcess }) {
         <FAQ />
       </div>
 
-      {/* Info del Proyecto reubicada al final */}
-      <div className="border-t border-gray-200">
-        <ProjectInfo />
-      </div>
-
       <Footer />
     </div>
   );

@@ -122,9 +122,6 @@ export default function UploadPage({
 
   return (
     <>
-      {!isProcessMode && <ProjectInfo />}
-
-      {/* Vista combinada: ambos pasos lado a lado */}
       <section className="py-8 sm:py-16 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-7xl relative">
           {/* Botón Volver al Inicio integrado de forma profesional */}
