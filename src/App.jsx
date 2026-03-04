@@ -3,6 +3,7 @@ import Header from './components/Header';
 import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
 import UploadPage from './components/pages/UploadPage';
+import JornadasPage from './components/pages/JornadasPage';
 import ProcessingLoader from './components/ProcessingLoader';
 import { useDNIFiles } from './hooks/useDNIFiles';
 import { useNavigation } from './hooks/useNavigation';
@@ -277,6 +278,12 @@ function App() {
             onGoHome={goHome}
           />
         );
+
+      case VIEWS.JORNADAS_CACERES:
+        return <JornadasPage imageSrc="/jornadasCaceres.png" />;
+
+      case VIEWS.JORNADAS_MERIDA:
+        return <JornadasPage imageSrc="/jornadasMerida.png" />;
 
       default:
         return (
