@@ -343,19 +343,18 @@ export default function DNIEditor({
       const hologramDetected = frontDetections.some(d => HOLOGRAM_CLASSES.includes(d.label));
 
       // --- GUARDAR EN BACKEND ---
+      // ✅ PRODUCCIÓN: Solo se guardan metadatos, NO datos OCR (privacidad)
       try {
         console.log("💾 Guardando en backend...");
         await dniApi.saveDniRecord({
           dniNumber: ocrDataForValidation.front?.NUM_DNI || `UNKNOWN-${Date.now()}`,
-          // frontImageUrl: result.frontImageUrl,  <-- REMOVED per user request
-          // backImageUrl: result.backImageUrl,    <-- REMOVED per user request
+          // 🔐 DNI se cifrará automáticamente en el backend
           profileUsed: selectedProfile || 'personalizado',
           hiddenFields: {
             frontFields: selectedFrontFields,
             backFields: selectedBackFields
           },
-          ocrFrontData: ocrDataForValidation.front,
-          ocrBackData: ocrDataForValidation.back,
+          // ❌ ocrFrontData y ocrBackData ya NO se guardan por privacidad
           validation: validationFlags,
           manualCensor: Object.keys(manualFiles).length > 0,
           manualDetection: manualDetection,
@@ -363,7 +362,7 @@ export default function DNIEditor({
           homogenityPassed: accuracyPercentage,
           watermarkText: watermarkText
         });
-        console.log("✅ Guardado exitoso");
+        console.log("✅ Guardado exitoso (DNI cifrado, sin datos OCR)");
       } catch (saveError) {
         console.error("❌ Error al guardar en backend:", saveError);
         // Opcional: mostrar aviso visual de que falló el guardado, aunque el proceso local fue bien
