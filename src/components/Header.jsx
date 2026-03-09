@@ -21,7 +21,32 @@ function Header({ onShowHome }) {
     setTimeout(() => {
       const element = document.getElementById(targetId);
       if (element) {
-        const headerOffset = 80;
+        const headerOffset = 90;
+
+        if (targetId === 'upload-section') {
+          const ctaAnchor = document.getElementById('upload-cta-anchor');
+          const sectionTop = element.getBoundingClientRect().top + window.pageYOffset;
+          const minTarget = sectionTop - headerOffset;
+          let targetPosition = minTarget;
+
+          if (ctaAnchor) {
+            const ctaRect = ctaAnchor.getBoundingClientRect();
+            const ctaTop = ctaRect.top + window.pageYOffset;
+            const ctaBottom = ctaTop + ctaRect.height;
+            const bottomMargin = 20;
+            targetPosition = ctaBottom - (window.innerHeight - bottomMargin);
+          }
+
+          const maxTarget = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+          const finalTarget = Math.min(maxTarget, Math.max(minTarget, targetPosition));
+
+          window.scrollTo({
+            top: finalTarget,
+            behavior: 'smooth'
+          });
+          return;
+        }
+
         const elementPosition = element.getBoundingClientRect().top;
         const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
 

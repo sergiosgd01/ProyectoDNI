@@ -4,7 +4,7 @@ function FAQ() {
   const faqs = [
     {
       question: "¿Es seguro subir la foto de mi DNI?",
-      answer: "Sí, es completamente seguro. Tu foto nunca sale de tu móvil u ordenador. Todo el proceso ocurre en tu propio dispositivo de manera privada y no se envía ninguna foto por internet a ninguna otra parte."
+      answer: "Sí, puedes hacerlo con tranquilidad. Hemos diseñado la herramienta para cuidar tu privacidad y proteger tus datos durante todo el proceso. Tú decides cómo editar tu documento y revisarlo antes de compartirlo."
     },
     {
       question: "¿Se guarda algún dato mío?",

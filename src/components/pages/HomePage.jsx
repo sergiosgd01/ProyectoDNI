@@ -11,17 +11,33 @@ export default function HomePage({ onStartProcess }) {
   useScrollToTop();
 
   const scrollToUpload = () => {
-    const element = document.getElementById('upload-section');
-    if (element) {
-      const headerOffset = 80;
-      const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+    const section = document.getElementById('upload-section');
+    const ctaAnchor = document.getElementById('upload-cta-anchor');
 
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
+    if (!section) return;
+
+    const headerOffset = 90;
+    const sectionTop = section.getBoundingClientRect().top + window.pageYOffset;
+    const minTarget = sectionTop - headerOffset;
+
+    // Intentamos dejar el CTA visible en la parte baja de pantalla sin saltarnos el inicio de la seccion.
+    let targetPosition = minTarget;
+
+    if (ctaAnchor) {
+      const ctaRect = ctaAnchor.getBoundingClientRect();
+      const ctaTop = ctaRect.top + window.pageYOffset;
+      const ctaBottom = ctaTop + ctaRect.height;
+      const bottomMargin = 20;
+      targetPosition = ctaBottom - (window.innerHeight - bottomMargin);
     }
+
+    const maxTarget = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const finalTarget = Math.min(maxTarget, Math.max(minTarget, targetPosition));
+
+    window.scrollTo({
+      top: finalTarget,
+      behavior: 'smooth'
+    });
   };
 
   return (
@@ -83,57 +99,76 @@ export default function HomePage({ onStartProcess }) {
       </section>
 
       {/* Sección principal de subida */}
-      <section id="upload-section" className="py-20 lg:py-32 bg-white relative">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-
-          <div className="text-center mb-16">
-            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Comienza en 3 sencillos pasos
-            </h2>
-            <p className="text-lg text-gray-600">
-              Sube tus imágenes y aplica la protección en segundos
-            </p>
-          </div>
+      <section id="upload-section" className="py-10 sm:py-14 lg:py-20 bg-white relative">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden relative">
             {/* Cabecera decorativa de la tarjeta */}
             <div className="h-2 w-full bg-gradient-to-r from-primary-500 via-secondary-500 to-primary-500"></div>
 
-            <div className="p-8 sm:p-12 text-center">
-              <div className="inline-flex items-center justify-center w-24 h-24 bg-primary-50 rounded-2xl mb-8 transform rotate-3 hover:rotate-0 transition-transform duration-300">
-                <i className="bi bi-person-bounding-box text-5xl text-primary-600"></i>
-              </div>
+            <div className="p-5 sm:p-8 lg:p-10 relative">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.09),_transparent_45%)] pointer-events-none"></div>
 
-              <div className="grid md:grid-cols-3 gap-8 text-left max-w-3xl mx-auto mb-12">
-                <div className="relative">
-                  <div className="absolute -ml-4 mt-2 w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-700 text-xl -z-10">1</div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el frontal</h3>
-                  <p className="text-gray-600 text-sm">Captura o sube la parte delantera de tu documento.</p>
+              <div className="relative">
+                <div className="text-center mb-7 sm:mb-8">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                    Comienza en 3 sencillos pasos
+                  </h2>
+                  <p className="text-base sm:text-lg text-gray-600">
+                    Sube tus imágenes y aplica la protección en segundos
+                  </p>
                 </div>
-                <div className="relative">
-                  <div className="absolute -ml-4 mt-2 w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-700 text-xl -z-10">2</div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el reverso</h3>
-                  <p className="text-gray-600 text-sm">Captura o sube la parte trasera para completarlo.</p>
-                </div>
-                <div className="relative">
-                  <div className="absolute -ml-4 mt-2 w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center font-bold text-primary-700 text-xl -z-10">3</div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-2">Edita y protege</h3>
-                  <p className="text-gray-600 text-sm">Aplica marcas de agua y censura a tu gusto.</p>
-                </div>
-              </div>
 
-              <div className="border-t border-gray-100 pt-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 max-w-4xl mx-auto mb-8 sm:mb-10">
+                  {/* Paso 1 */}
+                  <div className="group relative bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                    <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
+                    <div className="flex items-center justify-between mb-5 pt-2">
+                      <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
+                        <i className="bi bi-credit-card-2-front text-xl text-primary-600"></i>
+                      </div>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">1</span>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el frontal</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">Captura o sube la parte delantera de tu documento.</p>
+                  </div>
+
+                  {/* Paso 2 */}
+                  <div className="group relative bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                    <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
+                    <div className="flex items-center justify-between mb-5 pt-2">
+                      <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
+                        <i className="bi bi-credit-card-2-back text-xl text-primary-600"></i>
+                      </div>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">2</span>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el reverso</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">Captura o sube la parte trasera para completarlo.</p>
+                  </div>
+
+                  {/* Paso 3 */}
+                  <div className="group relative bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                    <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
+                    <div className="flex items-center justify-between mb-5 pt-2">
+                      <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
+                        <i className="bi bi-shield-lock text-xl text-primary-600"></i>
+                      </div>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">3</span>
+                    </div>
+                    <h3 className="font-bold text-gray-900 text-lg mb-2">Edita y protege</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">Aplica marcas de agua y censura a tu gusto.</p>
+                  </div>
+                </div>
+
+                <div id="upload-cta-anchor" className="border-t border-gray-200 pt-6 sm:pt-8 text-center">
                 <button
                   onClick={onStartProcess}
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-10 py-5 bg-gray-900 text-white font-bold text-xl rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-xl hover:-translate-y-1 group"
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-7 sm:px-10 py-4 sm:py-5 bg-gray-900 text-white font-bold text-lg sm:text-xl rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-xl hover:-translate-y-1 group"
                 >
-                  <i className="bi bi-upload mr-3 text-2xl group-hover:-translate-y-1 transition-transform"></i>
+                    <i className="bi bi-upload mr-3 text-xl sm:text-2xl group-hover:-translate-y-1 transition-transform"></i>
                   Subir mi DNI
                 </button>
-                <p className="text-sm text-gray-500 mt-6 flex items-center justify-center">
-                  <i className="bi bi-shield-lock-fill text-green-500 mr-2 border border-green-200 rounded-full p-1 bg-green-50"></i>
-                  Procesamiento local. Máxima privacidad garantizada.
-                </p>
+              </div>
               </div>
             </div>
           </div>
