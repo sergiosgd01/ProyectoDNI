@@ -8,8 +8,14 @@ const certKeyPath = path.resolve('./cert-key.pem');
 const certPath = path.resolve('./cert.pem');
 const httpsEnabled = fs.existsSync(certKeyPath) && fs.existsSync(certPath);
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
+  // En la versión publicada se quitan los mensajes de consola (log, info, debug y warn)
+  // para que no aparezcan nombres de archivo, fotos ni datos del DNI. console.error se mantiene.
+  // En local (npm run dev) siguen saliendo todos.
+  esbuild: command === 'build'
+    ? { pure: ['console.log', 'console.info', 'console.debug', 'console.warn'] }
+    : undefined,
   server: {
     host: true,  // Permite acceso desde la red local o ngrok
     port: 5173,
@@ -25,4 +31,4 @@ export default defineConfig({
       '.ngrok.io'
     ]
   }
-})
+}))
