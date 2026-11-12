@@ -26,7 +26,7 @@ function Footer() {
               </h3>
             </div>
             <p className="text-gray-400 text-sm max-w-sm text-center md:text-left leading-relaxed">
-              La herramienta gratuita y segura para proteger tu documentación de identidad en el navegador de forma 100% privada.
+              La herramienta gratuita para proteger tu documento de identidad antes de compartirlo.
             </p>
           </div>
 
@@ -60,7 +60,7 @@ function Footer() {
           </p>
           <div className="flex items-center space-x-2 text-xs text-gray-600">
             <i className="bi bi-shield-lock-fill text-green-500"></i>
-            <span>Procesamiento 100% Local</span>
+            <span>Tus fotos no se guardan</span>
           </div>
         </div>
       </div>

@@ -62,9 +62,9 @@ function SecuritySection() {
               <div className="w-16 h-16 bg-secondary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
                 <i className="bi bi-lock text-secondary-600 text-3xl"></i>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">100% Privado</h3>
+              <h3 className="text-lg font-semibold text-gray-800 mb-3">Tu foto no se guarda</h3>
               <p className="text-sm text-gray-600">
-                Tu DNI nunca sale de tu dispositivo. Todo se procesa localmente en tu navegador. Sin servidores, sin riesgos.
+                La foto viaja cifrada a nuestro servidor solo para recortarla y enderezarla, y no se guarda. La censura y la marca de agua se aplican en tu navegador.
               </p>
             </div>
 

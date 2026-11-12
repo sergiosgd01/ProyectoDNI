@@ -4,11 +4,11 @@ function FAQ() {
   const faqs = [
     {
       question: "¿Es seguro subir la foto de mi DNI?",
-      answer: "Sí, puedes hacerlo con tranquilidad. Hemos diseñado la herramienta para cuidar tu privacidad y proteger tus datos durante todo el proceso. Tú decides cómo editar tu documento y revisarlo antes de compartirlo."
+      answer: "Sí. La foto viaja cifrada a nuestro servidor solo para recortar y enderezar el DNI, y no se guarda en ningún sitio. La censura y la marca de agua se aplican en tu navegador, y tú revisas el resultado antes de descargarlo."
     },
     {
       question: "¿Se guarda algún dato mío?",
-      answer: "No guardamos tu foto, nombre ni ningún dato personal tuyo. Únicamente registramos de forma totalmente privada (e indescifrable) tu número de documento para poder llevar la cuenta general de cuánta gente usa la aplicación, pero de ninguna manera sabremos quién eres."
+      answer: "No guardamos tu foto ni ningún dato de tu DNI. Solo registramos estadísticas anónimas de uso, como el perfil elegido o qué campos se tapan, sin nada que permita identificarte."
     },
     {
       question: "¿Qué formatos de imagen acepta la aplicación?",
@@ -24,7 +24,7 @@ function FAQ() {
     },
     {
       question: "¿Qué partes del DNI puedo ocultar?",
-      answer: "Puedes ocultar o difuminar fácilmente cualquier dato del DNI que no quieras mostrar como tu nombre, apellidos, firma, fechas o lugar de nacimiento. Tú eliges en todo momento qué información quieres que sea visible."
+      answer: "Puedes tapar cualquier dato del DNI que no quieras mostrar, como tu nombre, apellidos, firma, fechas o lugar de nacimiento. Tú eliges en todo momento qué información quieres que sea visible."
     }
   ];
 

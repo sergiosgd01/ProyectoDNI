@@ -52,7 +52,7 @@ export default function HomePage({ onStartProcess }) {
             <div className="text-center lg:text-left animate-slide-up">
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 font-medium text-sm mb-6">
                 <i className="bi bi-shield-check mr-2"></i>
-                100% Seguro y Privado
+                Tus fotos no se guardan
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight mb-6">
                 Protege tu DNI <br className="hidden lg:block" />
@@ -61,7 +61,7 @@ export default function HomePage({ onStartProcess }) {
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-gray-600 mb-8 max-w-2xl mx-auto lg:mx-0">
-                Añade marcas de agua, censura datos sensibles y extrae texto automáticamente. Todo ocurre en tu navegador, sin enviar imágenes a ningún servidor.
+                Censura los datos que no quieras compartir y añade una marca de agua antes de enviar tu DNI. La foto solo pasa por nuestro servidor para recortarla y no se guarda.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
