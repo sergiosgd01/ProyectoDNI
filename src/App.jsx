@@ -4,6 +4,8 @@ import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
 import UploadPage from './components/pages/UploadPage';
 import JornadasPage from './components/pages/JornadasPage';
+import AvisoLegalPage from './components/pages/AvisoLegalPage';
+import PrivacidadPage from './components/pages/PrivacidadPage';
 import ProcessingLoader from './components/ProcessingLoader';
 import { useDNIFiles } from './hooks/useDNIFiles';
 import { useNavigation } from './hooks/useNavigation';
@@ -284,6 +286,12 @@ function App() {
 
       case VIEWS.JORNADAS_MERIDA:
         return <JornadasPage imageSrc="/jornadasMerida.png" />;
+
+      case VIEWS.AVISO_LEGAL:
+        return <AvisoLegalPage onGoHome={goHome} />;
+
+      case VIEWS.PRIVACIDAD:
+        return <PrivacidadPage onGoHome={goHome} />;
 
       default:
         return (

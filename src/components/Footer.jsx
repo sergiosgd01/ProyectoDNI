@@ -58,6 +58,10 @@ function Footer() {
           <p className="text-xs text-gray-500 mb-4 md:mb-0">
             © {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.
           </p>
+          <nav className="flex items-center gap-4 text-xs mb-4 md:mb-0" aria-label="Información legal">
+            <a href="/aviso-legal" className="text-gray-400 hover:text-white transition-colors">Aviso legal</a>
+            <a href="/privacidad" className="text-gray-400 hover:text-white transition-colors">Política de privacidad</a>
+          </nav>
           <div className="flex items-center space-x-2 text-xs text-gray-600">
             <i className="bi bi-shield-lock-fill text-green-500"></i>
             <span>Tus fotos no se guardan</span>

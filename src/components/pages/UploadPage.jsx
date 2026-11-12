@@ -4,6 +4,7 @@ import MainSection from '../MainSection';
 import SecuritySection from '../SecuritySection';
 import FAQ from '../FAQ';
 import Footer from '../Footer';
+import PrivacyNotice from '../PrivacyNotice';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 
 export default function UploadPage({
@@ -211,6 +212,9 @@ export default function UploadPage({
               />
             </div>
           </div>
+
+          {/* Información básica de protección de datos (primera capa) */}
+          <PrivacyNotice />
 
           {/* Mensaje cuando ambas fotos estén cargadas */}
           {hasAllFiles && (

@@ -5,6 +5,8 @@ export function useNavigation() {
     const path = window.location.pathname;
     if (path === '/jornadas-caceres') return 'jornadas-caceres';
     if (path === '/jornadas-merida' || path === '/jorndas-merida') return 'jornadas-merida';
+    if (path === '/aviso-legal') return 'aviso-legal';
+    if (path === '/privacidad') return 'privacidad';
     return 'home';
   };
 
@@ -17,6 +19,8 @@ export function useNavigation() {
     const paths = {
       'jornadas-caceres': '/jornadas-caceres',
       'jornadas-merida': '/jornadas-merida',
+      'aviso-legal': '/aviso-legal',
+      'privacidad': '/privacidad',
       'home': '/'
     };
 
