@@ -1,0 +1,8 @@
+# Cabeceras de seguridad que Netlify añade a todas las páginas de la web.
+# La política de contenido (CSP) principal sigue en index.html. Aquí solo se añade lo que una etiqueta meta no puede hacer.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
