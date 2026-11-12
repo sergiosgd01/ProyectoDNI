@@ -179,8 +179,10 @@ export default function PrivacidadPage({ onGoHome }) {
 
       <LegalSection title="Registros anteriores al 12 de noviembre de 2026">
         <p>
-          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado. Si quieres que se borre
-          cualquier registro tuyo de esa época, escribe a {contactLink}.
+          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado, con el único fin de saber
+          cuántas veces se usaba con un mismo documento. Junto a él no se guardaba ningún otro dato de tu DNI, y no
+          se usaba para nada más. Desde esa fecha ya no se guarda. Si quieres que se borre cualquier registro tuyo
+          de esa época, escribe a {contactLink}.
         </p>
       </LegalSection>
 
