@@ -8,7 +8,7 @@ function FAQ() {
     },
     {
       question: "¿Se guarda algún dato mío?",
-      answer: "No guardamos tu foto ni ningún dato de tu DNI. Solo registramos estadísticas anónimas de uso, como el perfil elegido o qué campos se tapan, sin nada que permita identificarte."
+      answer: "No guardamos tu foto ni ningún dato de tu DNI. Solo registramos estadísticas de uso, como el perfil elegido o qué campos se tapan, y el texto que escribes en la marca de agua. Por eso te pedimos que no pongas datos personales en ese texto."
     },
     {
       question: "¿Qué formatos de imagen acepta la aplicación?",

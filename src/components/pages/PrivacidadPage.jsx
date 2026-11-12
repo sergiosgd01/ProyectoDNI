@@ -37,8 +37,8 @@ export default function PrivacidadPage({ onGoHome }) {
           </li>
           <li>Tu navegador detecta los campos, tapa los que eliges y añade la marca de agua.</li>
           <li>
-            Descargas tu copia. A nuestro servidor de estadísticas solo llegan datos anónimos, nunca el DNI ni la
-            foto.
+            Descargas tu copia. A nuestro servidor de estadísticas solo llegan datos de uso y el texto de la marca de
+            agua, nunca el DNI ni la foto.
           </li>
         </ol>
       </LegalSection>
@@ -76,6 +76,12 @@ export default function PrivacidadPage({ onGoHome }) {
               info.plazoEstadisticas,
             ],
             [
+              'El texto que escribes en la marca de agua. Te pedimos que no pongas datos personales en él',
+              'Saber para qué se usan las copias del DNI y mejorar la herramienta',
+              'Base de datos del proyecto',
+              info.plazoEstadisticas,
+            ],
+            [
               'Tu dirección IP y datos técnicos de la conexión',
               'Mostrar la web y protegerla de ataques',
               'Proveedores de la tabla de destinatarios',
@@ -85,15 +91,17 @@ export default function PrivacidadPage({ onGoHome }) {
         />
         <p>
           No usamos tu foto para reconocer tu cara, para entrenar modelos de inteligencia artificial ni para tomar
-          decisiones automáticas sobre ti. Las estadísticas no incluyen nada que permita identificarte.
+          decisiones automáticas sobre ti. Las estadísticas no incluyen tu foto ni ningún dato de tu DNI. El texto
+          de la marca de agua se guarda tal como lo escribes, así que no pongas en él tu nombre, tu dirección ni
+          otros datos personales.
         </p>
       </LegalSection>
 
       <LegalSection title="Base jurídica">
         <p>
           Tratamos la foto para prestarte el servicio que pides al usar la herramienta (artículo 6.1.b del RGPD).
-          Los datos técnicos de la conexión se tratan para mantener la web segura (artículo 6.1.f del RGPD). Las
-          estadísticas anónimas no son datos personales.
+          Los datos técnicos de la conexión se tratan para mantener la web segura, y el texto de la marca de agua
+          para fines estadísticos y de investigación (artículo 6.1.f del RGPD).
         </p>
       </LegalSection>
 
@@ -132,8 +140,9 @@ export default function PrivacidadPage({ onGoHome }) {
             escribiendo a {contactLink}.
           </li>
           <li>
-            Como no guardamos tu foto ni datos que te identifiquen, normalmente no podremos encontrar información
-            tuya (artículo 11 del RGPD).
+            Como no guardamos tu foto ni datos de tu DNI, normalmente no podremos encontrar información tuya
+            (artículo 11 del RGPD). Si escribiste algún dato personal en la marca de agua y quieres que se borre,
+            indícanos el texto y la fecha aproximada.
           </li>
           <li>
             Si crees que no hemos tratado bien tus datos, puedes reclamar ante la Agencia Española de Protección de
@@ -170,8 +179,8 @@ export default function PrivacidadPage({ onGoHome }) {
 
       <LegalSection title="Registros anteriores al 12 de noviembre de 2026">
         <p>
-          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado y el texto de la marca de agua.
-          Si quieres que se borre cualquier registro tuyo de esa época, escribe a {contactLink}.
+          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado. Si quieres que se borre
+          cualquier registro tuyo de esa época, escribe a {contactLink}.
         </p>
       </LegalSection>
 

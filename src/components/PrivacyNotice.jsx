@@ -43,7 +43,7 @@ export default function PrivacyNotice() {
             ],
             [
               'Finalidad',
-              'Recortar tu DNI para que puedas tapar los datos que elijas. La foto se envía cifrada a nuestro servidor en Alemania y no se guarda',
+              'Recortar tu DNI para que puedas tapar los datos que elijas. La foto se envía cifrada a nuestro servidor en Alemania y no se guarda. Guardamos estadísticas de uso y el texto de la marca de agua',
             ],
             ['Legitimación', LEGAL_INFO.legitimacion],
             ['Destinatarios', 'Proveedores técnicos que actúan por nuestra cuenta. No cedemos datos a terceros'],

@@ -67,6 +67,14 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
             {remainingChars} restantes
           </span>
         </div>
+
+        <p className="text-xs text-gray-600 flex items-start">
+          <i className="bi bi-exclamation-circle mr-1 mt-0.5 text-amber-600"></i>
+          <span>
+            Este texto se guarda para nuestras estadísticas. No escribas tu nombre, tu dirección ni otros datos
+            personales.
+          </span>
+        </p>
       </div>
     </div>
   );

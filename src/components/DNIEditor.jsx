@@ -341,10 +341,10 @@ export default function DNIEditor({
       const hologramDetected = frontDetections.some(d => HOLOGRAM_CLASSES.includes(d.label));
 
       // --- GUARDAR EN BACKEND ---
-      // Solo métricas anónimas de uso. No se envía el número de DNI, ningún dato leído
-      // por OCR ni el texto libre de la marca de agua, porque podrían identificar a la persona.
+      // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
+      // Nunca se envía el número de DNI ni ningún dato leído por OCR.
       try {
-        console.log("💾 Guardando métricas anónimas...");
+        console.log("💾 Guardando métricas de uso...");
         await dniApi.saveDniRecord({
           profileUsed: selectedProfile || 'personalizado',
           hiddenFields: {
@@ -355,7 +355,8 @@ export default function DNIEditor({
           manualCensor: Object.keys(manualFiles).length > 0,
           manualDetection: manualDetection,
           hologramReadable: hologramDetected,
-          homogenityPassed: accuracyPercentage
+          homogenityPassed: accuracyPercentage,
+          watermarkText: watermarkText
         });
         console.log("✅ Métricas anónimas guardadas");
       } catch (saveError) {
