@@ -1,11 +1,26 @@
 import React from 'react';
 import LegalPageLayout, { LegalSection } from '../legal/LegalPageLayout';
 import LegalTable from '../legal/LegalTable';
-import Fill from '../legal/Fill';
 import { LEGAL_INFO } from '../../content/legal';
 
 export default function AvisoLegalPage({ onGoHome }) {
   const info = LEGAL_INFO;
+
+  const titularRows = [
+    ['Titular', info.titular],
+    ['Proyecto', info.proyecto],
+    ['NIF', info.nif],
+    ['Domicilio', info.direccion],
+    [
+      'Correo de contacto',
+      info.correoContacto && (
+        <a href={`mailto:${info.correoContacto}`} className="text-primary-700 underline">
+          {info.correoContacto}
+        </a>
+      ),
+    ],
+    ['Sitio web', 'protegetuidentidad.es y los dominios que redirigen a él'],
+  ].filter(([, value]) => value);
 
   return (
     <LegalPageLayout title="Aviso legal" onGoHome={onGoHome}>
@@ -16,16 +31,7 @@ export default function AvisoLegalPage({ onGoHome }) {
       </p>
 
       <LegalSection title="Titular del sitio web">
-        <LegalTable
-          headers={['Dato', 'Valor']}
-          rows={[
-            ['Titular', <Fill>{info.titular}</Fill>],
-            ['NIF', <Fill>{info.nif}</Fill>],
-            ['Domicilio', <Fill>{info.direccion}</Fill>],
-            ['Correo de contacto', <Fill>{info.correoContacto}</Fill>],
-            ['Sitio web', 'protegetuidentidad.es y los dominios que redirigen a él'],
-          ]}
-        />
+        <LegalTable headers={['Dato', 'Valor']} rows={titularRows} />
       </LegalSection>
 
       <LegalSection title="Qué es la herramienta">
@@ -33,8 +39,7 @@ export default function AvisoLegalPage({ onGoHome }) {
           La herramienta tapa con bloques negros los datos del DNI que la persona elige y añade una marca de agua.
           Forma parte del proyecto C108/23 “Detección de Falsificación de Documentos de Identidad mediante Técnicas
           de Visión por Computador e Inteligencia Artificial”. Lo financia la Unión Europea (NextGenerationEU) a
-          través del Plan de Recuperación, Transformación y Resiliencia y de INCIBE.{' '}
-          <Fill>[CONFIRMAR LA MENCIÓN DE FINANCIACIÓN QUE EXIGE EL CONVENIO]</Fill>
+          través del Plan de Recuperación, Transformación y Resiliencia y de INCIBE.
         </p>
       </LegalSection>
 
@@ -66,15 +71,15 @@ export default function AvisoLegalPage({ onGoHome }) {
           La herramienta se ofrece gratis y tal cual, como resultado de un proyecto de investigación. No
           garantizamos que esté siempre disponible ni que detecte todos los datos en todas las fotos. El titular no
           responde de los daños que se deriven de compartir una imagen sin revisarla o de un uso contrario a estas
-          condiciones. <Fill>[REVISAR ESTE APARTADO CON LA ASESORÍA JURÍDICA DE LA UEX]</Fill>
+          condiciones.
         </p>
       </LegalSection>
 
       <LegalSection title="Propiedad intelectual">
         <p>
-          Los textos, el diseño, el código y los modelos de la herramienta pertenecen a{' '}
-          <Fill>{info.titularDerechos}</Fill>, salvo las librerías de código abierto, que mantienen sus propias
-          licencias. Las imágenes que subes siguen siendo tuyas y no se guardan.
+          Los textos, el diseño, el código y los modelos de la herramienta pertenecen a {info.titularDerechos},
+          salvo las librerías de código abierto, que mantienen sus propias licencias. Las imágenes que subes siguen
+          siendo tuyas y no se guardan.
         </p>
       </LegalSection>
 
@@ -85,9 +90,7 @@ export default function AvisoLegalPage({ onGoHome }) {
         </p>
       </LegalSection>
 
-      <p className="mt-8 text-sm text-gray-500">
-        Última actualización el <Fill>{info.fechaActualizacion}</Fill>.
-      </p>
+      <p className="mt-8 text-sm text-gray-500">Última actualización el {info.fechaActualizacion}.</p>
     </LegalPageLayout>
   );
 }

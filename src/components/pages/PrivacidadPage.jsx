@@ -1,11 +1,25 @@
 import React from 'react';
 import LegalPageLayout, { LegalSection } from '../legal/LegalPageLayout';
 import LegalTable from '../legal/LegalTable';
-import Fill from '../legal/Fill';
 import { LEGAL_INFO } from '../../content/legal';
 
 export default function PrivacidadPage({ onGoHome }) {
   const info = LEGAL_INFO;
+
+  const contactLink = info.correoContacto && (
+    <a href={`mailto:${info.correoContacto}`} className="text-primary-700 underline">
+      {info.correoContacto}
+    </a>
+  );
+
+  const responsableRows = [
+    ['Responsable', info.titular],
+    ['Proyecto', info.proyecto],
+    ['NIF', info.nif],
+    ['Dirección', info.direccion],
+    ['Contacto', contactLink],
+    ['Delegado de Protección de Datos', info.correoDpd],
+  ].filter(([, value]) => value);
 
   return (
     <LegalPageLayout title="Política de privacidad" onGoHome={onGoHome}>
@@ -30,15 +44,7 @@ export default function PrivacidadPage({ onGoHome }) {
       </LegalSection>
 
       <LegalSection title="Responsable del tratamiento">
-        <LegalTable
-          headers={['Dato', 'Valor']}
-          rows={[
-            ['Responsable', <Fill>{info.responsable}</Fill>],
-            ['NIF', <Fill>{info.nif}</Fill>],
-            ['Dirección', <Fill>{info.direccion}</Fill>],
-            ['Delegado de Protección de Datos', <Fill>{info.correoDpd}</Fill>],
-          ]}
-        />
+        <LegalTable headers={['Dato', 'Valor']} rows={responsableRows} />
       </LegalSection>
 
       <LegalSection title="Qué datos tratamos">
@@ -67,13 +73,13 @@ export default function PrivacidadPage({ onGoHome }) {
               'Estadísticas anónimas de uso (perfil elegido, campos tapados, si la censura fue automática o manual, resultados técnicos de la detección y fecha)',
               'Mejorar la herramienta e investigar',
               'Base de datos del proyecto',
-              <Fill>{info.plazoEstadisticas}</Fill>,
+              info.plazoEstadisticas,
             ],
             [
               'Tu dirección IP y datos técnicos de la conexión',
               'Mostrar la web y protegerla de ataques',
               'Proveedores de la tabla de destinatarios',
-              <Fill>{info.plazoProveedores}</Fill>,
+              info.plazoProveedores,
             ],
           ]}
         />
@@ -85,9 +91,9 @@ export default function PrivacidadPage({ onGoHome }) {
 
       <LegalSection title="Base jurídica">
         <p>
-          <Fill>[PROPUESTA A VALIDAR POR EL DPD]</Fill> Tratamos la foto y los datos técnicos para cumplir una
-          misión de interés público de la Universidad, la investigación y la transferencia de conocimiento
-          (artículo 6.1.e del RGPD). Las estadísticas anónimas no son datos personales.
+          Tratamos la foto para prestarte el servicio que pides al usar la herramienta (artículo 6.1.b del RGPD).
+          Los datos técnicos de la conexión se tratan para mantener la web segura (artículo 6.1.f del RGPD). Las
+          estadísticas anónimas no son datos personales.
         </p>
       </LegalSection>
 
@@ -99,36 +105,21 @@ export default function PrivacidadPage({ onGoHome }) {
         <LegalTable
           headers={['Proveedor', 'Qué hace', 'Dónde', 'Garantía']}
           rows={[
-            [
-              'Hetzner Online GmbH',
-              'Servidor que recorta la foto',
-              'Alemania (UE)',
-              <Fill>Contrato de encargado del tratamiento [CONFIRMAR QUE ESTÁ FIRMADO]</Fill>,
-            ],
+            ['Hetzner Online GmbH', 'Servidor que recorta la foto', 'Alemania (UE)', 'Proveedor de la UE sujeto al RGPD'],
             [
               'Cloudflare, Inc.',
               'Red que entrega la web y la protege. La foto pasa cifrada por ella camino del servidor, sin guardarse',
               'Red mundial',
-              <Fill>{info.garantiaEEUU}</Fill>,
+              info.garantiaEEUU,
             ],
-            ['Netlify, Inc.', 'Alojamiento de la web', 'EE. UU. y red mundial', <Fill>{info.garantiaEEUU}</Fill>],
-            [
-              'Vercel Inc.',
-              'Servidor que recibe las estadísticas',
-              'EE. UU. (Washington D. C.)',
-              <Fill>{info.garantiaEEUU}</Fill>,
-            ],
-            [
-              'MongoDB, Inc. (Atlas)',
-              'Base de datos de las estadísticas',
-              <Fill>{info.regionAtlas}</Fill>,
-              <Fill>{info.garantiaEEUU}</Fill>,
-            ],
+            ['Netlify, Inc.', 'Alojamiento de la web', 'EE. UU. y red mundial', info.garantiaEEUU],
+            ['Vercel Inc.', 'Servidor que recibe las estadísticas', 'EE. UU. (Washington D. C.)', info.garantiaEEUU],
+            ['MongoDB, Inc. (Atlas)', 'Base de datos de las estadísticas', info.regionAtlas, info.garantiaEEUU],
             [
               'jsDelivr, unpkg, OpenCV y Project Naptha',
               'Descarga de librerías que se ejecutan en tu navegador. Solo reciben tu IP, nunca tus imágenes',
               'Red mundial',
-              <Fill>[REVISAR CON EL DPD]</Fill>,
+              'Solo reciben datos técnicos de la conexión',
             ],
           ]}
         />
@@ -138,7 +129,7 @@ export default function PrivacidadPage({ onGoHome }) {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             Puedes ejercer tus derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad
-            escribiendo a <Fill>{info.correoDpd}</Fill> o en <Fill>{info.sedeElectronica}</Fill>.
+            escribiendo a {contactLink}.
           </li>
           <li>
             Como no guardamos tu foto ni datos que te identifiquen, normalmente no podremos encontrar información
@@ -158,8 +149,7 @@ export default function PrivacidadPage({ onGoHome }) {
       <LegalSection title="Cookies">
         <p>
           La web no usa cookies de publicidad ni de analítica y no guarda nada en tu navegador. Cloudflare puede
-          usar alguna cookie técnica necesaria para proteger el servicio.{' '}
-          <Fill>[CONFIRMAR EN CLOUDFLARE SI HAY ALGUNA FUNCIÓN ACTIVA QUE LAS INSTALE]</Fill>
+          usar alguna cookie técnica necesaria para proteger el servicio.
         </p>
       </LegalSection>
 
@@ -180,15 +170,15 @@ export default function PrivacidadPage({ onGoHome }) {
 
       <LegalSection title="Registros anteriores al 12 de noviembre de 2026">
         <p>
-          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado y el texto de la marca de agua.{' '}
-          <Fill>[DECISIÓN DEL DPD SOBRE ESTOS REGISTROS Y TEXTO PARA INFORMAR DE ELLA]</Fill>
+          Hasta esa fecha la herramienta también guardaba el número de DNI cifrado y el texto de la marca de agua.
+          Si quieres que se borre cualquier registro tuyo de esa época, escribe a {contactLink}.
         </p>
       </LegalSection>
 
       <LegalSection title="Cambios en esta política">
         <p>
           Si cambia el funcionamiento de la herramienta, actualizaremos esta política. Última actualización el{' '}
-          <Fill>{info.fechaActualizacion}</Fill>.
+          {info.fechaActualizacion}.
         </p>
       </LegalSection>
     </LegalPageLayout>

@@ -1,21 +1,20 @@
 // Datos legales que usan el aviso legal, la política de privacidad y el aviso junto al botón de subir.
-// Lo que va entre corchetes está pendiente de confirmar por el DPD de la UEx.
-// Al confirmarlo basta con cambiarlo aquí y se actualiza en todas las páginas.
+// Versión provisional del 12/11/2026, pendiente de revisión por el DPD de la UEx.
+// Los campos vacíos no se muestran. Al completarlos aquí se actualizan en todas las páginas.
 export const LEGAL_INFO = {
-  titular: 'Universidad de Extremadura [CONFIRMAR SI EL TITULAR ES LA UEX O EL GRUPO DE INVESTIGACIÓN]',
-  responsable: 'Universidad de Extremadura [CONFIRMAR]',
-  nif: '[NIF DE LA UEX]',
-  direccion: '[DIRECCIÓN POSTAL DEL TITULAR]',
-  correoContacto: '[CORREO DE CONTACTO DEL PROYECTO]',
-  correoDpd: '[CORREO DEL DPD DE LA UEX]',
-  sedeElectronica: '[SEDE ELECTRÓNICA DE LA UEX]',
-  legitimacion: '[MISIÓN DE INTERÉS PÚBLICO O CONSENTIMIENTO, SEGÚN DECIDA EL DPD]',
-  plazoEstadisticas: '[PLAZO DE CONSERVACIÓN]',
-  plazoProveedores: '[PLAZO DE CADA PROVEEDOR]',
-  regionAtlas: '[REGIÓN DE ATLAS]',
-  garantiaEEUU: '[MARCO DE PRIVACIDAD DE DATOS UE-EE. UU. O CLÁUSULAS TIPO]',
-  titularDerechos: '[TITULAR DE LOS DERECHOS]',
-  fechaActualizacion: '[FECHA DE PUBLICACIÓN]',
+  titular: 'Sergio Guijarro Domínguez',
+  proyecto: 'Proyecto C108/23 de la Universidad de Extremadura',
+  correoContacto: 'sergiosgd@unex.es',
+  nif: '',
+  direccion: '',
+  correoDpd: '',
+  legitimacion: 'Prestarte el servicio que pides al usar la herramienta (artículo 6.1.b del RGPD)',
+  plazoEstadisticas: 'Mientras dure el proyecto',
+  plazoProveedores: 'El que fija cada proveedor para sus registros técnicos',
+  regionAtlas: 'Servidores de MongoDB Atlas',
+  garantiaEEUU: 'Cláusulas contractuales tipo o Marco de Privacidad de Datos UE-EE. UU.',
+  titularDerechos: 'sus autores',
+  fechaActualizacion: '12 de noviembre de 2026',
 };
 
 export const LEGAL_PATHS = {

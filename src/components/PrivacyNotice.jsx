@@ -1,6 +1,5 @@
 import React from 'react';
 import LegalTable from './legal/LegalTable';
-import Fill from './legal/Fill';
 import { LEGAL_INFO, LEGAL_PATHS } from '../content/legal';
 
 // Primera capa de información de protección de datos, junto a donde se sube la foto.
@@ -14,6 +13,12 @@ export default function PrivacyNotice() {
       className="text-primary-700 underline hover:text-primary-800"
     >
       política de privacidad
+    </a>
+  );
+
+  const contactLink = (
+    <a href={`mailto:${LEGAL_INFO.correoContacto}`} className="text-primary-700 underline">
+      {LEGAL_INFO.correoContacto}
     </a>
   );
 
@@ -32,19 +37,17 @@ export default function PrivacyNotice() {
         <LegalTable
           headers={['Concepto', 'Texto']}
           rows={[
-            ['Responsable', <Fill>{LEGAL_INFO.responsable}</Fill>],
+            [
+              'Responsable',
+              `${LEGAL_INFO.titular} (${LEGAL_INFO.proyecto.charAt(0).toLowerCase()}${LEGAL_INFO.proyecto.slice(1)})`,
+            ],
             [
               'Finalidad',
               'Recortar tu DNI para que puedas tapar los datos que elijas. La foto se envía cifrada a nuestro servidor en Alemania y no se guarda',
             ],
-            ['Legitimación', <Fill>{LEGAL_INFO.legitimacion}</Fill>],
+            ['Legitimación', LEGAL_INFO.legitimacion],
             ['Destinatarios', 'Proveedores técnicos que actúan por nuestra cuenta. No cedemos datos a terceros'],
-            [
-              'Derechos',
-              <>
-                Acceso, supresión y el resto de derechos escribiendo a <Fill>{LEGAL_INFO.correoDpd}</Fill>
-              </>,
-            ],
+            ['Derechos', <>Acceso, supresión y el resto de derechos escribiendo a {contactLink}</>],
             ['Más información', privacyLink],
           ]}
         />
