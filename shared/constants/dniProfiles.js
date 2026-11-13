@@ -1,3 +1,8 @@
+// Perfiles predefinidos del editor.
+// Cada campo dice si el perfil lo tapa (true) o lo deja a la vista (false). Es el mismo criterio que siguen
+// las casillas del editor («marcada = censurar»), censorDniComplete y hiddenFields en las métricas.
+// CLI, lugar de nacimiento y ventana del soporte no aparecen en ningún perfil, así que ningún perfil los tapa.
+// Falta decidir qué debe hacer cada perfil con ellos.
 const DNI_PROFILES_DATA = {
   VIAJES: {
     id: 'viajes',
@@ -5,26 +10,32 @@ const DNI_PROFILES_DATA = {
     description: 'Para reservas, controles de identidad y visados',
     icon: '✈️',
     color: 'blue',
+    // Deja a la vista nombre, apellidos, número de DNI, nacimiento, nacionalidad y caducidad.
+    // Municipio y provincia deberían verse también, pero de momento se tapan para no enseñar la calle.
+    // La casilla «Municipio» tapa la caja DOMICILIO del modelo, que cubre calle, municipio y provincia.
+    // «Domicilio» y «Provincia» apuntan a clases que el modelo no tiene, así que solas no tapan nada.
+    // Se marcan las tres para que las casillas y hiddenFields digan lo que de verdad se tapa.
+    // Cuando la calle tenga su propia clase, municipio y provincia pasarán a false.
     frontFields: {
-      nombre: true,
-      apellidos: true,
-      dni: true,
-      fechaNacimiento: true,
-      sexo: false,
-      nacionalidad: true,
-      fechaExpedicion: false,
-      fechaCaducidad: true,
-      numeroSoporte: false,
-      can: false,
-      firma: false,
+      nombre: false,
+      apellidos: false,
+      dni: false,
+      fechaNacimiento: false,
+      sexo: true,
+      nacionalidad: false,
+      fechaExpedicion: true,
+      fechaCaducidad: false,
+      numeroSoporte: true,
+      can: true,
+      firma: true,
     },
     backFields: {
-      mrz: false,
-      domicilio: false,
+      mrz: true,
+      domicilio: true,
       municipio: true,
       provincia: true,
-      equipoExpedidor: false,
-      progenitores: false,
+      equipoExpedidor: true,
+      progenitores: true,
     },
   },
   SALUD: {
@@ -33,26 +44,27 @@ const DNI_PROFILES_DATA = {
     description: 'Para hospitales y clínicas',
     icon: '🏥',
     color: 'red',
+    // Deja a la vista nombre, apellidos, número de DNI y nacimiento
     frontFields: {
-      nombre: true,
-      apellidos: true,
-      dni: true,
-      fechaNacimiento: true,
-      sexo: false,
-      nacionalidad: false,
-      fechaExpedicion: false,
-      fechaCaducidad: false,
-      numeroSoporte: false,
-      can: false,
-      firma: false,
+      nombre: false,
+      apellidos: false,
+      dni: false,
+      fechaNacimiento: false,
+      sexo: true,
+      nacionalidad: true,
+      fechaExpedicion: true,
+      fechaCaducidad: true,
+      numeroSoporte: true,
+      can: true,
+      firma: true,
     },
     backFields: {
-      mrz: false,
-      domicilio: false,
-      municipio: false,
-      provincia: false,
-      equipoExpedidor: false,
-      progenitores: false,
+      mrz: true,
+      domicilio: true,
+      municipio: true,
+      provincia: true,
+      equipoExpedidor: true,
+      progenitores: true,
     },
   },
   ADMINISTRATIVO: {
@@ -61,26 +73,27 @@ const DNI_PROFILES_DATA = {
     description: 'Para trámites oficiales que requieren domicilio',
     icon: '📋',
     color: 'purple',
+    // Deja a la vista nombre, apellidos, número de DNI, nacimiento, domicilio, municipio y provincia
     frontFields: {
-      nombre: true,
-      apellidos: true,
-      dni: true,
-      fechaNacimiento: true,
-      sexo: false,
-      nacionalidad: false,
-      fechaExpedicion: false,
-      fechaCaducidad: false,
-      numeroSoporte: false,
-      can: false,
-      firma: false,
+      nombre: false,
+      apellidos: false,
+      dni: false,
+      fechaNacimiento: false,
+      sexo: true,
+      nacionalidad: true,
+      fechaExpedicion: true,
+      fechaCaducidad: true,
+      numeroSoporte: true,
+      can: true,
+      firma: true,
     },
     backFields: {
-      mrz: false,
-      domicilio: true,
-      municipio: true,
-      provincia: true,
-      equipoExpedidor: false,
-      progenitores: false,
+      mrz: true,
+      domicilio: false,
+      municipio: false,
+      provincia: false,
+      equipoExpedidor: true,
+      progenitores: true,
     },
   },
   FINANCIERO: {
@@ -89,26 +102,27 @@ const DNI_PROFILES_DATA = {
     description: 'Para verificaciones bancarias y KYC',
     icon: '🏦',
     color: 'green',
+    // Deja a la vista nombre, apellidos, número de DNI, nacimiento y nacionalidad
     frontFields: {
-      nombre: true,
-      apellidos: true,
-      dni: true,
-      fechaNacimiento: true,
-      sexo: false,
-      nacionalidad: true,
-      fechaExpedicion: false,
-      fechaCaducidad: false,
-      numeroSoporte: false,
-      can: false,
-      firma: false,
+      nombre: false,
+      apellidos: false,
+      dni: false,
+      fechaNacimiento: false,
+      sexo: true,
+      nacionalidad: false,
+      fechaExpedicion: true,
+      fechaCaducidad: true,
+      numeroSoporte: true,
+      can: true,
+      firma: true,
     },
     backFields: {
-      mrz: false,
-      domicilio: false,
-      municipio: false,
-      provincia: false,
-      equipoExpedidor: false,
-      progenitores: false,
+      mrz: true,
+      domicilio: true,
+      municipio: true,
+      provincia: true,
+      equipoExpedidor: true,
+      progenitores: true,
     },
   },
 };
@@ -121,6 +135,7 @@ const DNI_PROFILES = {
   getProfilesList() {
     return Object.values(DNI_PROFILES_DATA);
   },
+  // Cuenta los campos marcados para tapar
   getFieldsCount(frontFields, backFields) {
     const frontCount = frontFields ? Object.values(frontFields).filter(Boolean).length : 0;
     const backCount = backFields ? Object.values(backFields).filter(Boolean).length : 0;
