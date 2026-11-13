@@ -6,3 +6,10 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
+
+# Los archivos de /assets llevan en el nombre una huella que cambia con cada versión,
+# así que el navegador puede guardarlos un año sin volver a preguntar.
+# El modelo de /models no lleva huella. Se sigue comprobando en cada visita, que cuesta una petición
+# de unos 75 ms sin descarga, para que nadie se quede con un modelo antiguo cuando se cambie.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
