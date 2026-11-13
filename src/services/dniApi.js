@@ -14,6 +14,9 @@ export const dniApi = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        // El editor ya no espera esta respuesta. keepalive deja terminar el envío
+        // aunque la persona cierre o cambie de página nada más ver el resultado
+        keepalive: true,
       });
 
       if (!response.ok) {

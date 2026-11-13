@@ -2,6 +2,10 @@ import { useEffect, useRef } from 'react';
 import { VIEWS } from '../constants/views';
 import { DEMO_MODE } from '../config/demoMode';
 
+// Pausa antes de abrir el editor, para que se llegue a ver la miniatura de la segunda cara.
+// Eran 1,5 s fijos, más de lo que tarda ahora el propio recorte
+const EDITOR_DELAY_MS = 300;
+
 export function useAutoNavigation(
   frontFile, 
   backFile, 
@@ -50,8 +54,8 @@ export function useAutoNavigation(
           // Navegar al editor
           goTo(VIEWS.EDITOR);
         } else {
-          // Modo normal (sin demo): delay simple como antes
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // Modo normal (sin demo): pausa breve
+          await new Promise(resolve => setTimeout(resolve, EDITOR_DELAY_MS));
           goTo(VIEWS.EDITOR);
         }
         } catch (error) {

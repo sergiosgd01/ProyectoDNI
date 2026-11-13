@@ -343,27 +343,28 @@ export default function DNIEditor({
       // --- GUARDAR EN BACKEND ---
       // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
       // Nunca se envía el número de DNI ni ningún dato leído por OCR.
-      try {
-        console.log("💾 Guardando métricas de uso...");
-        await dniApi.saveDniRecord({
-          profileUsed: selectedProfile || 'personalizado',
-          hiddenFields: {
-            frontFields: selectedFrontFields,
-            backFields: selectedBackFields
-          },
-          validation: validationFlags,
-          manualCensor: Object.keys(manualFiles).length > 0,
-          manualDetection: manualDetection,
-          hologramReadable: hologramDetected,
-          homogenityPassed: accuracyPercentage,
-          watermarkText: watermarkText
+      // No se espera la respuesta. El resultado ya está listo y el guardado tarda entre
+      // 0,7 s y 2 s, según el backend esté o no en frío. Si falla, solo se registra el error
+      console.log("💾 Guardando métricas de uso...");
+      dniApi.saveDniRecord({
+        profileUsed: selectedProfile || 'personalizado',
+        hiddenFields: {
+          frontFields: selectedFrontFields,
+          backFields: selectedBackFields
+        },
+        validation: validationFlags,
+        manualCensor: Object.keys(manualFiles).length > 0,
+        manualDetection: manualDetection,
+        hologramReadable: hologramDetected,
+        homogenityPassed: accuracyPercentage,
+        watermarkText: watermarkText
+      })
+        .then(() => {
+          console.log("✅ Métricas anónimas guardadas");
+        })
+        .catch((saveError) => {
+          console.error("❌ Error al guardar en backend:", saveError);
         });
-        console.log("✅ Métricas anónimas guardadas");
-      } catch (saveError) {
-        console.error("❌ Error al guardar en backend:", saveError);
-        // Opcional: mostrar aviso visual de que falló el guardado, aunque el proceso local fue bien
-        // No bloqueamos el flujo si falla el guardado, pero lo logueamos
-      }
       // --------------------------
 
       if (Object.keys(manualFiles).length > 0) {
