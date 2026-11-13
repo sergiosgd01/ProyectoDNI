@@ -6,6 +6,7 @@ import FAQ from '../FAQ';
 import Footer from '../Footer';
 import PrivacyNotice from '../PrivacyNotice';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
+import { usePreloadDetector } from '../../hooks/usePreloadDetector';
 
 export default function UploadPage({
   frontFile,
@@ -31,6 +32,9 @@ export default function UploadPage({
 
   // Scroll inicial al principio de la página
   useScrollToTop();
+
+  // Preparar el modelo de detección mientras se suben las fotos
+  usePreloadDetector();
 
   const isMobileView = () => {
     return window.innerWidth < 768;

@@ -19,18 +19,30 @@ const CLASS_NAMES = [
   'SOPORTE', 'SOPORTE_MIN', 'VALIDEZ'
 ];
 
-let sharedSession = null;
+// Se guarda la promesa de carga, no la sesión ya creada. Así la precarga de la página de subida
+// y la primera detección comparten la misma carga en vez de descargar y preparar el modelo dos veces
+let sessionPromise = null;
 
 // --- 1. CARGA DEL MODELO ---
-const ensureSession = async () => {
-  if (sharedSession) return sharedSession;
-
-  sharedSession = await ort.InferenceSession.create(MODEL_PATH, {
-    executionProviders: ["wasm"],
-    graphOptimizationLevel: "all"
-  });
-  return sharedSession;
+const ensureSession = () => {
+  if (!sessionPromise) {
+    sessionPromise = ort.InferenceSession.create(MODEL_PATH, {
+      executionProviders: ["wasm"],
+      graphOptimizationLevel: "all"
+    }).catch((error) => {
+      // Si falla, por ejemplo sin conexión, el siguiente intento vuelve a cargarlo
+      sessionPromise = null;
+      throw error;
+    });
+  }
+  return sessionPromise;
 };
+
+/**
+ * Descarga y prepara el modelo por adelantado, para que el primer «Procesar» no tenga que esperarlo.
+ * Devuelve true si el modelo quedó listo. Si falla no lanza el error, la detección lo volverá a intentar.
+ */
+export const preloadDetector = () => ensureSession().then(() => true, () => false);
 
 // --- 2. PREPROCESAMIENTO ---
 const preprocessing = (sourceCanvas, targetSize) => {
