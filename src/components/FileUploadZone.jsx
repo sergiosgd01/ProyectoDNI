@@ -2,7 +2,8 @@ import React, { useState, useId, useEffect } from 'react';
 import CameraCapture from './CameraCapture';
 import ManualCropModal from './ManualCropModal';
 import { processWithYolo } from '../services/processWithYolo';
-import { validateFileComplete, sanitizeFileName } from '../utils/fileValidation';
+import { validateFileComplete, sanitizeFileName, MAX_UPLOAD_SIZE } from '../utils/fileValidation';
+import { prepareImageForUpload } from '../utils/imageResize';
 import { fileUploadLimiter } from '../utils/rateLimiter';
 import logger from '../utils/logger';
 
@@ -51,7 +52,7 @@ function FileUploadZone({ onFileSelect }) {
     } catch (error) {
       logger.error('❌ [FileUploadZone] Validación fallida:', error.message);
       // Mensaje genérico al usuario, sin exponer detalles internos
-      alert(`⚠️ El archivo no es válido.\nAsegúrate de subir una imagen JPG, PNG o WEBP menor a 10MB.`);
+      alert(`⚠️ El archivo no es válido.\nAsegúrate de subir una imagen JPG, PNG o WEBP menor a 30MB.`);
       return;
     }
 
@@ -59,9 +60,24 @@ function FileUploadZone({ onFileSelect }) {
     setProcessingError(null);
 
     try {
+      // Reducir la foto antes de subirla. Si falla, se sigue con la original
+      let uploadFile = file;
+      try {
+        uploadFile = await prepareImageForUpload(file);
+      } catch (resizeError) {
+        logger.error('❌ [FileUploadZone] No se pudo reducir la imagen:', resizeError);
+      }
+
+      // El servidor no admite más de 10MB. Solo se llega aquí si una foto grande no se pudo reducir
+      if (uploadFile.size > MAX_UPLOAD_SIZE) {
+        setIsProcessing(false);
+        alert(`⚠️ El archivo no es válido.\nAsegúrate de subir una imagen JPG, PNG o WEBP menor a 30MB.`);
+        return;
+      }
+
       console.log('📤 [FileUploadZone] Enviando archivo a YOLO:', file.name);
 
-      const result = await processWithYolo(file);
+      const result = await processWithYolo(uploadFile);
 
       setIsProcessing(false);
 
@@ -87,8 +103,8 @@ function FileUploadZone({ onFileSelect }) {
         // ❌ Error en el procesamiento - Mostrar opción de recorte manual
         console.warn('⚠️ [FileUploadZone] Error de procesamiento:', result);
 
-        // Guardar archivo original para recorte manual
-        setOriginalFileForCrop(file);
+        // Guardar la foto para el recorte manual. Se usa la preparada para subir, que el navegador maneja mejor
+        setOriginalFileForCrop(uploadFile);
 
         setProcessingError({
           type: result.errorType || 'unknown_error',
@@ -323,7 +339,7 @@ function FileUploadZone({ onFileSelect }) {
           </div>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>
-            Máximo 10MB
+            Máximo 30MB
           </div>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-secondary-500 rounded-full mr-2"></span>

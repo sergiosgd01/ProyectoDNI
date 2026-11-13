@@ -4,7 +4,11 @@
  */
 
 // Configuración de validación
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// Peso máximo de la foto que elige el usuario. Antes de subirla se reduce en el navegador
+// (ver imageResize.js), por eso puede superar el límite del servidor
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+// Peso máximo que acepta el servidor de recorte
+export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_DIMENSION = 10000; // 10000x10000 píxeles máximo
 
@@ -26,7 +30,7 @@ export const validateFile = (file) => {
   // Validar tamaño del archivo
   if (file.size > MAX_FILE_SIZE) {
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-    throw new Error(`El archivo (${sizeMB}MB) excede el límite de 10MB`);
+    throw new Error(`El archivo (${sizeMB}MB) excede el límite de 30MB`);
   }
 
   console.log('✅ Validación básica pasada:', file.name, `(${(file.size / 1024).toFixed(2)}KB)`);
