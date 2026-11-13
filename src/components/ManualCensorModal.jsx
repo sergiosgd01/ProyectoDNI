@@ -3,6 +3,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 /**
  * Modal para censura manual de campos del DNI
  * Permite dibujar rectángulos para ocultar información sensible
+ *
+ * Solo recibe las caras en las que ha fallado la detección automática.
+ * La cara que no llega (frontFile o backFile vacío) no se pide ni se genera.
+ * onComplete la devuelve a null y el editor conserva su resultado automático.
  */
 function ManualCensorModal({
   frontFile,
@@ -36,6 +40,25 @@ function ManualCensorModal({
 
   // Estado para destacar el botón que falta por editar
   const [highlightSide, setHighlightSide] = useState(null);
+
+  // Generación de las imágenes al pulsar «Finalizar»
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState(null);
+
+  // Se marca al cancelar o al cerrar el modal. Si la generación termina después,
+  // su resultado se descarta para no sustituir lo que ya muestra el editor
+  const closedRef = useRef(false);
+  useEffect(() => {
+    closedRef.current = false;
+    return () => {
+      closedRef.current = true;
+    };
+  }, []);
+
+  const handleCancel = () => {
+    closedRef.current = true;
+    onCancel();
+  };
 
   // Detectar si es móvil y si ya ha tocado el canvas
   const [isMobile, setIsMobile] = useState(false);
@@ -297,42 +320,60 @@ function ManualCensorModal({
     setCurrentRectangles([]);
   };
 
-  // Cambiar de lado
+  // Cambiar de lado. Solo a una cara que necesite censura manual
   const handleSwitchSide = (side) => {
+    if (side === 'front' && !frontFile) return;
     if (side === 'back' && !backFile) return;
     setCurrentSide(side);
   };
 
-  // Generar imagen censurada
+  // Generar imagen censurada. La promesa termina siempre, también si falla,
+  // para que «Finalizar» no se quede esperando sin avisar
   const generateCensoredImage = async (file, rectangles) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
 
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          // Safari en iPhone devuelve null cuando se queda sin memoria para lienzos
+          if (!ctx) throw new Error('No hay memoria para preparar la imagen censurada');
 
-        canvas.width = img.width;
-        canvas.height = img.height;
+          canvas.width = img.width;
+          canvas.height = img.height;
 
-        // Dibujar imagen original
-        ctx.drawImage(img, 0, 0);
+          // Dibujar imagen original
+          ctx.drawImage(img, 0, 0);
 
-        // Aplicar censura (convertir coordenadas de escala)
-        ctx.fillStyle = 'black';
-        rectangles.forEach(rect => {
-          const originalX = rect.x / scale;
-          const originalY = rect.y / scale;
-          const originalWidth = rect.width / scale;
-          const originalHeight = rect.height / scale;
-          ctx.fillRect(originalX, originalY, originalWidth, originalHeight);
-        });
+          // Aplicar censura (convertir coordenadas de escala)
+          ctx.fillStyle = 'black';
+          rectangles.forEach(rect => {
+            const originalX = rect.x / scale;
+            const originalY = rect.y / scale;
+            const originalWidth = rect.width / scale;
+            const originalHeight = rect.height / scale;
+            ctx.fillRect(originalX, originalY, originalWidth, originalHeight);
+          });
 
-        canvas.toBlob((blob) => {
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(url);
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('No se ha podido codificar la imagen censurada'));
+            }
+          }, 'image/jpeg', 0.95);
+        } catch (error) {
           URL.revokeObjectURL(url);
-          resolve(blob);
-        }, 'image/jpeg', 0.95);
+          reject(error);
+        }
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('No se ha podido cargar la imagen'));
       };
 
       img.src = url;
@@ -340,10 +381,11 @@ function ManualCensorModal({
   };
 
   // Verificar si faltan censuras y mostrar aviso
+  // Solo cuentan las caras que están en el modal
   const handleComplete = () => {
     const missing = [];
 
-    if (frontRectangles.length === 0) {
+    if (frontFile && frontRectangles.length === 0) {
       missing.push('anverso');
     }
     if (backFile && backRectangles.length === 0) {
@@ -378,17 +420,29 @@ function ManualCensorModal({
   };
 
   // Procesar y completar (sin validación)
+  // Solo se generan las caras que están en el modal. La otra se devuelve a null
   const processAndComplete = async () => {
     setShowConfirmModal(false);
+    if (isGenerating) return;
+    setIsGenerating(true);
+    setGenerationError(null);
     try {
-      // Generar imágenes censuradas
-      const frontBlob = await generateCensoredImage(frontFile, frontRectangles);
-      const frontUrl = URL.createObjectURL(frontBlob);
+      let frontUrl = null;
+      if (frontFile) {
+        const frontBlob = await generateCensoredImage(frontFile, frontRectangles);
+        frontUrl = URL.createObjectURL(frontBlob);
+      }
 
       let backUrl = null;
       if (backFile) {
         const backBlob = await generateCensoredImage(backFile, backRectangles);
         backUrl = URL.createObjectURL(backBlob);
+      }
+
+      if (closedRef.current) {
+        if (frontUrl) URL.revokeObjectURL(frontUrl);
+        if (backUrl) URL.revokeObjectURL(backUrl);
+        return;
       }
 
       onComplete({
@@ -399,8 +453,14 @@ function ManualCensorModal({
       });
     } catch (error) {
       console.error('Error generando imágenes censuradas:', error);
+      setGenerationError('No se ha podido generar la imagen censurada. Vuelve a pulsar «Finalizar».');
+    } finally {
+      setIsGenerating(false);
     }
   };
+
+  // Nombre de la única cara que hay que censurar a mano, o null si son las dos
+  const singleSideName = frontFile && backFile ? null : (frontFile ? 'anverso' : 'reverso');
 
   const totalRectangles = frontRectangles.length + backRectangles.length;
 
@@ -410,7 +470,7 @@ function ManualCensorModal({
       <div className="bg-gray-900 text-white p-3 md:p-4 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center space-x-3">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
             aria-label="Volver"
           >
@@ -443,7 +503,9 @@ function ManualCensorModal({
                 Detección automática no disponible
               </p>
               <p className="text-yellow-200/80 text-xs md:text-sm leading-relaxed">
-                No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar{frontFile && backFile ? ' en ambas caras del documento' : ''}.
+                {singleSideName
+                  ? `No hemos podido detectar automáticamente los campos del ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
+                  : 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'}
               </p>
             </div>
           </div>
@@ -551,7 +613,12 @@ function ManualCensorModal({
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
           {/* Info */}
           <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
-            {totalRectangles > 0 ? (
+            {generationError ? (
+              <span className="text-red-400 flex items-center" role="alert">
+                <i className="bi bi-exclamation-triangle mr-1.5"></i>
+                {generationError}
+              </span>
+            ) : totalRectangles > 0 ? (
               <span className="text-green-400 flex items-center">
                 <i className="bi bi-check-circle mr-1.5"></i>
                 {totalRectangles} área(s) censurada(s)
@@ -594,7 +661,7 @@ function ManualCensorModal({
 
             {/* Cancelar */}
             <button
-              onClick={onCancel}
+              onClick={handleCancel}
               className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm"
             >
               Cancelar
@@ -603,13 +670,17 @@ function ManualCensorModal({
             {/* Finalizar */}
             <button
               onClick={handleComplete}
-              disabled={totalRectangles === 0}
-              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 ${totalRectangles > 0
+              disabled={totalRectangles === 0 || isGenerating}
+              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 ${totalRectangles > 0 && !isGenerating
                 ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg'
                 : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
             >
-              <i className="bi bi-check-lg"></i>
+              {isGenerating ? (
+                <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></span>
+              ) : (
+                <i className="bi bi-check-lg"></i>
+              )}
               <span>Finalizar</span>
             </button>
           </div>
