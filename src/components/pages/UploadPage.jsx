@@ -45,6 +45,8 @@ export default function UploadPage({
     if (backSectionRef.current && isMobileView()) {
       // Pequeño delay para que se vea la confirmación de la foto delantera
       setTimeout(() => {
+        // La subida puede haberse cerrado entretanto, con Atrás o al abrir el editor
+        if (!backSectionRef.current) return;
         backSectionRef.current.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
@@ -68,6 +70,7 @@ export default function UploadPage({
     if (completionMessageRef.current && isMobileView()) {
       // Delay para que se vea la confirmación de la foto trasera
       setTimeout(() => {
+        if (!completionMessageRef.current) return;
         completionMessageRef.current.scrollIntoView({
           behavior: 'smooth',
           block: 'center',

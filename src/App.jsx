@@ -15,7 +15,6 @@ import { DEMO_MODE } from './config/demoMode';
 import './index.css';
 
 function App() {
-  const { currentView, goTo, goHome } = useNavigation();
   const {
     frontFile,
     backFile,
@@ -30,6 +29,23 @@ function App() {
 
   // Estado para controlar si debe hacer auto-navegación al editor
   const [shouldAutoNavigate, setShouldAutoNavigate] = useState(true);
+
+  // El editor necesita las dos fotos. Si faltan, por ejemplo tras recargar la página o al ir con Adelante
+  // después de quitar una, se muestra la subida
+  const hasBothFiles = Boolean(frontFile && backFile);
+  const resolveView = useCallback(
+    (view) => (view === VIEWS.EDITOR && !hasBothFiles ? VIEWS.UPLOAD_PROCESS : view),
+    [hasBothFiles]
+  );
+
+  // Con Atrás o Adelante no se salta solo al editor. Si no, al volver del editor a la subida
+  // con las dos fotos puestas se abriría otra vez el editor
+  const handleHistoryNavigate = useCallback(() => setShouldAutoNavigate(false), []);
+
+  const { currentView, goTo, goBack, goHome } = useNavigation({
+    resolveView,
+    onHistoryNavigate: handleHistoryNavigate
+  });
 
   // Estado para controlar el loader de procesamiento (solo en modo demo)
   const [showProcessingLoader, setShowProcessingLoader] = useState(false);
@@ -205,7 +221,8 @@ function App() {
   const handleBackToStep = () => {
     // Cuando se regresa desde el editor, NO permitir auto-navegación
     setShouldAutoNavigate(false);
-    goTo(VIEWS.UPLOAD_PROCESS);
+    // Si se llegó al editor desde la subida, se vuelve a esa entrada del historial como con Atrás
+    goBack(VIEWS.UPLOAD_PROCESS);
   };
 
   const handleContinueToEditor = async () => {

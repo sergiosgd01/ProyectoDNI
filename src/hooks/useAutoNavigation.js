@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { VIEWS } from '../constants/views';
 import { DEMO_MODE } from '../config/demoMode';
 
@@ -18,12 +18,23 @@ export function useAutoNavigation(
 ) {
   const isProcessingRef = useRef(false);
 
+  // Vista y permiso actuales, para mirarlos otra vez después de las esperas
+  const latestRef = useRef({ currentView, shouldAutoNavigate });
+  useLayoutEffect(() => {
+    latestRef.current = { currentView, shouldAutoNavigate };
+  }, [currentView, shouldAutoNavigate]);
+
   // Efecto para ir automáticamente al editor cuando ambas imágenes estén cargadas
   useEffect(() => {
     if (frontFile && backFile && shouldAutoNavigate && currentView === VIEWS.UPLOAD_PROCESS) {
       if (isProcessingRef.current) {
         return;
       }
+
+      // Durante la pausa la persona puede salir de la subida con Atrás o con el botón de volver.
+      // En ese caso ya no se abre el editor
+      const canStillNavigate = () =>
+        latestRef.current.currentView === VIEWS.UPLOAD_PROCESS && latestRef.current.shouldAutoNavigate;
 
       const navigateToEditor = async () => {
         isProcessingRef.current = true;
@@ -52,11 +63,15 @@ export function useAutoNavigation(
           setShowProcessingLoader(false);
           
           // Navegar al editor
-          goTo(VIEWS.EDITOR);
+          if (canStillNavigate()) {
+            goTo(VIEWS.EDITOR);
+          }
         } else {
           // Modo normal (sin demo): pausa breve
           await new Promise(resolve => setTimeout(resolve, EDITOR_DELAY_MS));
-          goTo(VIEWS.EDITOR);
+          if (canStillNavigate()) {
+            goTo(VIEWS.EDITOR);
+          }
         }
         } catch (error) {
           onFailure?.({ ok: false, error, message: error?.message });

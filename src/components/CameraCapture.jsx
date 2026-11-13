@@ -16,6 +16,9 @@ function CameraCapture({ onCapture, onClose }) {
   const [capturedFileForCrop, setCapturedFileForCrop] = useState(null);
   const isInitializing = useRef(false);
   const hasInitialized = useRef(false);
+  // Si se sale de la vista mientras se pide la cámara, por ejemplo con el botón Atrás del navegador,
+  // la cámara llega cuando el componente ya no está y nadie la apagaría
+  const isMountedRef = useRef(false);
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
@@ -42,7 +45,7 @@ function CameraCapture({ onCapture, onClose }) {
 
   const initializeCamera = useCallback(
     async () => {
-      if (isInitializing.current) {
+      if (isInitializing.current || !isMountedRef.current) {
         return;
       }
 
@@ -67,14 +70,21 @@ function CameraCapture({ onCapture, onClose }) {
         }
 
         const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (!isMountedRef.current) {
+          // Ya se había salido de la vista. Se apaga la cámara en el acto
+          newStream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         streamRef.current = newStream;
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = newStream;
+        // Se guarda el vídeo porque la referencia se vacía si se sale de la vista antes de que cargue
+        const video = videoRef.current;
+        if (video) {
+          video.srcObject = newStream;
 
           await new Promise((resolve) => {
-            videoRef.current.onloadedmetadata = () => {
-              videoRef.current.play().then(resolve).catch(resolve);
+            video.onloadedmetadata = () => {
+              video.play().then(resolve).catch(resolve);
             };
           });
 
@@ -103,6 +113,13 @@ function CameraCapture({ onCapture, onClose }) {
     },
     [selectedDeviceId, isMobile, stopCamera]
   );
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
