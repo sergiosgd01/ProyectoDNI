@@ -13,8 +13,13 @@ export default defineConfig(({ command }) => ({
   // En la versión publicada se quitan los mensajes de consola (log, info, debug y warn)
   // para que no aparezcan nombres de archivo, fotos ni datos del DNI. console.error se mantiene.
   // En local (npm run dev) siguen saliendo todos.
+  // Desde Vite 7.2 el minificado borra los avisos de licencia de las librerías (React, ONNX Runtime, jsPDF...).
+  // Con legalComments 'inline' se quedan en el código publicado como antes, porque varias licencias piden conservarlos.
   esbuild: command === 'build'
-    ? { pure: ['console.log', 'console.info', 'console.debug', 'console.warn'] }
+    ? {
+        pure: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+        legalComments: 'inline'
+      }
     : undefined,
   server: {
     host: true,  // Permite acceso desde la red local o ngrok

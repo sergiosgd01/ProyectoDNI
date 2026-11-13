@@ -12,7 +12,7 @@
   "dependencies": {
     "bootstrap-icons": "^1.13.1",
     "flag-icons": "^7.5.0",
-    "jspdf": "^3.0.3",
+    "jspdf": "^4.2.1",
     "onnxruntime-web": "^1.24.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
