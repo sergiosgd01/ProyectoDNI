@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 
 /**
  * Modal para censura manual de campos del DNI
@@ -7,7 +7,43 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
  * Solo recibe las caras en las que ha fallado la detección automática.
  * La cara que no llega (frontFile o backFile vacío) no se pide ni se genera.
  * onComplete la devuelve a null y el editor conserva su resultado automático.
+ *
+ * Los rectángulos se guardan en fracciones del ancho y del alto de la imagen original, de 0 a 1.
+ * Así no dependen del tamaño con el que se ve el lienzo, que cambia de una cara a otra,
+ * al cambiar el tamaño de la ventana y al girar el móvil, y cada cara se tapa justo donde se dibujó.
  */
+
+// Tamaño mínimo en pantalla, en píxeles, para enseñar el rectángulo mientras se arrastra y para guardarlo
+const MIN_PREVIEW_SIZE = 5;
+const MIN_RECT_SIZE = 10;
+
+const clamp01 = (value) => Math.min(1, Math.max(0, value));
+
+// Caja del contenido del lienzo en pantalla, sin su borde (clase border-2)
+// Su tamaño es el que le da el CSS en ese momento, que puede ser menor que canvas.width si max-w-full lo encoge
+const getContentBox = (canvas) => {
+  const rect = canvas.getBoundingClientRect();
+  const style = window.getComputedStyle(canvas);
+  const px = (value) => parseFloat(value) || 0;
+  const left = rect.left + px(style.borderLeftWidth) + px(style.paddingLeft);
+  const top = rect.top + px(style.borderTopWidth) + px(style.paddingTop);
+  const right = rect.right - px(style.borderRightWidth) - px(style.paddingRight);
+  const bottom = rect.bottom - px(style.borderBottomWidth) - px(style.paddingBottom);
+  return { left, top, width: right - left, height: bottom - top };
+};
+
+// Dedo con ese identificador dentro de una lista de toques. touches tiene los dedos que siguen en la pantalla
+// y changedTouches los que se acaban de mover, levantar o cancelar
+const findTouch = (list, id) => Array.from(list || []).find((touch) => touch.identifier === id) || null;
+
+// Rectángulo entre el punto de partida y el actual, en fracciones de la imagen
+const rectBetween = (start, end) => ({
+  x: Math.min(start.x, end.x),
+  y: Math.min(start.y, end.y),
+  width: Math.abs(end.x - start.x),
+  height: Math.abs(end.y - start.y)
+});
+
 function ManualCensorModal({
   frontFile,
   backFile,
@@ -16,22 +52,27 @@ function ManualCensorModal({
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [originalImage, setOriginalImage] = useState(null);
-  const [scale, setScale] = useState(1);
+  // Imagen cargada junto con la cara a la que pertenece
+  const [loadedImage, setLoadedImage] = useState(null);
+  // Tamaño del lienzo calculado para esa imagen y el tamaño actual de la ventana
+  const [canvasSize, setCanvasSize] = useState(null);
   const objectUrlRef = useRef(null);
 
   // Estado para controlar qué cara se está editando
   // Inicializar con el primer archivo disponible
   const [currentSide, setCurrentSide] = useState(frontFile ? 'front' : 'back'); // 'front' o 'back'
 
+  // La imagen solo vale si es de la cara que está en pantalla. Mientras carga la otra se ve el aviso de carga
+  const originalImage = loadedImage && loadedImage.side === currentSide ? loadedImage.image : null;
+  const imageLoaded = originalImage !== null;
+
   // Rectángulos dibujados para cada cara
   const [frontRectangles, setFrontRectangles] = useState([]);
   const [backRectangles, setBackRectangles] = useState([]);
 
-  // Estado del dibujo
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPoint, setStartPoint] = useState(null);
+  // Estado del dibujo. El arrastre en curso va en una referencia para que los oyentes del ratón
+  // y del dedo lean siempre su punto de partida, aunque React todavía no haya vuelto a pintar
+  const dragRef = useRef(null);
   const [currentRect, setCurrentRect] = useState(null);
 
   // Modal de confirmación cuando falta censurar alguna cara
@@ -77,8 +118,11 @@ function ManualCensorModal({
   }, []);
 
   // Resetear interacción cuando cambia de lado (Anverso/Reverso)
+  // Un arrastre sin terminar se descarta para que no aparezca en la otra cara
   useEffect(() => {
     setHasInteracted(false);
+    dragRef.current = null;
+    setCurrentRect(null);
   }, [currentSide]);
 
   // Bloquear scroll del body cuando el modal está abierto
@@ -130,23 +174,28 @@ function ManualCensorModal({
       objectUrlRef.current = null;
     }
 
-    setImageLoaded(false);
-    setOriginalImage(null);
-
+    // Si se cambia de cara antes de que termine de cargar, esta imagen ya no se usa
+    let cancelled = false;
+    const side = currentSide;
     const img = new Image();
     objectUrlRef.current = URL.createObjectURL(file);
 
     img.onload = () => {
-      console.log(`✅ Imagen ${currentSide} cargada correctamente`);
-      setOriginalImage(img);
-      setImageLoaded(true);
+      if (cancelled) return;
+      console.log(`✅ Imagen ${side} cargada correctamente`);
+      setLoadedImage({ side, image: img });
     };
 
     img.onerror = (err) => {
+      if (cancelled) return;
       console.error('❌ Error cargando imagen:', err);
     };
 
     img.src = objectUrlRef.current;
+
+    return () => {
+      cancelled = true;
+    };
   }, [currentSide, getCurrentFile]);
 
   // Limpiar URL cuando el componente se desmonte
@@ -159,35 +208,62 @@ function ManualCensorModal({
     };
   }, []);
 
-  // Configurar canvas cuando la imagen está lista
-  useEffect(() => {
-    if (!imageLoaded || !originalImage || !canvasRef.current || !containerRef.current) return;
+  // Ajustar el lienzo al espacio libre al cargar la cara y cada vez que cambia el tamaño de la ventana,
+  // por ejemplo al girar el móvil
+  useLayoutEffect(() => {
+    if (!originalImage) return;
 
+    const fitCanvas = () => {
+      const canvas = canvasRef.current;
+      const container = containerRef.current;
+      if (!canvas || !container) return;
+
+      // Ancho libre del contenedor sin su relleno ni el borde del lienzo, para que max-w-full no tenga que encogerlo
+      const px = (value) => parseFloat(value) || 0;
+      const containerStyle = window.getComputedStyle(container);
+      const canvasStyle = window.getComputedStyle(canvas);
+      const containerWidth = container.clientWidth
+        - px(containerStyle.paddingLeft) - px(containerStyle.paddingRight)
+        - px(canvasStyle.borderLeftWidth) - px(canvasStyle.borderRightWidth);
+      const containerHeight = window.innerHeight * 0.55;
+
+      const scaleX = containerWidth / originalImage.width;
+      const scaleY = containerHeight / originalImage.height;
+      const scale = Math.min(scaleX, scaleY, 1);
+      const width = Math.max(1, Math.floor(originalImage.width * scale));
+      const height = Math.max(1, Math.floor(originalImage.height * scale));
+
+      setCanvasSize((prev) => (
+        prev && prev.image === originalImage && prev.width === width && prev.height === height
+          ? prev
+          : { image: originalImage, width, height }
+      ));
+    };
+
+    fitCanvas();
+    window.addEventListener('resize', fitCanvas);
+    return () => window.removeEventListener('resize', fitCanvas);
+  }, [originalImage]);
+
+  // Redibujar canvas. Los rectángulos pasan de fracciones de la imagen a píxeles del lienzo con el tamaño
+  // que tiene ahora, así siguen sobre la misma zona de la foto aunque el lienzo cambie de tamaño
+  const currentRectangles = getCurrentRectangles();
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
-    const container = containerRef.current;
+    if (!canvas || !originalImage || !canvasSize || canvasSize.image !== originalImage) return;
 
-    const containerWidth = container.clientWidth - 32;
-    const containerHeight = window.innerHeight * 0.55;
+    // Cambiar el tamaño borra el lienzo, por eso se hace justo antes de pintar
+    if (canvas.width !== canvasSize.width) canvas.width = canvasSize.width;
+    if (canvas.height !== canvasSize.height) canvas.height = canvasSize.height;
 
-    const scaleX = containerWidth / originalImage.width;
-    const scaleY = containerHeight / originalImage.height;
-    const newScale = Math.min(scaleX, scaleY, 1);
-
-    setScale(newScale);
-
-    canvas.width = originalImage.width * newScale;
-    canvas.height = originalImage.height * newScale;
-
-    redrawCanvas();
-  }, [imageLoaded, originalImage]);
-
-  // Redibujar canvas
-  const redrawCanvas = useCallback(() => {
-    if (!canvasRef.current || !originalImage) return;
-
-    const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const rectangles = getCurrentRectangles();
+    if (!ctx) return;
+    const toCanvas = (rect) => [
+      rect.x * canvas.width,
+      rect.y * canvas.height,
+      rect.width * canvas.width,
+      rect.height * canvas.height
+    ];
 
     // Limpiar y dibujar imagen
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -195,46 +271,71 @@ function ManualCensorModal({
 
     // Dibujar rectángulos de censura existentes
     ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-    rectangles.forEach(rect => {
-      ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+    currentRectangles.forEach(rect => {
+      ctx.fillRect(...toCanvas(rect));
     });
 
     // Dibujar rectángulo actual si está dibujando
     if (currentRect) {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.fillRect(currentRect.x, currentRect.y, currentRect.width, currentRect.height);
+      ctx.fillRect(...toCanvas(currentRect));
 
       // Borde del rectángulo actual
       ctx.strokeStyle = '#EF4444';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
-      ctx.strokeRect(currentRect.x, currentRect.y, currentRect.width, currentRect.height);
+      ctx.strokeRect(...toCanvas(currentRect));
       ctx.setLineDash([]);
     }
-  }, [originalImage, getCurrentRectangles, currentRect]);
+  }, [originalImage, canvasSize, currentRectangles, currentRect]);
 
-  useEffect(() => {
-    redrawCanvas();
-  }, [redrawCanvas, frontRectangles, backRectangles, currentRect]);
-
-  // Obtener posición del mouse/touch relativa al canvas
-  const getCanvasPosition = (event) => {
+  // Posición de un punto de la pantalla en fracciones de la imagen, de 0 a 1 y sin salirse de ella
+  // Se mide sobre la caja de contenido del lienzo, sin el borde, y con el tamaño con el que se ve en ese momento.
+  // Los píxeles de pantalla no son píxeles del lienzo en cuanto el CSS lo encoge
+  const getImagePoint = (point) => {
     const canvas = canvasRef.current;
-    if (!canvas) return null;
+    if (!canvas || !point) return null;
 
-    const rect = canvas.getBoundingClientRect();
-    const clientX = event.touches ? event.touches[0].clientX : event.clientX;
-    const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+    const box = getContentBox(canvas);
+    if (box.width <= 0 || box.height <= 0) return null;
 
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: clamp01((point.clientX - box.left) / box.width),
+      y: clamp01((point.clientY - box.top) / box.height),
+      box
     };
   };
 
-  // Iniciar dibujo
+  // Descarta el arrastre en curso sin guardar nada
+  const discardDrag = useCallback(() => {
+    dragRef.current = null;
+    setCurrentRect(null);
+  }, []);
+
+  // Iniciar dibujo, con el botón principal del ratón o con un solo dedo
+  // El arrastre apunta qué dedo lo empezó (touchId), o null si es el ratón, para seguir solo a ese puntero
   const handleMouseDown = useCallback((event) => {
-    const pos = getCanvasPosition(event);
+    const isTouch = Boolean(event.touches);
+    let point = event;
+
+    if (isTouch) {
+      // Un arrastre cuyo dedo ya no está en la pantalla se perdió y no cuenta
+      const drag = dragRef.current;
+      if (drag && (drag.touchId === null || !findTouch(event.touches, drag.touchId))) {
+        dragRef.current = null;
+      }
+      // Un segundo dedo, por ejemplo el pulgar que sujeta el móvil, no empieza otro rectángulo
+      if (dragRef.current || event.touches.length > 1) {
+        event.preventDefault();
+        return;
+      }
+      point = event.changedTouches[0];
+    } else if (event.button !== 0) {
+      // Solo el botón principal. Con el derecho se abre el menú y el navegador no avisa al soltarlo
+      return;
+    }
+
+    const pos = getImagePoint(point);
     if (!pos) return;
 
     // Marcar que el usuario ha interactuado (para ocultar mensaje en móviles)
@@ -242,70 +343,99 @@ function ManualCensorModal({
       setHasInteracted(true);
     }
 
-    setIsDrawing(true);
-    setStartPoint(pos);
+    dragRef.current = { side: currentSide, start: pos, touchId: isTouch ? point.identifier : null };
     setCurrentRect(null);
     event.preventDefault();
-  }, [isMobile, hasInteracted]);
+  }, [isMobile, hasInteracted, currentSide]);
 
-  // Durante el dibujo
+  // Durante el dibujo. Solo sigue al ratón o al dedo que empezó el arrastre
   const handleMouseMove = useCallback((event) => {
-    if (!isDrawing || !startPoint) return;
+    const drag = dragRef.current;
+    if (!drag) return;
+
+    let point = event;
+    if (event.touches) {
+      point = drag.touchId === null ? null : findTouch(event.touches, drag.touchId);
+      if (!point) return;
+    } else {
+      if (drag.touchId !== null) return;
+      // Si el botón se soltó fuera de la ventana no llega mouseup. Ese arrastre ya terminó y se descarta
+      if (event.buttons === 0) {
+        discardDrag();
+        return;
+      }
+    }
     event.preventDefault();
 
-    const pos = getCanvasPosition(event);
+    const pos = getImagePoint(point);
     if (!pos) return;
 
-    const canvas = canvasRef.current;
-
-    // Calcular rectángulo normalizado
-    let x = Math.min(startPoint.x, pos.x);
-    let y = Math.min(startPoint.y, pos.y);
-    let width = Math.abs(pos.x - startPoint.x);
-    let height = Math.abs(pos.y - startPoint.y);
-
-    // Limitar al canvas
-    x = Math.max(0, x);
-    y = Math.max(0, y);
-    width = Math.min(width, canvas.width - x);
-    height = Math.min(height, canvas.height - y);
-
-    if (width > 5 && height > 5) {
-      setCurrentRect({ x, y, width, height });
+    // Se enseña cuando ya mide unos píxeles en pantalla
+    const rect = rectBetween(drag.start, pos);
+    if (rect.width * pos.box.width > MIN_PREVIEW_SIZE && rect.height * pos.box.height > MIN_PREVIEW_SIZE) {
+      setCurrentRect(rect);
     }
-  }, [isDrawing, startPoint]);
+  }, [discardDrag]);
 
-  // Finalizar dibujo
-  const handleMouseUp = useCallback(() => {
-    if (currentRect && currentRect.width > 10 && currentRect.height > 10) {
-      const rectangles = getCurrentRectangles();
-      setCurrentRectangles([...rectangles, currentRect]);
+  // Finalizar dibujo. El rectángulo llega hasta donde se suelta, o hasta el borde si el ratón sale del lienzo,
+  // y se guarda en la cara en la que empezó el arrastre
+  const handleMouseUp = useCallback((event) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+
+    let point = event;
+    if (event.changedTouches) {
+      // Al levantar el dedo ya no está en touches, solo en changedTouches
+      point = drag.touchId === null ? null : findTouch(event.changedTouches, drag.touchId);
+      if (!point) return;
+    } else {
+      // Un evento del ratón no termina un arrastre con el dedo. Algunos navegadores lo mandan al tocar otro botón
+      if (drag.touchId !== null) return;
+      // Salir del lienzo sin ningún botón pulsado quiere decir que se soltó fuera de la ventana sin avisar
+      if (event.type === 'mouseleave' && event.buttons === 0) {
+        discardDrag();
+        return;
+      }
     }
 
-    setIsDrawing(false);
-    setStartPoint(null);
+    dragRef.current = null;
     setCurrentRect(null);
-  }, [currentRect, getCurrentRectangles, setCurrentRectangles]);
 
-  // Touch events con passive: false
+    const pos = getImagePoint(point);
+    if (!pos) return;
+
+    const rect = rectBetween(drag.start, pos);
+    if (rect.width * pos.box.width > MIN_RECT_SIZE && rect.height * pos.box.height > MIN_RECT_SIZE) {
+      const setRectangles = drag.side === 'front' ? setFrontRectangles : setBackRectangles;
+      setRectangles((rectangles) => [...rectangles, rect]);
+    }
+  }, [discardDrag]);
+
+  // Si el sistema cancela el toque, por ejemplo con el gesto de volver o un aviso, el arrastre se descarta
+  const handleTouchCancel = useCallback((event) => {
+    const drag = dragRef.current;
+    if (!drag || drag.touchId === null) return;
+    if (findTouch(event.changedTouches, drag.touchId)) discardDrag();
+  }, [discardDrag]);
+
+  // Eventos táctiles sin modo pasivo, para que el dedo dibuje en vez de desplazar la página
+  // El lienzo se crea de nuevo cada vez que se carga una cara, por eso se vuelven a poner al cambiar la imagen
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const touchStartHandler = (e) => handleMouseDown(e);
-    const touchMoveHandler = (e) => handleMouseMove(e);
-    const touchEndHandler = () => handleMouseUp();
-
-    canvas.addEventListener('touchstart', touchStartHandler, { passive: false });
-    canvas.addEventListener('touchmove', touchMoveHandler, { passive: false });
-    canvas.addEventListener('touchend', touchEndHandler, { passive: false });
+    canvas.addEventListener('touchstart', handleMouseDown, { passive: false });
+    canvas.addEventListener('touchmove', handleMouseMove, { passive: false });
+    canvas.addEventListener('touchend', handleMouseUp, { passive: false });
+    canvas.addEventListener('touchcancel', handleTouchCancel);
 
     return () => {
-      canvas.removeEventListener('touchstart', touchStartHandler);
-      canvas.removeEventListener('touchmove', touchMoveHandler);
-      canvas.removeEventListener('touchend', touchEndHandler);
+      canvas.removeEventListener('touchstart', handleMouseDown);
+      canvas.removeEventListener('touchmove', handleMouseMove);
+      canvas.removeEventListener('touchend', handleMouseUp);
+      canvas.removeEventListener('touchcancel', handleTouchCancel);
     };
-  }, [handleMouseDown, handleMouseMove, handleMouseUp]);
+  }, [originalImage, handleMouseDown, handleMouseMove, handleMouseUp, handleTouchCancel]);
 
   // Deshacer último rectángulo
   const handleUndo = () => {
@@ -347,14 +477,16 @@ function ManualCensorModal({
           // Dibujar imagen original
           ctx.drawImage(img, 0, 0);
 
-          // Aplicar censura (convertir coordenadas de escala)
+          // Aplicar censura. Los rectángulos están en fracciones de esta misma imagen, así que no dependen
+          // de la cara que haya en pantalla al finalizar. Se redondea hacia fuera para tapar entero
+          // cualquier píxel que toque el rectángulo
           ctx.fillStyle = 'black';
           rectangles.forEach(rect => {
-            const originalX = rect.x / scale;
-            const originalY = rect.y / scale;
-            const originalWidth = rect.width / scale;
-            const originalHeight = rect.height / scale;
-            ctx.fillRect(originalX, originalY, originalWidth, originalHeight);
+            const left = Math.floor(rect.x * canvas.width);
+            const top = Math.floor(rect.y * canvas.height);
+            const right = Math.ceil((rect.x + rect.width) * canvas.width);
+            const bottom = Math.ceil((rect.y + rect.height) * canvas.height);
+            ctx.fillRect(left, top, right - left, bottom - top);
           });
 
           canvas.toBlob((blob) => {
