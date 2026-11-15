@@ -2,11 +2,22 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
 import ManualCropModal from './ManualCropModal';
 import { useAutoCapture } from '../hooks/useAutoCapture';
-import { HINTS, captureArea, guideRectInVideo } from '../utils/liveCapture';
+import { HINTS, captureArea, checkFinalPhoto, guideRectInVideo } from '../utils/liveCapture';
 import { prepareImageForUpload } from '../utils/imageResize';
+import { detectDniFromFile } from './dni_scripts/dni_detector';
 
+// Veces que la cámara repite sola una foto que no ha salido bien antes de preguntar qué hacer
+const MAX_AUTO_RETRIES = 2;
+// Tras una foto fallida, tiempo que se enseña el motivo antes de volver a intentarlo
+const RETRY_PAUSE_MS = 2500;
 // La zona del DNI que vio el detector sirve para recortar el fotograma si es de hace poco
 const PLACEMENT_MAX_AGE_MS = 3000;
+
+// Qué se le dice a la persona cuando la foto no sirve, según lo que falle
+const PROBLEM_TEXTS = {
+  fields: 'No se leen bien todos los datos del DNI. La foto puede estar borrosa, movida o con reflejos.',
+  document: 'En la foto no se reconoce el DNI.',
+};
 
 // Colores del recuadro según lo que ve la captura automática
 const GUIDE_TONES = {
@@ -73,6 +84,45 @@ function DNIGuide({ guideRef, isMobile, tone, progress }) {
   );
 }
 
+/**
+ * Aviso de que la foto ha llegado bien al servidor pero no sirve para censurarla sola. Deja repetirla o
+ * seguir con ella, porque en el editor los datos también se pueden tapar a mano.
+ */
+function CaptureProblem({ problem, onRepeat, onUse, onCancel }) {
+  return (
+    <div
+      data-captura-problema
+      role="alertdialog"
+      aria-label="La foto no ha salido bien"
+      className="absolute inset-0 flex flex-col items-center justify-center p-6 space-y-5 bg-gradient-to-b from-black to-gray-900 z-20"
+    >
+      <div className="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-500/20">
+        <i className="bi bi-exclamation-triangle text-4xl text-yellow-400"></i>
+      </div>
+      <div className="text-center space-y-2">
+        <p className="text-white font-bold text-xl">La foto no ha salido bien</p>
+        <p className="text-white/90 text-sm max-w-sm">{problem.message}</p>
+      </div>
+      <div className="flex flex-col gap-3 w-full max-w-sm">
+        <button onClick={onRepeat} className="btn-primary w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2">
+          <i className="bi bi-camera-fill"></i>
+          Repetir la foto
+        </button>
+        <button onClick={onUse} className="bg-white/20 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
+          <i className="bi bi-check2"></i>
+          Usar esta foto
+        </button>
+        <button onClick={onCancel} className="text-white/80 w-full py-2 text-sm underline">
+          Cancelar
+        </button>
+      </div>
+      <p className="text-white/70 text-xs text-center max-w-sm">
+        Si sigues con esta foto, puede que tengas que tapar los datos a mano.
+      </p>
+    </div>
+  );
+}
+
 function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -90,6 +140,12 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   // tarda, y hasta que no está hecha hay que seguir pidiendo que no se mueva el DNI
   const [capturePhase, setCapturePhase] = useState(null);
   const isProcessing = capturePhase !== null;
+  // Foto que ha llegado bien al servidor pero no sirve para censurarla sola, con lo que se le dice a la persona
+  const [captureProblem, setCaptureProblem] = useState(null);
+  // Motivo por el que se repite una foto, que se enseña un momento en el aviso de arriba
+  const [retryNotice, setRetryNotice] = useState(null);
+  const failedChecksRef = useRef(0);
+  const bestAttemptRef = useRef(null);
   const [showFlash, setShowFlash] = useState(false);
   const isCapturingRef = useRef(false);
   const isInitializing = useRef(false);
@@ -284,7 +340,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     });
   };
 
-  const capturePhoto = async () => {
+  // auto dice si la ha pedido la captura automática o el botón
+  const capturePhoto = async (auto = false) => {
     // La captura automática y el botón pueden coincidir. Solo vale la primera
     if (isCapturingRef.current) return;
 
@@ -297,6 +354,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     }
 
     isCapturingRef.current = true;
+    setRetryNotice(null);
     setCapturePhase('foto');
     try {
       const blob = await grabPhoto(video, canvas, guideRef.current);
@@ -313,15 +371,34 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
       setShowFlash(true);
       setTimeout(() => setShowFlash(false), 180);
       setCapturePhase('analisis');
-      await processCapturedBlob(blob);
+      await processCapturedBlob(blob, auto);
     } finally {
       isCapturingRef.current = false;
       setCapturePhase(null);
     }
   };
 
+  const finishCapture = (file, metadata) => {
+    onCapture?.(file, metadata);
+    stopCamera();
+    onClose();
+  };
+
+  // Mira si la foto ya recortada sirve para censurarla sola, con el mismo detector y la misma regla que el
+  // editor. Devuelve null si no se puede comprobar, y entonces la foto se da por buena como antes
+  const checkCapture = async (file) => {
+    // Con el ahorro de datos activado no se descarga el modelo solo para esto
+    if (navigator.connection?.saveData) return null;
+    try {
+      return checkFinalPhoto(await detectDniFromFile(file), expectedSide);
+    } catch (err) {
+      console.error('[CameraCapture] No se pudo comprobar la foto:', err);
+      return null;
+    }
+  };
+
   // Envía la foto al servidor de recorte
-  const processCapturedBlob = async (blob) => {
+  const processCapturedBlob = async (blob, auto) => {
     const capturedFile = new File([blob], 'dni-camera-capture.jpg', {
       type: 'image/jpeg',
       lastModified: Date.now(),
@@ -351,9 +428,30 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
         });
 
         console.log('✅ [capturePhoto] YOLO procesado exitosamente, confianza:', resp.confidence);
-        onCapture?.(processedFile, { yolo: { ok: true, confidence: resp.confidence } });
-        stopCamera();
-        onClose();
+        const metadata = { yolo: { ok: true, confidence: resp.confidence } };
+        const check = await checkCapture(processedFile);
+        if (!check || check.ok) {
+          finishCapture(processedFile, metadata);
+          return;
+        }
+
+        // El servidor ha recortado el DNI, pero con esta foto el editor no podría censurar solo.
+        // Se guarda la mejor por si al final se decide seguir con ella
+        console.warn('⚠️ [capturePhoto] La foto no sirve para censurar sola:', check.reason, check.detections);
+        failedChecksRef.current += 1;
+        const attempt = { file: processedFile, metadata, detections: check.detections, rightSide: check.reason !== 'side' };
+        const best = bestAttemptRef.current;
+        // Vale más una foto de la cara pedida que una de la otra cara, aunque esta dé más detecciones
+        if (!best || (attempt.rightSide && !best.rightSide)
+          || (attempt.rightSide === best.rightSide && attempt.detections > best.detections)) {
+          bestAttemptRef.current = attempt;
+        }
+        if (auto && failedChecksRef.current <= MAX_AUTO_RETRIES) {
+          // La cámara sigue abierta y la captura automática la repite sola
+          setRetryNotice(check.hint);
+        } else {
+          setCaptureProblem({ message: PROBLEM_TEXTS[check.reason] || check.hint });
+        }
       } else {
         // ❌ ERROR: Problemas con la detección
         console.warn(`⚠️ [capturePhoto] Error de detección: ${resp.errorType}`, resp);
@@ -378,7 +476,24 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   };
 
   const handleAutoCapture = () => {
-    capturePhoto();
+    capturePhoto(true);
+  };
+
+  // El motivo por el que se repite la foto se enseña un momento y después vuelven los avisos en directo
+  useEffect(() => {
+    if (!retryNotice) return undefined;
+    const timer = setTimeout(() => setRetryNotice(null), RETRY_PAUSE_MS);
+    return () => clearTimeout(timer);
+  }, [retryNotice]);
+
+  const handleRepeatPhoto = () => {
+    failedChecksRef.current = 0;
+    setCaptureProblem(null);
+  };
+
+  const handleUseAnyway = () => {
+    const best = bestAttemptRef.current;
+    if (best) finishCapture(best.file, best.metadata);
   };
 
   const handleDeviceChange = (deviceId) => {
@@ -445,22 +560,28 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const autoCapture = useAutoCapture({
     videoRef,
     guideRef,
-    enabled: !isLoading && !error && !detectionError && !isProcessing && !showManualCrop,
+    enabled: !isLoading && !error && !detectionError && !captureProblem && !isProcessing && !showManualCrop,
     expectedSide,
+    warmupMs: retryNotice ? RETRY_PAUSE_MS : 0,
     onReady: handleAutoCapture,
   });
 
-  // Mientras se hace la foto el recuadro sigue en verde y se pide no moverse
+  // Mientras se hace la foto el recuadro sigue en verde y se pide no moverse. Justo después de una foto
+  // fallida se enseña el motivo en vez del aviso en directo
   const isTakingPhoto = capturePhase === 'foto';
   const guideTone = isProcessing || autoCapture.status === 'listo' || autoCapture.status === 'disparado'
     ? 'listo'
-    : autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
+    : retryNotice || autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
   const guideProgress = isTakingPhoto ? 1 : autoCapture.progress;
-  const hintText = isTakingPhoto ? HINTS.capturing : autoCapture.hint || 'Coloca el DNI dentro del recuadro';
+  const hintText = isTakingPhoto
+    ? HINTS.capturing
+    : retryNotice || autoCapture.hint || 'Coloca el DNI dentro del recuadro';
   const hintBackground = isTakingPhoto
     ? HINT_BACKGROUNDS.listo
-    : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
+    : retryNotice ? HINT_BACKGROUNDS.ajustando : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
   const isAutoAvailable = autoCapture.status !== 'manual';
+  // Con un aviso que tapa la cámara y trae sus propios botones no se ofrece hacer otra foto
+  const hasBlockingOverlay = Boolean(detectionError || captureProblem);
 
   const processingOverlay = capturePhase === 'analisis' && (
     <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-30">
@@ -476,7 +597,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   );
 
   // Valores en directo para ajustar los umbrales en un móvil, abriendo la web con ?depurar-camara
-  const renderDebugPanel = (positionClass) => autoCapture.debug && !detectionError && (
+  const renderDebugPanel = (positionClass) => autoCapture.debug && !hasBlockingOverlay && (
     <div
       data-captura-depuracion
       className={`absolute ${positionClass} z-30 rounded-lg bg-black/75 px-3 py-2 font-mono text-[11px] leading-tight text-white pointer-events-none`}
@@ -552,16 +673,25 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${detectionError ? 'invisible' : 'visible'}`}
+                className={`w-full h-full object-cover ${hasBlockingOverlay ? 'invisible' : 'visible'}`}
               />
 
-              {!isLoading && !detectionError && (
+              {!isLoading && !hasBlockingOverlay && (
                 <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={guideProgress} />
               )}
 
               {renderDebugPanel('left-2 top-36')}
               {processingOverlay}
               {flashOverlay}
+
+              {captureProblem && (
+                <CaptureProblem
+                  problem={captureProblem}
+                  onRepeat={handleRepeatPhoto}
+                  onUse={handleUseAnyway}
+                  onCancel={handleClose}
+                />
+              )}
 
               {/* Overlay de error */}
               {detectionError && (
@@ -623,17 +753,20 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               </div>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
-              <button onClick={capturePhoto} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
-                <i className="bi bi-camera-fill text-2xl"></i>
-                Capturar Foto
-              </button>
-              {isAutoAvailable && (
-                <p className="text-white/80 text-xs text-center mt-2">
-                  También se hace sola cuando el DNI se ve bien
-                </p>
-              )}
-            </div>
+            {/* Con un aviso encima no se enseña, porque en pantallas pequeñas tapaba sus botones */}
+            {!hasBlockingOverlay && (
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
+                <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
+                  <i className="bi bi-camera-fill text-2xl"></i>
+                  Capturar Foto
+                </button>
+                {isAutoAvailable && (
+                  <p className="text-white/80 text-xs text-center mt-2">
+                    También se hace sola cuando el DNI se ve bien
+                  </p>
+                )}
+              </div>
+            )}
           </>
         )}
 
@@ -730,10 +863,10 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                   autoPlay
                   playsInline
                   muted
-                  className={`w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain ${detectionError ? 'invisible' : 'visible'}`}
+                  className={`w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain ${hasBlockingOverlay ? 'invisible' : 'visible'}`}
                 />
 
-                {!isLoading && !detectionError && (
+                {!isLoading && !hasBlockingOverlay && (
                   <>
                     <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={guideProgress} />
                     <div className="absolute top-3 left-0 right-0 text-center px-4 pointer-events-none z-10">
@@ -745,6 +878,15 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                 {renderDebugPanel('left-2 bottom-2')}
                 {processingOverlay}
                 {flashOverlay}
+
+                {captureProblem && (
+                  <CaptureProblem
+                    problem={captureProblem}
+                    onRepeat={handleRepeatPhoto}
+                    onUse={handleUseAnyway}
+                    onCancel={handleClose}
+                  />
+                )}
 
                 {/* Overlay de error */}
                 {detectionError && (
@@ -803,7 +945,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                 )}
               </div>
 
-              <button onClick={capturePhoto} disabled={isLoading || isProcessing} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
+              <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing || hasBlockingOverlay} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
                 <i className="bi bi-camera text-xl"></i>
                 Capturar Foto
               </button>

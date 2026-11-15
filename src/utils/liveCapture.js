@@ -49,6 +49,13 @@ export const PLACEMENT = {
   minDetections: { anverso: 10, reverso: 5 },
 };
 
+/**
+ * Detecciones que tiene que dar la foto ya recortada para que el editor la censure sola, contando la del
+ * documento. Son los mismos números que usa DNIEditor. Con menos, el editor pasa a censura manual, así que
+ * la cámara repite la foto antes de darla por buena
+ */
+export const FINAL_MIN_DETECTIONS = { anverso: 15, reverso: 6 };
+
 export const ANALYSIS_WIDTH = 400;
 // El modelo trabaja a 640 px, no sirve de nada pasarle más
 export const DETECTOR_MAX_SIDE = 640;
@@ -75,6 +82,8 @@ export const HINTS = {
   blurry: 'Enfocando. Mantén el DNI quieto',
   hold: 'Muy bien, no te muevas',
   capturing: 'Haciendo la foto, no te muevas',
+  retryBlurry: 'La foto no ha salido nítida. Vamos a repetirla',
+  retryNoDocument: 'En la foto no se reconoce el DNI. Vamos a repetirla',
 };
 
 /**
@@ -368,4 +377,39 @@ export function captureArea(guideRect, cardRect, videoWidth, videoHeight) {
   const right = Math.max(guideArea.x + guideArea.width, cardArea.x + cardArea.width);
   const bottom = Math.max(guideArea.y + guideArea.height, cardArea.y + cardArea.height);
   return { x, y, width: right - x, height: bottom - y };
+}
+
+/**
+ * Mira si la foto ya recortada sirve para censurarla sola, con la misma regla que el editor: tiene que verse
+ * el documento de esa cara y dar al menos FINAL_MIN_DETECTIONS detecciones.
+ * @param {Array} boxes - Detecciones sobre la foto recortada
+ * @param {'anverso'|'reverso'|null} expectedSide - Cara que se pedía, o null si valía cualquiera
+ * @returns {{ok: boolean, detections: number, reason: 'side'|'document'|'fields'|null, hint: string|null}}
+ */
+export function checkFinalPhoto(boxes, expectedSide = null) {
+  const best = (label) => boxes
+    .filter((box) => box.label === label)
+    .reduce((top, box) => (!top || box.confidence > top.confidence ? box : top), null);
+  const front = best('DOC_DNI');
+  const back = best('DOC_DNI_REV');
+  const detections = boxes.length;
+
+  let side = expectedSide;
+  if (!side) {
+    if (!front && !back) return { ok: false, detections, reason: 'document', hint: HINTS.retryNoDocument };
+    side = !back || (front && front.confidence >= back.confidence) ? 'anverso' : 'reverso';
+  }
+
+  const wanted = side === 'anverso' ? front : back;
+  const other = side === 'anverso' ? back : front;
+  if (!wanted) {
+    if (other) {
+      return { ok: false, detections, reason: 'side', hint: side === 'anverso' ? HINTS.flipToFront : HINTS.flipToBack };
+    }
+    return { ok: false, detections, reason: 'document', hint: HINTS.retryNoDocument };
+  }
+  if (detections < FINAL_MIN_DETECTIONS[side]) {
+    return { ok: false, detections, reason: 'fields', hint: HINTS.retryBlurry };
+  }
+  return { ok: true, detections, reason: null, hint: null };
 }
