@@ -6,26 +6,29 @@ import { validateFileComplete, sanitizeFileName, MAX_UPLOAD_SIZE } from '../util
 import { prepareImageForUpload } from '../utils/imageResize';
 import { fileUploadLimiter } from '../utils/rateLimiter';
 import logger from '../utils/logger';
+import { useUploadSlotRegistration } from '../hooks/useUploadSlots';
+
+// Ordenador con ratón o trackpad. Ahí se puede arrastrar o pegar la foto y no se ofrece la webcam,
+// que saca el DNI poco nítido. En móvil y tablet se ofrece primero la cámara del dispositivo
+const CONSULTA_RATON = '(hover: hover) and (pointer: fine)';
+const ATAJO_PEGAR = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? '⌘V' : 'Ctrl+V';
 
 function FileUploadZone({ onFileSelect }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showManualCrop, setShowManualCrop] = useState(false);
   const [originalFileForCrop, setOriginalFileForCrop] = useState(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const [conRaton, setConRaton] = useState(() => window.matchMedia(CONSULTA_RATON).matches);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState(null);
   const fileInputId = useId();
 
+  // Se vuelve a mirar si cambia, por ejemplo al conectar un ratón a una tablet
   useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-
-    return () => window.removeEventListener('resize', checkIsMobile);
+    const consulta = window.matchMedia(CONSULTA_RATON);
+    const actualizar = () => setConRaton(consulta.matches);
+    consulta.addEventListener('change', actualizar);
+    return () => consulta.removeEventListener('change', actualizar);
   }, []);
 
   const handleDragOver = (event) => {
@@ -33,7 +36,9 @@ function FileUploadZone({ onFileSelect }) {
     setIsDragOver(true);
   };
 
-  const handleDragLeave = () => {
+  // Pasar por encima de un botón del recuadro no cuenta como salir de él
+  const handleDragLeave = (event) => {
+    if (event.currentTarget.contains(event.relatedTarget)) return;
     setIsDragOver(false);
   };
 
@@ -125,11 +130,15 @@ function FileUploadZone({ onFileSelect }) {
     }
   };
 
+  // Dentro de la página de subida, lo que se suelta o se pega lo reparte ella entre las dos caras
+  // (usePageFileDrop), así que se aceptan las dos fotos a la vez
+  const enPaginaDeSubida = useUploadSlotRegistration(processAndSelectFile, isProcessing);
+
   const handleDrop = (event) => {
-    event.preventDefault();
     setIsDragOver(false);
-    const file = event.dataTransfer.files[0];
-    processAndSelectFile(file); // ✅ Procesar con YOLO
+    if (enPaginaDeSubida) return;
+    event.preventDefault();
+    processAndSelectFile(event.dataTransfer.files[0]); // ✅ Procesar con YOLO
   };
 
   const handleFileChange = (event) => {
@@ -184,22 +193,25 @@ function FileUploadZone({ onFileSelect }) {
 
   return (
     <>
+      {/* Con el dedo el recuadro es compacto, para que «Hacer foto» se vea nada más entrar.
+          Si hay un error necesita sitio para el mensaje y sus botones */}
       <div
         className={`
-          w-full flex flex-col items-center justify-center p-8 md:p-16 border-2 rounded-2xl
-          transition-all duration-300 ease-in-out min-h-[400px] relative
-          ${!isMobile ? 'border-dashed cursor-pointer group' : 'border-solid'}
-          ${isDragOver && !isMobile
+          w-full flex flex-col items-center justify-center border-2 rounded-2xl
+          transition-all duration-300 ease-in-out relative
+          ${conRaton ? 'p-8 md:p-16 min-h-[400px] border-dashed cursor-pointer group' : 'p-4 border-solid'}
+          ${!conRaton && processingError && !isProcessing ? 'min-h-[440px]' : ''}
+          ${isDragOver && conRaton
             ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-secondary-100 scale-[1.02] shadow-xl'
-            : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white'
+            : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white group-data-[arrastrando=true]/subida:border-primary-300 group-data-[arrastrando=true]/subida:from-primary-50'
           }
-          ${!isMobile ? 'hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50' : ''}
+          ${conRaton ? 'hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50' : ''}
           ${isProcessing ? 'pointer-events-none opacity-75' : ''}
         `}
-        onDragOver={!isMobile ? handleDragOver : undefined}
-        onDragLeave={!isMobile ? handleDragLeave : undefined}
-        onDrop={!isMobile ? handleDrop : undefined}
-        onClick={!isMobile && !isProcessing ? () => document.getElementById(fileInputId).click() : undefined}
+        onDragOver={conRaton ? handleDragOver : undefined}
+        onDragLeave={conRaton ? handleDragLeave : undefined}
+        onDrop={conRaton ? handleDrop : undefined}
+        onClick={conRaton && !isProcessing ? () => document.getElementById(fileInputId).click() : undefined}
       >
         <input
           type="file"
@@ -269,70 +281,73 @@ function FileUploadZone({ onFileSelect }) {
           </div>
         )}
 
-        <div className={`
-          p-4 rounded-full mb-6 transition-all duration-300
-          ${isDragOver
-            ? 'bg-primary-500 scale-110'
-            : 'bg-gradient-to-br from-primary-500 to-secondary-600 group-hover:scale-105 group-hover:shadow-lg'
-          }
-        `}>
-          <i className="bi bi-cloud-arrow-up text-white text-5xl"></i>
-        </div>
-
-        <h3 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${isDragOver ? 'text-primary-700' : 'text-gray-800 group-hover:text-primary-600'
-          }`}>
-          {isMobile
-            ? 'Selecciona tu DNI'
-            : (isDragOver ? '¡Suelta tu imagen aquí!' : 'Arrastra tu DNI aquí')
-          }
-        </h3>
-
-        <p className={`text-lg font-medium mb-6 transition-colors duration-300 ${isDragOver ? 'text-primary-600' : 'text-gray-600 group-hover:text-primary-500'
-          }`}>
-          {isMobile ? 'Elige una de estas opciones' : 'o elige una de estas opciones'}
-        </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              document.getElementById(fileInputId).click();
-            }}
-            disabled={isProcessing}
-            className={`
-              px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform flex items-center justify-center space-x-2
+        {conRaton ? (
+          <>
+            <div className={`
+              p-4 rounded-full mb-6 transition-all duration-300
               ${isDragOver
-                ? 'bg-primary-600 text-white shadow-lg scale-105'
-                : 'bg-white text-primary-600 border-2 border-primary-600 hover:bg-primary-600 hover:text-white hover:scale-105 hover:shadow-lg'
+                ? 'bg-primary-500 scale-110'
+                : 'bg-gradient-to-br from-primary-500 to-secondary-600 group-hover:scale-105 group-hover:shadow-lg'
               }
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-          >
-            <i className="bi bi-folder text-lg"></i>
-            <span>Seleccionar Archivo</span>
-          </button>
+            `}>
+              <i className="bi bi-cloud-arrow-up text-white text-5xl"></i>
+            </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowCamera(true);
-            }}
-            disabled={isProcessing}
-            className={`
-              px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform flex items-center justify-center space-x-2
-              ${isDragOver
-                ? 'bg-secondary-600 text-white shadow-lg scale-105'
-                : 'bg-white text-secondary-600 border-2 border-secondary-600 hover:bg-secondary-600 hover:text-white hover:scale-105 hover:shadow-lg'
-              }
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-          >
-            <i className="bi bi-camera text-lg"></i>
-            <span>Usar Cámara</span>
-          </button>
-        </div>
+            <h3 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${isDragOver ? 'text-primary-700' : 'text-gray-800 group-hover:text-primary-600'
+              }`}>
+              {isDragOver ? '¡Suelta tu imagen aquí!' : 'Arrastra tu DNI aquí'}
+            </h3>
 
-        <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4 text-sm text-gray-500">
+            <p className={`text-lg font-medium mb-6 transition-colors duration-300 ${isDragOver ? 'text-primary-600' : 'text-gray-600 group-hover:text-primary-500'
+              }`}>
+              o pégalo con {ATAJO_PEGAR}
+            </p>
+
+            <div className="mb-6">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  document.getElementById(fileInputId).click();
+                }}
+                disabled={isProcessing}
+                className={`
+                  px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform flex items-center justify-center space-x-2
+                  ${isDragOver
+                    ? 'bg-primary-600 text-white shadow-lg scale-105'
+                    : 'bg-white text-primary-600 border-2 border-primary-600 hover:bg-primary-600 hover:text-white hover:scale-105 hover:shadow-lg'
+                  }
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                `}
+              >
+                <i className="bi bi-folder text-lg"></i>
+                <span>Seleccionar Archivo</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="w-full flex flex-col gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setShowCamera(true)}
+              disabled={isProcessing}
+              className="w-full px-6 py-3.5 rounded-xl font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-md active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="bi bi-camera-fill text-lg"></i>
+              <span>Hacer foto</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => document.getElementById(fileInputId).click()}
+              disabled={isProcessing}
+              className="w-full px-6 py-3 rounded-xl font-semibold text-primary-600 bg-white border-2 border-primary-600 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i className="bi bi-images text-lg"></i>
+              <span>Elegir de la galería</span>
+            </button>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500">
           <div className="flex items-center">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
             Formatos: JPG, PNG, WEBP

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import ProjectInfo from '../ProjectInfo';
 import MainSection from '../MainSection';
 import SecuritySection from '../SecuritySection';
@@ -7,6 +7,8 @@ import Footer from '../Footer';
 import PrivacyNotice from '../PrivacyNotice';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { usePreloadDetector } from '../../hooks/usePreloadDetector';
+import { UploadSlotProvider, useUploadSlots } from '../../hooks/useUploadSlots';
+import { usePageFileDrop } from '../../hooks/usePageFileDrop';
 
 export default function UploadPage({
   frontFile,
@@ -35,6 +37,24 @@ export default function UploadPage({
 
   // Preparar el modelo de detección mientras se suben las fotos
   usePreloadDetector();
+
+  // Las fotos se pueden soltar o pegar en cualquier parte de la página, también las dos a la vez
+  const slots = useUploadSlots();
+  const [aviso, setAviso] = useState(null);
+  const recibirFotos = useCallback((files, side) => setAviso(slots.distribute(files, side)), [slots]);
+  const arrastre = usePageFileDrop(recibirFotos);
+
+  useEffect(() => {
+    if (!aviso) return undefined;
+    const timer = setTimeout(() => setAviso(null), 6000);
+    return () => clearTimeout(timer);
+  }, [aviso]);
+
+  const carasLibres = [!frontFile && 'delantera', !backFile && 'trasera'].filter(Boolean);
+  let textoArrastre = 'Suelta la foto en el recuadro de su cara';
+  if (carasLibres.length === 0) textoArrastre = 'Ya hay una foto en cada cara. Quita la que quieras cambiar';
+  else if (carasLibres.length === 1) textoArrastre = `Suelta la foto de la cara ${carasLibres[0]}`;
+  else if (arrastre.count >= 2) textoArrastre = 'Suelta las dos fotos en cualquier parte';
 
   const isMobileView = () => {
     return window.innerWidth < 768;
@@ -130,10 +150,31 @@ export default function UploadPage({
 
   return (
     <>
-      <section className="py-8 sm:py-16 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-7xl relative">
+      <section className="py-4 sm:py-16 flex flex-col items-center justify-center p-4">
+        {/* data-arrastrando ilumina los recuadros libres mientras se arrastra una foto por la página */}
+        <div
+          className="w-full max-w-7xl relative group/subida"
+          data-arrastrando={arrastre.active ? 'true' : 'false'}
+        >
+          {arrastre.active && (
+            <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-5 py-3 rounded-full bg-gray-900/90 text-white text-sm font-medium shadow-xl flex items-center gap-2 whitespace-nowrap">
+              <i className="bi bi-download"></i>
+              {textoArrastre}
+            </div>
+          )}
+
+          {aviso && (
+            <div
+              role="status"
+              className="fixed top-4 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 z-50 px-4 py-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-sm shadow-lg flex items-start gap-2"
+            >
+              <i className="bi bi-info-circle-fill mt-0.5"></i>
+              <span>{aviso}</span>
+            </div>
+          )}
+
           {/* Botón Volver al Inicio integrado de forma profesional */}
-          <div className="mb-4 sm:absolute sm:-top-8 sm:left-0 z-10">
+          <div className="mb-3 sm:mb-4 sm:absolute sm:-top-8 sm:left-0 z-10">
             <button
               onClick={onGoHome}
               className="group inline-flex items-center px-4 py-2 bg-white/60 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
@@ -143,15 +184,15 @@ export default function UploadPage({
             </button>
           </div>
 
-          {/* Header general */}
-          <div className="text-center mb-8 mt-4 sm:mt-0">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+          {/* Header general. En móvil se queda en el título, para que los botones de subir se vean sin bajar */}
+          <div className="text-center mb-4 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 sm:mb-4">
               Subir ambas partes del DNI
             </h2>
-            <p className="text-base md:text-lg text-gray-600 mb-2">
+            <p className="hidden sm:block text-base md:text-lg text-gray-600 mb-2">
               Sube las fotos de la parte delantera y trasera de tu DNI
             </p>
-            <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
+            <div className="hidden sm:flex items-center justify-center space-x-4 text-sm text-gray-500">
               <div className="flex items-center">
                 <div className={`w-3 h-3 rounded-full mr-2 ${frontFile ? 'bg-primary-500' : 'bg-primary-300'}`}></div>
                 <span>Parte delantera</span>
@@ -164,14 +205,16 @@ export default function UploadPage({
           </div>
 
           {/* Grid responsive: una columna en móvil, dos columnas en pantallas medianas y grandes */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* En cada tarjeta, data-upload-side dice a qué cara va una foto soltada encima.
+              En móvil el número va a la izquierda del título para ahorrar alto */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
             {/* Parte Delantera */}
-            <div className="bg-white rounded-lg shadow-xl p-6">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-primary-100 rounded-full mb-4">
-                  <span className="text-xl font-bold text-primary-500">1</span>
+            <div data-upload-side="front" className="bg-white rounded-lg shadow-xl p-4 sm:p-6">
+              <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 mb-4 text-left sm:block sm:text-center sm:mb-6">
+                <div className="row-span-2 inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-full sm:mb-4">
+                  <span className="text-lg sm:text-xl font-bold text-primary-500">1</span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight sm:mb-2">
                   Parte Delantera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
@@ -179,26 +222,28 @@ export default function UploadPage({
                 </p>
               </div>
 
-              <MainSection
-                key="front-section"
-                selectedFile={frontFile}
-                onFileSelect={onFrontFileSelect}
-                onClearImage={onClearFrontFile}
-                stepInfo={{
-                  current: 1,
-                  total: 2,
-                  side: 'delantera'
-                }}
-              />
+              <UploadSlotProvider value={slots.front}>
+                <MainSection
+                  key="front-section"
+                  selectedFile={frontFile}
+                  onFileSelect={onFrontFileSelect}
+                  onClearImage={onClearFrontFile}
+                  stepInfo={{
+                    current: 1,
+                    total: 2,
+                    side: 'delantera'
+                  }}
+                />
+              </UploadSlotProvider>
             </div>
 
             {/* Parte Trasera */}
-            <div ref={backSectionRef} className="bg-white rounded-lg shadow-xl p-6 transition-all duration-500">
-              <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 bg-secondary-100 rounded-full mb-4">
-                  <span className="text-xl font-bold text-secondary-600">2</span>
+            <div ref={backSectionRef} data-upload-side="back" className="bg-white rounded-lg shadow-xl p-4 sm:p-6 transition-all duration-500">
+              <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 mb-4 text-left sm:block sm:text-center sm:mb-6">
+                <div className="row-span-2 inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-secondary-100 rounded-full sm:mb-4">
+                  <span className="text-lg sm:text-xl font-bold text-secondary-600">2</span>
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">
+                <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight sm:mb-2">
                   Parte Trasera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
@@ -206,17 +251,19 @@ export default function UploadPage({
                 </p>
               </div>
 
-              <MainSection
-                key="back-section"
-                selectedFile={backFile}
-                onFileSelect={onBackFileSelect}
-                onClearImage={onClearBackFile}
-                stepInfo={{
-                  current: 2,
-                  total: 2,
-                  side: 'trasera'
-                }}
-              />
+              <UploadSlotProvider value={slots.back}>
+                <MainSection
+                  key="back-section"
+                  selectedFile={backFile}
+                  onFileSelect={onBackFileSelect}
+                  onClearImage={onClearBackFile}
+                  stepInfo={{
+                    current: 2,
+                    total: 2,
+                    side: 'trasera'
+                  }}
+                />
+              </UploadSlotProvider>
             </div>
           </div>
 

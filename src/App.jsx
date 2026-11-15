@@ -54,9 +54,10 @@ function App() {
   const [validationResult, setValidationResult] = useState(null);
   const [validationError, setValidationError] = useState(null);
 
-  // Resetear auto-navegación cuando se suben archivos por primera vez
+  // Resetear auto-navegación cuando se sube la primera de las dos fotos. Puede ser la trasera,
+  // porque al soltar las dos a la vez se procesan a la par y cualquiera puede terminar antes
   useEffect(() => {
-    if (frontFile && !backFile && shouldAutoNavigate === false) {
+    if (Boolean(frontFile) !== Boolean(backFile) && shouldAutoNavigate === false) {
       setShouldAutoNavigate(true);
     }
   }, [frontFile, backFile, shouldAutoNavigate]);
