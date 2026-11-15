@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
 import ManualCropModal from './ManualCropModal';
 import { useAutoCapture } from '../hooks/useAutoCapture';
-import { captureArea, guideRectInVideo } from '../utils/liveCapture';
+import { HINTS, captureArea, guideRectInVideo } from '../utils/liveCapture';
 import { prepareImageForUpload } from '../utils/imageResize';
 
 // La zona del DNI que vio el detector sirve para recortar el fotograma si es de hace poco
@@ -85,8 +85,11 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [showManualCrop, setShowManualCrop] = useState(false);
   const [capturedFileForCrop, setCapturedFileForCrop] = useState(null);
-  // Mientras se hace la foto y la analiza el servidor. Apaga la captura automática y evita fotos dobles
-  const [isProcessing, setIsProcessing] = useState(false);
+  // 'foto' mientras se hace la foto y 'analisis' mientras la analiza el servidor. En las dos se apaga la
+  // captura automática y no se admiten más fotos. Van separadas porque hacer la foto a resolución completa
+  // tarda, y hasta que no está hecha hay que seguir pidiendo que no se mueva el DNI
+  const [capturePhase, setCapturePhase] = useState(null);
+  const isProcessing = capturePhase !== null;
   const [showFlash, setShowFlash] = useState(false);
   const isCapturingRef = useRef(false);
   const isInitializing = useRef(false);
@@ -294,7 +297,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     }
 
     isCapturingRef.current = true;
-    setIsProcessing(true);
+    setCapturePhase('foto');
     try {
       const blob = await grabPhoto(video, canvas, guideRef.current);
       if (!blob) {
@@ -305,10 +308,15 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
         });
         return;
       }
+      // La foto ya está hecha. Se avisa con un destello y una vibración corta, y ya se puede mover el DNI
+      navigator.vibrate?.(60);
+      setShowFlash(true);
+      setTimeout(() => setShowFlash(false), 180);
+      setCapturePhase('analisis');
       await processCapturedBlob(blob);
     } finally {
       isCapturingRef.current = false;
-      setIsProcessing(false);
+      setCapturePhase(null);
     }
   };
 
@@ -369,11 +377,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     }
   };
 
-  // La captura automática avisa con un destello y una vibración corta, y hace la foto
   const handleAutoCapture = () => {
-    navigator.vibrate?.(60);
-    setShowFlash(true);
-    setTimeout(() => setShowFlash(false), 180);
     capturePhoto();
   };
 
@@ -446,14 +450,19 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     onReady: handleAutoCapture,
   });
 
-  const guideTone = autoCapture.status === 'listo' || autoCapture.status === 'disparado'
+  // Mientras se hace la foto el recuadro sigue en verde y se pide no moverse
+  const isTakingPhoto = capturePhase === 'foto';
+  const guideTone = isProcessing || autoCapture.status === 'listo' || autoCapture.status === 'disparado'
     ? 'listo'
     : autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
-  const hintText = autoCapture.hint || 'Coloca el DNI dentro del recuadro';
-  const hintBackground = HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
+  const guideProgress = isTakingPhoto ? 1 : autoCapture.progress;
+  const hintText = isTakingPhoto ? HINTS.capturing : autoCapture.hint || 'Coloca el DNI dentro del recuadro';
+  const hintBackground = isTakingPhoto
+    ? HINT_BACKGROUNDS.listo
+    : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
   const isAutoAvailable = autoCapture.status !== 'manual';
 
-  const processingOverlay = isProcessing && (
+  const processingOverlay = capturePhase === 'analisis' && (
     <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-30">
       <div className="text-center text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-3"></div>
@@ -478,9 +487,13 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     </div>
   );
 
-  const hintPill = (
+  // Mientras el servidor analiza la foto no se enseña, porque quedaría debajo de «Analizando DNI».
+  // Los lectores de pantalla lo leen cada vez que cambia
+  const hintPill = capturePhase !== 'analisis' && (
     <div
       data-captura-estado={autoCapture.status}
+      role="status"
+      aria-live="polite"
       className={`inline-block ${hintBackground} backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl transition-colors duration-200`}
     >
       <p className="text-white text-sm font-semibold">{hintText}</p>
@@ -543,7 +556,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               />
 
               {!isLoading && !detectionError && (
-                <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={autoCapture.progress} />
+                <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={guideProgress} />
               )}
 
               {renderDebugPanel('left-2 top-36')}
@@ -722,7 +735,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
 
                 {!isLoading && !detectionError && (
                   <>
-                    <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={autoCapture.progress} />
+                    <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={guideProgress} />
                     <div className="absolute top-3 left-0 right-0 text-center px-4 pointer-events-none z-10">
                       {hintPill}
                     </div>

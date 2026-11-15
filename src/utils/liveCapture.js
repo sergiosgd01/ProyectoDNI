@@ -74,7 +74,7 @@ export const HINTS = {
   moving: 'No te muevas',
   blurry: 'Enfocando. Mantén el DNI quieto',
   hold: 'Muy bien, no te muevas',
-  capturing: 'Haciendo la foto',
+  capturing: 'Haciendo la foto, no te muevas',
 };
 
 /**
