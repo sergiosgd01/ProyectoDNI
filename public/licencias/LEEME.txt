@@ -1,0 +1,53 @@
+Librerías de terceros que la web sirve desde su propio dominio
+
+La web no carga código ni datos de dominios ajenos. Estos archivos son copias exactas, sin ningún cambio,
+de los que publica cada proyecto. Cualquiera puede comprobarlo descargando el archivo de la web y
+calculando su huella SHA-256, por ejemplo con «shasum -a 256 archivo».
+
+OpenCV.js se carga, como antes, con una etiqueta script clásica de index.html. Vite solo pone huella a los
+scripts de tipo module, así que este archivo va copiado en public/vendor con la versión en la ruta. El resto
+sale de node_modules al construir la web y Vite le pone en la ruta una huella del contenido, que aquí aparece
+como <huella>. Las licencias de todos están en esta misma carpeta.
+
+OpenCV.js 4.5.2
+  Ruta en la web     /vendor/opencv/4.5.2/opencv.js
+  Copia de           https://docs.opencv.org/4.5.2/opencv.js, el que publica el propio proyecto OpenCV
+                     El paquete npm de un tercero @techstark/opencv-js@4.5.2-release.1 trae el mismo archivo
+                     en dist/opencv.js
+  SHA-256            7c6bf9b115971c1fa952e80a384e22bf02837b70980d882bbfaa0dc60f4c61f6
+  Licencia           Apache 2.0, opencv-4.5.2-LICENSE.txt y opencv-4.5.2-COPYRIGHT.txt
+
+ONNX Runtime Web 1.24.1, cargador del motor
+  Ruta en la web     /assets/ort-wasm-simd-threaded.jsep-<huella>.js
+  Copia de           paquete npm onnxruntime-web@1.24.1, dist/ort-wasm-simd-threaded.jsep.mjs
+                     Mismo contenido, solo cambia la extensión para que se sirva como JavaScript
+  SHA-256            9b7e9dbe87f1cb3df68660418492e8c6b0cae6fe83ce46ef1a51dbc95580e690
+  Licencia           MIT, onnxruntime-1.24.1-LICENSE.txt y avisos de terceros en onnxruntime-1.24.1-ThirdPartyNotices.txt
+
+ONNX Runtime Web 1.24.1, motor en WebAssembly
+  Ruta en la web     /assets/ort-wasm-simd-threaded.jsep-<huella>.wasm
+  Copia de           paquete npm onnxruntime-web@1.24.1, dist/ort-wasm-simd-threaded.jsep.wasm
+  SHA-256            5febcf74919ee7ba3c7e838290c9ef2c03d6da297f06a8facfd7d22f623d7cd9
+  Licencia           MIT, onnxruntime-1.24.1-LICENSE.txt y avisos de terceros en onnxruntime-1.24.1-ThirdPartyNotices.txt
+
+Tesseract.js 5.1.1, worker del OCR
+  Ruta en la web     /assets/worker.min-<huella>.js
+  Copia de           paquete npm tesseract.js@5.1.1, dist/worker.min.js
+  SHA-256            aca1229639fc9907d86f96e825955a2b7c5716d17f3bc3acd71f9c7ab66181fc
+  Licencia           Apache 2.0, tesseract.js-5.1.1-LICENSE.txt y las de lo que incluye en tesseract.js-5.1.1-worker.min.js.LICENSE.txt
+
+Tesseract.js-core 5.1.1, motor del OCR
+  Ruta en la web     /assets/tesseract-core-simd.wasm-<huella>.js
+  Copia de           paquete npm tesseract.js-core@5.1.1, tesseract-core-simd.wasm.js
+  SHA-256            63f232c4f7a97b04e52eb940202700b2c6239783a75d0ff0553274fac530cd5c
+  Licencia           Apache 2.0, tesseract.js-core-5.1.1-LICENSE.txt
+
+Datos del idioma español de Tesseract 4.0.0
+  Ruta en la web     /assets/tessdata-<huella>/spa.traineddata.gz
+  Copia de           paquete npm @tesseract.js-data/spa@1.0.0, 4.0.0/spa.traineddata.gz
+                     Es el mismo archivo que https://tessdata.projectnaptha.com/4.0.0/spa.traineddata.gz
+  SHA-256            6cd52c545bceeacb2e43fad64fc0703a711c482ba20d1ca4b6915c09de9973e6
+  Licencia           Apache 2.0, tessdata-4.0.0-LICENSE.txt, la del repositorio naptha/tessdata del que salen los datos
+                     El paquete npm se declara MIT en su package.json y no trae ningún texto de licencia
+
+Al cambiar la versión de alguna de estas librerías hay que actualizar este archivo y su licencia.

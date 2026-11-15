@@ -13,3 +13,9 @@
 # de unos 75 ms sin descarga, para que nadie se quede con un modelo antiguo cuando se cambie.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
+
+# OpenCV.js se carga con una etiqueta script clásica de index.html, a la que Vite no pone huella, y va copiado
+# en public/vendor (ver public/licencias/LEEME.txt). La versión forma parte de la ruta y una ruta nunca cambia
+# de contenido, así que también se guarda un año.
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable

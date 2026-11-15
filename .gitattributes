@@ -1,0 +1,2 @@
+# Copias exactas de librerías de terceros. Git no debe tocar sus finales de línea ni compararlas como texto
+public/vendor/** binary

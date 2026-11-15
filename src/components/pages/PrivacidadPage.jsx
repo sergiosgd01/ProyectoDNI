@@ -123,12 +123,6 @@ export default function PrivacidadPage({ onGoHome }) {
             ['Netlify, Inc.', 'Alojamiento de la web', 'EE. UU. y red mundial', info.garantiaEEUU],
             ['Vercel Inc.', 'Servidor que recibe las estadísticas', 'EE. UU. (Washington D. C.)', info.garantiaEEUU],
             ['MongoDB, Inc. (Atlas)', 'Base de datos de las estadísticas', info.regionAtlas, info.garantiaEEUU],
-            [
-              'jsDelivr, unpkg, OpenCV y Project Naptha',
-              'Descarga de librerías que se ejecutan en tu navegador. Solo reciben tu IP, nunca tus imágenes',
-              'Red mundial',
-              'Solo reciben datos técnicos de la conexión',
-            ],
           ]}
         />
       </LegalSection>
@@ -157,7 +151,9 @@ export default function PrivacidadPage({ onGoHome }) {
 
       <LegalSection title="Cookies">
         <p>
-          La web no usa cookies de publicidad ni de analítica y no guarda nada en tu navegador. Cloudflare puede
+          La web no usa cookies de publicidad ni de analítica. Lo único que guarda en tu navegador son los datos
+          del idioma español que usa para leer el texto del DNI, así no tiene que descargarlos en cada visita. No
+          contienen ningún dato tuyo y se borran al borrar los datos de esta web en el navegador. Cloudflare puede
           usar alguna cookie técnica necesaria para proteger el servicio.
         </p>
       </LegalSection>
@@ -165,6 +161,10 @@ export default function PrivacidadPage({ onGoHome }) {
       <LegalSection title="Seguridad">
         <ul className="list-disc pl-5 space-y-2">
           <li>Todas las conexiones van cifradas con HTTPS.</li>
+          <li>
+            Las librerías que se ejecutan en tu navegador (OpenCV, ONNX Runtime y Tesseract) se descargan de esta
+            misma web, no de servidores ajenos.
+          </li>
           <li>
             La foto solo existe mientras se procesa y después se borra. Los registros del servidor no guardan ni la
             imagen ni el nombre del archivo.

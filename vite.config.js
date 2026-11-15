@@ -21,6 +21,23 @@ export default defineConfig(({ command }) => ({
         legalComments: 'inline'
       }
     : undefined,
+  build: {
+    rollupOptions: {
+      output: {
+        // Nombres de los archivos que Vite copia sin tocarlos (imágenes, fuentes y las librerías de src/config)
+        assetFileNames: ({ names }) => {
+          // Tesseract pide los datos del idioma con su nombre exacto (<langPath>/spa.traineddata.gz),
+          // así que ese archivo conserva el nombre y la huella va en la carpeta (ver src/config/tesseractConfig.js)
+          if (names.includes('spa.traineddata.gz')) return 'assets/tessdata-[hash]/[name][extname]'
+          // El cargador de ONNX Runtime es un .mjs y se publica con extensión .js, con el mismo contenido.
+          // Netlify no documenta con qué tipo sirve .mjs y el navegador rechaza el módulo si no llega como JavaScript.
+          // Con .js sale como el resto del código de la web (application/javascript, comprobado en producción)
+          if (names.some((nombre) => nombre.endsWith('.mjs'))) return 'assets/[name]-[hash].js'
+          return 'assets/[name]-[hash][extname]'
+        }
+      }
+    }
+  },
   server: {
     host: true,  // Permite acceso desde la red local o ngrok
     port: 5173,
