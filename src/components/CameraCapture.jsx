@@ -1,8 +1,76 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
 import ManualCropModal from './ManualCropModal';
+import { useAutoCapture } from '../hooks/useAutoCapture';
+import { CROP_MARGIN, expandRect, guideRectInVideo } from '../utils/liveCapture';
+import { prepareImageForUpload } from '../utils/imageResize';
 
-function CameraCapture({ onCapture, onClose }) {
+// Colores del recuadro según lo que ve la captura automática
+const GUIDE_TONES = {
+  neutral: { border: 'border-white', corner: 'border-white' },
+  ajuste: { border: 'border-amber-300', corner: 'border-amber-400' },
+  listo: { border: 'border-green-400', corner: 'border-green-400' },
+};
+
+// Fondo del aviso de arriba según el estado de la captura automática
+const HINT_BACKGROUNDS = {
+  listo: 'bg-green-600/90',
+  disparado: 'bg-green-600/90',
+  ajustando: 'bg-amber-600/90',
+};
+
+/**
+ * Recuadro donde se coloca el DNI. Va fuera de CameraCapture para que no se vuelva a crear en cada
+ * render, que con la captura automática son varios por segundo.
+ * Solo se oscurece lo de fuera, para que el DNI se vea con su luz real.
+ */
+function DNIGuide({ guideRef, isMobile, tone, progress }) {
+  const colors = GUIDE_TONES[tone] || GUIDE_TONES.neutral;
+
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div
+        ref={guideRef}
+        data-guia-dni
+        className={`relative border-2 ${colors.border} rounded-xl shadow-2xl bg-transparent transition-colors duration-200`}
+        style={{
+          width: isMobile ? '80%' : '60%',
+          aspectRatio: '1.586',
+          maxWidth: '600px',
+          maxHeight: '70vh',
+        }}
+      >
+        {/* Sombra exterior */}
+        <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' }}></div>
+
+        {/* Esquinas */}
+        <div className={`absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 ${colors.corner} rounded-tl-xl transition-colors duration-200`}></div>
+        <div className={`absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 ${colors.corner} rounded-tr-xl transition-colors duration-200`}></div>
+        <div className={`absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 ${colors.corner} rounded-bl-xl transition-colors duration-200`}></div>
+        <div className={`absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 ${colors.corner} rounded-br-xl transition-colors duration-200`}></div>
+
+        {/* Icono y texto, solo mientras no hay un DNI dentro, para no taparlo */}
+        {tone === 'neutral' && (
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+            <i className="bi bi-credit-card text-white text-4xl mb-2 block opacity-90"></i>
+            <p className="text-white text-sm font-semibold drop-shadow-lg">
+              Alinea tu DNI aquí
+            </p>
+          </div>
+        )}
+
+        {/* Cuenta hasta la foto automática */}
+        {progress > 0 && (
+          <div className="absolute left-4 right-4 bottom-3 h-1.5 rounded-full bg-white/30 overflow-hidden">
+            <div className="h-full rounded-full bg-green-400" style={{ width: `${Math.round(progress * 100)}%` }}></div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -14,6 +82,10 @@ function CameraCapture({ onCapture, onClose }) {
   const [selectedDeviceId, setSelectedDeviceId] = useState(null);
   const [showManualCrop, setShowManualCrop] = useState(false);
   const [capturedFileForCrop, setCapturedFileForCrop] = useState(null);
+  // Mientras se hace la foto y la analiza el servidor. Apaga la captura automática y evita fotos dobles
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showFlash, setShowFlash] = useState(false);
+  const isCapturingRef = useRef(false);
   const isInitializing = useRef(false);
   const hasInitialized = useRef(false);
   // Si se sale de la vista mientras se pide la cámara, por ejemplo con el botón Atrás del navegador,
@@ -76,6 +148,13 @@ function CameraCapture({ onCapture, onClose }) {
           return;
         }
         streamRef.current = newStream;
+
+        // Enfoque continuo si la cámara lo permite (Chrome en Android), para que la captura automática
+        // no espere a un enfoque que no llega. Si falla, la cámara sigue como venga por defecto
+        const [videoTrack] = newStream.getVideoTracks();
+        if (videoTrack?.getCapabilities?.().focusMode?.includes('continuous')) {
+          videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }).catch(() => {});
+        }
 
         // Se guarda el vídeo porque la referencia se vacía si se sale de la vista antes de que cargue
         const video = videoRef.current;
@@ -160,179 +239,95 @@ function CameraCapture({ onCapture, onClose }) {
     initializeCamera();
   }, [selectedDeviceId, initializeCamera]);
 
-  const capturePhoto = async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const guide = guideRef.current;
-
-    if (!video || !canvas || !streamRef.current) {
-      console.error('Video o canvas no disponibles');
-      return;
-    }
-
-    if (!guide) {
-      console.error('Guía de rectángulo no disponible');
-      return;
-    }
-
-    const context = canvas.getContext('2d');
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-
-    if (videoWidth === 0 || videoHeight === 0) {
-      console.error('Video no tiene dimensiones válidas');
-      return;
-    }
-
-    // 📸 INTENTO DE CAPTURA ALTA RESOLUCIÓN (ImageCapture API)
-    const track = streamRef.current.getVideoTracks()[0];
-    let highResBlob = null;
+  // Foto a resolución completa si el navegador lo permite (Chrome en Android) y, si no, el fotograma
+  // del vídeo recortado al recuadro con margen
+  const grabPhoto = async (video, canvas, guide) => {
+    const track = streamRef.current?.getVideoTracks()[0];
 
     if ('ImageCapture' in window && track && track.readyState === 'live') {
       try {
-        console.log('📸 Intentando capturar con ImageCapture (Full Resolution)...');
         const imageCapture = new ImageCapture(track);
-        highResBlob = await imageCapture.takePhoto();
-        console.log('✅ Foto de alta resolución capturada:', highResBlob.size, highResBlob.type);
+        const photo = await imageCapture.takePhoto();
+        console.log('📸 Foto a resolución completa:', photo.size, photo.type);
+        return photo;
       } catch (err) {
-        console.warn('⚠️ Falló ImageCapture, usando fallback a canvas:', err);
+        console.warn('⚠️ Falló ImageCapture, se usa el fotograma del vídeo:', err);
       }
     }
 
-    // Si tenemos foto Full Res, la usamos directamente
-    if (highResBlob) {
-      processCapturedBlob(highResBlob, videoWidth, videoHeight); // Usamos dimensiones del video como referencia, aunque la foto sea mayor
-      return;
-    }
+    // El recuadro se pasa a píxeles del vídeo teniendo en cuenta object-cover y se deja un margen
+    // para no cortar el borde del DNI. Sin recuadro se envía el fotograma entero
+    const guideRect = guide ? guideRectInVideo(video, guide) : null;
+    const area = (guideRect && expandRect(guideRect, CROP_MARGIN, video.videoWidth, video.videoHeight))
+      || { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
 
-    // 🎯 FALLBACK: OBTENER POSICIÓN EXACTA DEL RECTÁNGULO GUÍA EN PANTALLA
-    const videoRect = video.getBoundingClientRect();
-    const guideRect = guide.getBoundingClientRect();
-
-    console.log('📺 Dimensiones del video:', {
-      real: { width: videoWidth, height: videoHeight },
-      display: { width: videoRect.width, height: videoRect.height },
-      position: { top: videoRect.top, left: videoRect.left }
-    });
-
-    console.log('📐 Dimensiones del rectángulo guía:', {
-      width: guideRect.width,
-      height: guideRect.height,
-      position: { top: guideRect.top, left: guideRect.left }
-    });
-
-    // Calcular posición relativa del rectángulo dentro del video (en píxeles de pantalla)
-    const relativeX = guideRect.left - videoRect.left;
-    const relativeY = guideRect.top - videoRect.top;
-    const relativeWidth = guideRect.width;
-    const relativeHeight = guideRect.height;
-
-    console.log('🎯 Posición relativa de la guía en pantalla:', {
-      x: relativeX,
-      y: relativeY,
-      width: relativeWidth,
-      height: relativeHeight
-    });
-
-    // Calcular factores de escala
-    const scaleX = videoWidth / videoRect.width;
-    const scaleY = videoHeight / videoRect.height;
-
-    console.log('📊 Factores de escala:', { scaleX, scaleY });
-
-    // Convertir a coordenadas del video real
-    const cropX = relativeX * scaleX;
-    const cropY = relativeY * scaleY;
-    const cropWidth = relativeWidth * scaleX;
-    const cropHeight = relativeHeight * scaleY;
-
-    // Asegurar que las coordenadas estén dentro de los límites
-    const finalCropX = Math.max(0, Math.min(cropX, videoWidth - 1));
-    const finalCropY = Math.max(0, Math.min(cropY, videoHeight - 1));
-    const finalCropWidth = Math.min(cropWidth, videoWidth - finalCropX);
-    const finalCropHeight = Math.min(cropHeight, videoHeight - finalCropY);
-
-    console.log('✂️ Coordenadas finales de recorte:', {
-      x: finalCropX,
-      y: finalCropY,
-      width: finalCropWidth,
-      height: finalCropHeight
-    });
-
-    // Configurar canvas y recortar
-    canvas.width = finalCropWidth;
-    canvas.height = finalCropHeight;
-
-    context.drawImage(
+    canvas.width = Math.round(area.width);
+    canvas.height = Math.round(area.height);
+    canvas.getContext('2d').drawImage(
       video,
-      finalCropX, finalCropY, finalCropWidth, finalCropHeight,
-      0, 0, finalCropWidth, finalCropHeight
+      area.x, area.y, area.width, area.height,
+      0, 0, canvas.width, canvas.height
     );
+    console.log('✂️ Fotograma recortado:', `${canvas.width}x${canvas.height} px`);
 
-    // MOSTRAR IMAGEN RECORTADA EN CONSOLA
-    const previewDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-    console.log('🖼️ VISTA PREVIA DE LA IMAGEN RECORTADA:');
-    console.log('📊 Tamaño recortado:', `${finalCropWidth.toFixed(0)}x${finalCropHeight.toFixed(0)} px`);
-
-    // Convertir a blob y procesar
-    canvas.toBlob(
-      (blob) => {
-        if (blob) processCapturedBlob(blob, canvas.width, canvas.height);
-      },
-      'image/jpeg',
-      0.95
-    );
+    return new Promise((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.95);
+    });
   };
 
-  // Nueva función para procesar el blob (sea de ImageCapture o Canvas)
-  const processCapturedBlob = async (blob, width, height) => {
-    if (!blob) {
-      console.error('Error al crear el blob de la imagen');
+  const capturePhoto = async () => {
+    // La captura automática y el botón pueden coincidir. Solo vale la primera
+    if (isCapturingRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas || !streamRef.current || !video.videoWidth || !video.videoHeight) {
+      console.error('Vídeo o lienzo no disponibles');
       return;
     }
 
-    const croppedFile = new File([blob], 'dni-camera-capture.jpg', {
+    isCapturingRef.current = true;
+    setIsProcessing(true);
+    try {
+      const blob = await grabPhoto(video, canvas, guideRef.current);
+      if (!blob) {
+        setDetectionError({
+          type: 'unexpected_error',
+          message: 'No se pudo hacer la foto',
+          suggestion: 'Intenta nuevamente o reinicia la aplicación.'
+        });
+        return;
+      }
+      await processCapturedBlob(blob);
+    } finally {
+      isCapturingRef.current = false;
+      setIsProcessing(false);
+    }
+  };
+
+  // Envía la foto al servidor de recorte
+  const processCapturedBlob = async (blob) => {
+    const capturedFile = new File([blob], 'dni-camera-capture.jpg', {
       type: 'image/jpeg',
       lastModified: Date.now(),
     });
 
-    // Guardar archivo para posible recorte manual
-    setCapturedFileForCrop(croppedFile);
-
-    console.log('✂️ Imagen para procesar:', {
-      width,
-      height,
-      size: `${(blob.size / 1024).toFixed(2)} KB`
-    });
-
-    // Crear overlay de procesamiento temporal
-    console.log('🎬 [capturePhoto] Creando overlay de procesamiento...');
-    let processingOverlay = null;
-    if (isMobile) {
-      processingOverlay = document.createElement('div');
-      processingOverlay.className = 'absolute inset-0 flex items-center justify-center bg-black/80 z-30';
-      processingOverlay.innerHTML = `
-            <div class="text-center text-white">
-              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-3"></div>
-              <p>Analizando DNI...</p>
-            </div>
-          `;
-      videoRef.current?.parentElement?.appendChild(processingOverlay);
-      console.log('✅ [capturePhoto] Overlay temporal creado');
+    // Con ImageCapture la foto puede pasar de 12 MP y del límite del servidor. Se reduce igual
+    // que una foto subida desde la galería y, si falla, se sigue con la original
+    let uploadFile = capturedFile;
+    try {
+      uploadFile = await prepareImageForUpload(capturedFile);
+    } catch (resizeError) {
+      console.error('[CameraCapture] No se pudo reducir la foto:', resizeError);
     }
 
+    // Guardar archivo para posible recorte manual
+    setCapturedFileForCrop(uploadFile);
     setDetectionError(null);
-    console.log('🔄 [capturePhoto] Error de detección limpiado');
 
     try {
-      console.log('📤 [capturePhoto] Enviando imagen a YOLO...');
-      const resp = await processWithYolo(croppedFile);
-
-      // Remover overlay temporal
-      if (processingOverlay && processingOverlay.parentElement) {
-        processingOverlay.parentElement.removeChild(processingOverlay);
-        console.log('🗑️ [capturePhoto] Overlay temporal eliminado');
-      }
+      const resp = await processWithYolo(uploadFile);
 
       if (resp.ok && resp.blob) {
         // ✅ ÉXITO: DNI detectado y procesado correctamente
@@ -356,15 +351,8 @@ function CameraCapture({ onCapture, onClose }) {
           confidence: resp.confidence,
           minRequired: resp.minRequired
         });
-        console.log('❌ [capturePhoto] detectionError establecido');
       }
     } catch (err) {
-      // Remover overlay temporal en caso de error
-      if (processingOverlay && processingOverlay.parentElement) {
-        processingOverlay.parentElement.removeChild(processingOverlay);
-        console.log('🗑️ [capturePhoto] Overlay temporal eliminado (error)');
-      }
-
       console.error('[CameraCapture] Error inesperado:', err);
 
       setDetectionError({
@@ -372,8 +360,15 @@ function CameraCapture({ onCapture, onClose }) {
         message: 'Error inesperado al procesar la imagen',
         suggestion: 'Intenta nuevamente o reinicia la aplicación.'
       });
-      console.log('❌ [capturePhoto] Error inesperado capturado');
     }
+  };
+
+  // La captura automática avisa con un destello y una vibración corta, y hace la foto
+  const handleAutoCapture = () => {
+    navigator.vibrate?.(60);
+    setShowFlash(true);
+    setTimeout(() => setShowFlash(false), 180);
+    capturePhoto();
   };
 
   const handleDeviceChange = (deviceId) => {
@@ -436,44 +431,54 @@ function CameraCapture({ onCapture, onClose }) {
     navigator.mediaDevices = { getUserMedia: () => Promise.reject(new Error('No disponible')) };
   }
 
-  // Componente de guía DNI reutilizable
-  const DNIGuide = () => (
-    <>
-      {/* Overlay oscuro */}
-      <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
+  // Captura automática. Solo mira mientras se ve la cámara sin errores ni fotos en curso
+  const autoCapture = useAutoCapture({
+    videoRef,
+    guideRef,
+    enabled: !isLoading && !error && !detectionError && !isProcessing && !showManualCrop,
+    expectedSide,
+    onReady: handleAutoCapture,
+  });
 
-      {/* Contenedor centrado */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        {/* Rectángulo guía - REF AQUÍ */}
-        <div
-          ref={guideRef}
-          className="relative border-2 border-white rounded-xl shadow-2xl bg-transparent"
-          style={{
-            width: isMobile ? '80%' : '60%',
-            aspectRatio: '1.586',
-            maxWidth: '600px',
-            maxHeight: '70vh',
-          }}
-        >
-          {/* Sombra exterior */}
-          <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' }}></div>
+  const guideTone = autoCapture.status === 'listo' || autoCapture.status === 'disparado'
+    ? 'listo'
+    : autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
+  const hintText = autoCapture.hint || 'Coloca el DNI dentro del recuadro';
+  const hintBackground = HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
+  const isAutoAvailable = autoCapture.status !== 'manual';
 
-          {/* Esquinas decorativas */}
-          <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-green-400 rounded-tl-xl"></div>
-          <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-green-400 rounded-tr-xl"></div>
-          <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-green-400 rounded-bl-xl"></div>
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-green-400 rounded-br-xl"></div>
-
-          {/* Icono y texto */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
-            <i className="bi bi-credit-card text-white text-4xl mb-2 block opacity-90"></i>
-            <p className="text-white text-sm font-semibold drop-shadow-lg">
-              Alinea tu DNI aquí
-            </p>
-          </div>
-        </div>
+  const processingOverlay = isProcessing && (
+    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-30">
+      <div className="text-center text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-3"></div>
+        <p>Analizando DNI...</p>
       </div>
-    </>
+    </div>
+  );
+
+  const flashOverlay = showFlash && (
+    <div className="absolute inset-0 bg-white/80 z-40 pointer-events-none"></div>
+  );
+
+  // Valores en directo para ajustar los umbrales en un móvil, abriendo la web con ?depurar-camara
+  const renderDebugPanel = (positionClass) => autoCapture.debug && !detectionError && (
+    <div
+      data-captura-depuracion
+      className={`absolute ${positionClass} z-30 rounded-lg bg-black/75 px-3 py-2 font-mono text-[11px] leading-tight text-white pointer-events-none`}
+    >
+      {Object.entries(autoCapture.debug).map(([name, value]) => (
+        <div key={name}>{name} {value}</div>
+      ))}
+    </div>
+  );
+
+  const hintPill = (
+    <div
+      data-captura-estado={autoCapture.status}
+      className={`inline-block ${hintBackground} backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl transition-colors duration-200`}
+    >
+      <p className="text-white text-sm font-semibold">{hintText}</p>
+    </div>
   );
 
   // Vista móvil fullscreen
@@ -531,7 +536,13 @@ function CameraCapture({ onCapture, onClose }) {
                 className={`w-full h-full object-cover ${detectionError ? 'invisible' : 'visible'}`}
               />
 
-              {!isLoading && !detectionError && <DNIGuide />}
+              {!isLoading && !detectionError && (
+                <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={autoCapture.progress} />
+              )}
+
+              {renderDebugPanel('left-2 top-36')}
+              {processingOverlay}
+              {flashOverlay}
 
               {/* Overlay de error */}
               {detectionError && (
@@ -589,19 +600,20 @@ function CameraCapture({ onCapture, onClose }) {
               )}
 
               <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none z-10">
-                <div className="inline-block bg-black/70 backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl">
-                  <p className="text-white text-sm font-semibold">
-                    Coloca el DNI dentro del recuadro
-                  </p>
-                </div>
+                {hintPill}
               </div>
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
-              <button onClick={capturePhoto} disabled={isLoading} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
+              <button onClick={capturePhoto} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
                 <i className="bi bi-camera-fill text-2xl"></i>
                 Capturar Foto
               </button>
+              {isAutoAvailable && (
+                <p className="text-white/80 text-xs text-center mt-2">
+                  También se hace sola cuando el DNI se ve bien
+                </p>
+              )}
             </div>
           </>
         )}
@@ -653,7 +665,11 @@ function CameraCapture({ onCapture, onClose }) {
         <div className="p-3 sm:p-4 border-b flex-shrink-0" style={{ backgroundColor: 'var(--color-bg-secondary)', borderColor: 'var(--color-border-default)' }}>
           <div className="flex items-center justify-center text-xs sm:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
             <i className="bi bi-info-circle mr-2 flex-shrink-0" style={{ color: 'var(--color-primary)' }}></i>
-            <span className="text-center">Coloca el DNI dentro del recuadro y captura cuando esté alineado</span>
+            <span className="text-center">
+              {isAutoAvailable
+                ? 'Coloca el DNI dentro del recuadro. La foto se hace sola cuando se ve bien'
+                : 'Coloca el DNI dentro del recuadro y captura cuando esté alineado'}
+            </span>
           </div>
         </div>
 
@@ -698,7 +714,18 @@ function CameraCapture({ onCapture, onClose }) {
                   className={`w-full h-auto max-h-[60vh] min-h-[300px] sm:min-h-[400px] object-contain ${detectionError ? 'invisible' : 'visible'}`}
                 />
 
-                {!isLoading && !detectionError && <DNIGuide />}
+                {!isLoading && !detectionError && (
+                  <>
+                    <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={autoCapture.progress} />
+                    <div className="absolute top-3 left-0 right-0 text-center px-4 pointer-events-none z-10">
+                      {hintPill}
+                    </div>
+                  </>
+                )}
+
+                {renderDebugPanel('left-2 bottom-2')}
+                {processingOverlay}
+                {flashOverlay}
 
                 {/* Overlay de error */}
                 {detectionError && (
@@ -757,7 +784,7 @@ function CameraCapture({ onCapture, onClose }) {
                 )}
               </div>
 
-              <button onClick={capturePhoto} disabled={isLoading} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
+              <button onClick={capturePhoto} disabled={isLoading || isProcessing} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
                 <i className="bi bi-camera text-xl"></i>
                 Capturar Foto
               </button>

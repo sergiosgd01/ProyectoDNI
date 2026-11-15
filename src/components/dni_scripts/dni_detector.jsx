@@ -239,4 +239,11 @@ export const detectDniFromFile = async (file) => {
   return runYoloInference(canvas);
 };
 
+/**
+ * Detecta los campos sobre un lienzo ya dibujado. La cámara la usa en directo para saber si hay
+ * un DNI en el recuadro, qué cara es y cuántos campos se leen antes de hacer la foto sola.
+ * Las cajas vienen en píxeles del lienzo.
+ */
+export const detectDniFromCanvas = (canvas) => runYoloInference(canvas);
+
 export default DniDetector;

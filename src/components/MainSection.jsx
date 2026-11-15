@@ -11,7 +11,10 @@ const MainSection = ({
   return (
     <div className="w-full">
       {!selectedFile ? (
-        <FileUploadZone onFileSelect={onFileSelect} />
+        <FileUploadZone
+          onFileSelect={onFileSelect}
+          expectedSide={stepInfo?.side === 'delantera' ? 'anverso' : stepInfo?.side === 'trasera' ? 'reverso' : null}
+        />
       ) : (
         <div className="space-y-4">
           {/* Vista previa de la imagen */}
