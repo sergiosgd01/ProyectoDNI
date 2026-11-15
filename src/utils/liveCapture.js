@@ -6,7 +6,7 @@
  * fotogramas de móviles reales. Abriendo la web con ?depurar-camara la cámara enseña los valores en directo.
  */
 
-/** Calidad del fotograma, medida sobre la zona del recuadro reducida a ANALYSIS_WIDTH px de ancho */
+/** Calidad del fotograma, medida sobre el DNI (o el recuadro, si aún no se ha visto) reducido a ANALYSIS_WIDTH px de ancho */
 export const QUALITY = {
   // Luz media de 0 a 255. Con poca luz (C03) da unos 60 y las fotos normales dan 118 o más
   minBrightness: 75,
@@ -15,15 +15,21 @@ export const QUALITY = {
   // Varianza del laplaciano. En un Galaxy S24 Ultra el DNI bien colocado da de 190 a 380 según el fotograma,
   // mucho menos que las fotos del catálogo (900 o más) porque el vídeo va comprimido. Una foto desenfocada
   // del catálogo (D01) da unos 190, así que un umbral fijo no las separa. Por eso solo hay un mínimo muy bajo
-  // y además se pide que el fotograma esté casi tan nítido como el mejor de los últimos SHARPNESS_WINDOW_MS,
-  // es decir, que el enfoque ya se haya asentado. Si los datos se leen lo dice el detector
+  // y además se pide que la nitidez esté cerca de la mejor de los últimos SHARPNESS_WINDOW_MS, es decir, que el
+  // enfoque ya se haya asentado. Como de un fotograma al siguiente oscila mucho sin que cambie nada (en ese móvil
+  // el peor daba el 58 % del mejor), las dos cosas se miran sobre la mediana de los últimos SHARPNESS_SMOOTH
+  // fotogramas y no sobre cada uno. Si los datos se leen lo dice el detector, en directo y en la foto final
   minSharpness: 120,
   sharpnessRatio: 0.7,
+  // La foto se hace en un fotograma que esté al menos así de nítido respecto a esa mediana, no en uno de los flojos
+  fireSharpnessRatio: 0.85,
   // Fracción de píxeles quemados. La sobreexpuesta (C05) da un 64 % y las normales un 5 % como mucho
   maxGlare: 0.12,
   // Diferencia media entre dos fotogramas seguidos, de 0 a 255, sobre una copia del recuadro de 50 px
-  // de ancho. Quieto da 0 y moviendo el DNI 20 px da más de 40
+  // de ancho. Quieto da 0, con el pulso de una mano de 2 a 4 y moviendo el DNI 20 px da unos 20
   maxMotion: 12,
+  // Por encima de esto no es pulso, es que se ha movido el DNI o el móvil, y lo que vio el detector ya no vale
+  strongMotion: 30,
 };
 
 /**
@@ -178,11 +184,18 @@ export function measureFrame(imageData, previousSmall = null) {
     }
   }
 
+  // Al moverse el DNI unas zonas se aclaran y otras se oscurecen. Si cambia la luz de todo el fotograma a la vez,
+  // por ejemplo cuando la cámara ajusta la exposición, no es movimiento, así que ese cambio común se descuenta
   let motion = null;
   if (previousSmall && previousSmall.length === small.length && small.length > 0) {
+    let shift = 0;
+    for (let i = 0; i < small.length; i++) {
+      shift += small[i] - previousSmall[i];
+    }
+    shift /= small.length;
     let difference = 0;
     for (let i = 0; i < small.length; i++) {
-      difference += Math.abs(small[i] - previousSmall[i]);
+      difference += Math.abs(small[i] - previousSmall[i] - shift);
     }
     motion = difference / small.length;
   }
@@ -310,19 +323,29 @@ export function evaluatePlacement(boxes, view, expectedSide = null) {
   return { ...result, ok: true, reason: null, hint: null };
 }
 
-// Ventana en la que se busca el fotograma más nítido para comparar
+// Ventana en la que se busca la mejor nitidez para comparar
 export const SHARPNESS_WINDOW_MS = 1500;
+// Fotogramas sobre los que se calcula la mediana de la nitidez
+export const SHARPNESS_SMOOTH = 5;
+
+/** Mediana de una lista de números. Con la lista vacía devuelve 0 */
+export function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
 
 /**
- * Primer aviso de calidad que falla, o null si el fotograma se ve bien.
- * @param {object} metrics - Lo que devuelve measureFrame, con el movimiento ya puesto
- * @param {number} bestSharpness - La nitidez más alta de los últimos SHARPNESS_WINDOW_MS
+ * Primer aviso de calidad de la imagen que falla, o null si se ve bien. El movimiento va aparte.
+ * @param {object} metrics - Lo que devuelve measureFrame
+ * @param {number} sharpness - Mediana de la nitidez de los últimos fotogramas
+ * @param {number} bestSharpness - La mediana más alta de los últimos SHARPNESS_WINDOW_MS
  */
-export function qualityHint(metrics, bestSharpness = 0) {
+export function imageQualityHint(metrics, sharpness, bestSharpness = 0) {
   if (metrics.brightness < QUALITY.minBrightness) return HINTS.dark;
   if (metrics.glare > QUALITY.maxGlare || metrics.brightness > QUALITY.maxBrightness) return HINTS.glare;
-  if (metrics.motion !== null && metrics.motion > QUALITY.maxMotion) return HINTS.moving;
-  if (metrics.sharpness < QUALITY.minSharpness) return HINTS.blurry;
-  if (metrics.sharpness < bestSharpness * QUALITY.sharpnessRatio) return HINTS.blurry;
+  if (sharpness < QUALITY.minSharpness) return HINTS.blurry;
+  if (sharpness < bestSharpness * QUALITY.sharpnessRatio) return HINTS.blurry;
   return null;
 }
