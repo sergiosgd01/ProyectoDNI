@@ -219,6 +219,15 @@ function App() {
     goTo(VIEWS.UPLOAD_PROCESS);
   };
 
+  // Recorte de una cara corregido a mano desde el editor. Cuenta como recorte manual y guarda las esquinas
+  // elegidas, para que un segundo ajuste empiece donde se dejó el primero
+  const handleAdjustCrop = useCallback((side, file, esquinas) => {
+    const [metadata, select] = side === 'front'
+      ? [frontMetadata, handleFrontFileSelect]
+      : [backMetadata, handleBackFileSelect];
+    select(file, { ...metadata, manualCrop: true, recorteAjustado: true, esquinas });
+  }, [frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
+
   const handleBackToStep = () => {
     // Cuando se regresa desde el editor, NO permitir auto-navegación
     setShouldAutoNavigate(false);
@@ -290,6 +299,9 @@ function App() {
           <DNIEditor
             frontFile={frontFile}
             backFile={backFile}
+            frontMetadata={frontMetadata}
+            backMetadata={backMetadata}
+            onAdjustCrop={handleAdjustCrop}
             manualDetection={isManualDetection}
             onBack={handleBackToStep}
             onProcess={handleDNIProcess}

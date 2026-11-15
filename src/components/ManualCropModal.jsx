@@ -1,14 +1,31 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 
+// Esquinas de partida en píxeles de la foto. Solo valen si son de una foto del mismo tamaño que la cargada,
+// porque si no, por ejemplo con la foto girada, caerían fuera del DNI
+function esquinasDePartida(corners, image) {
+  if (!corners?.puntos || corners.puntos.length !== 4) return null;
+  const mismoTamano = Math.abs(corners.ancho - image.width) <= 1 && Math.abs(corners.alto - image.height) <= 1;
+  if (!mismoTamano) return null;
+  return corners.puntos.map((p) => ({
+    x: Math.min(Math.max(p.x, 0), image.width),
+    y: Math.min(Math.max(p.y, 0), image.height),
+  }));
+}
+
 /**
- * Modal para recorte manual de imagen cuando YOLO falla
+ * Modal para recorte manual de imagen cuando YOLO falla o para corregir su recorte
  * Sistema de 4 puntos ajustables para recortar DNI en perspectiva
+ * initialCorners son las esquinas de partida ({ ancho, alto, puntos }), por ejemplo las que usó el servidor.
+ * Al recortar, onCrop recibe el archivo y las esquinas elegidas con esa misma forma
  */
-function ManualCropModal({ 
-  file, 
-  onCrop, 
+function ManualCropModal({
+  file,
+  onCrop,
   onCancel,
-  errorInfo = null 
+  errorInfo = null,
+  initialCorners = null,
+  titulo = 'Recorte manual',
+  subtitulo = 'Selecciona el área del DNI'
 }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
@@ -81,7 +98,11 @@ function ManualCropModal({
 
     ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
 
-    if (!points) {
+    // Si llegan esquinas de esta misma foto se empieza en ellas. Si no, en un rectángulo centrado
+    const esquinas = !points && esquinasDePartida(initialCorners, originalImage);
+    if (esquinas) {
+      setPoints(esquinas.map((p) => ({ x: p.x * newScale, y: p.y * newScale })));
+    } else if (!points) {
       const dniAspectRatio = 85.6 / 53.98;
       const estimatedWidth = Math.min(canvas.width * 0.7, canvas.height * dniAspectRatio * 0.7);
       const estimatedHeight = estimatedWidth / dniAspectRatio;
@@ -96,7 +117,7 @@ function ManualCropModal({
         { x: centerX - estimatedWidth / 2, y: centerY + estimatedHeight / 2 },
       ]);
     }
-  }, [imageLoaded, originalImage, points]);
+  }, [imageLoaded, originalImage, points, initialCorners]);
 
   // Redibujar canvas con polígono
   const redrawCanvas = useCallback(() => {
@@ -498,7 +519,11 @@ function ManualCropModal({
             file.name.replace(/\.\w+$/, '-manual-crop.jpg'),
             { type: 'image/jpeg', lastModified: Date.now() }
           );
-          onCrop(croppedFile);
+          onCrop(croppedFile, {
+            ancho: originalImage.width,
+            alto: originalImage.height,
+            puntos: originalPoints
+          });
         }
       },
       'image/jpeg',
@@ -524,8 +549,8 @@ function ManualCropModal({
             <i className="bi bi-arrow-left text-xl"></i>
           </button>
           <div>
-            <h2 className="font-semibold text-base md:text-lg">Recorte manual</h2>
-            <p className="text-gray-400 text-xs md:text-sm">Selecciona el área del DNI</p>
+            <h2 className="font-semibold text-base md:text-lg">{titulo}</h2>
+            <p className="text-gray-400 text-xs md:text-sm">{subtitulo}</p>
           </div>
         </div>
       </div>
@@ -539,7 +564,7 @@ function ManualCropModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-primary-100 text-sm md:text-base font-medium mb-1">
-                Ajusta las 4 esquinas del DNI moviendo los puntos azules
+                Ajusta las 4 esquinas del DNI moviendo los puntos rojos
               </p>
               <p className="text-primary-200/70 text-xs md:text-sm">
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva

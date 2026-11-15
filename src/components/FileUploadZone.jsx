@@ -102,7 +102,10 @@ function FileUploadZone({ onFileSelect }) {
           yolo: {
             ok: true,
             confidence: result.confidence
-          }
+          },
+          // La foto enviada y las esquinas del recorte, para poder corregirlo a mano desde el editor
+          original: uploadFile,
+          esquinas: result.esquinas || null
         });
       } else {
         // ❌ Error en el procesamiento - Mostrar opción de recorte manual
@@ -375,16 +378,19 @@ function FileUploadZone({ onFileSelect }) {
         <ManualCropModal
           file={originalFileForCrop}
           errorInfo={processingError}
-          onCrop={(croppedFile) => {
+          onCrop={(croppedFile, esquinas) => {
             console.log('✂️ [FileUploadZone] Imagen recortada manualmente');
             setShowManualCrop(false);
             setProcessingError(null);
             setOriginalFileForCrop(null);
 
-            // Enviar imagen recortada al siguiente paso directamente (sin YOLO)
+            // Enviar imagen recortada al siguiente paso directamente (sin YOLO). Con la foto y las esquinas
+            // elegidas se puede volver a ajustar desde el editor
             onFileSelect(croppedFile, {
               yolo: { ok: true, manualCrop: true },
-              manualCrop: true
+              manualCrop: true,
+              original: originalFileForCrop,
+              esquinas: esquinas || null
             });
           }}
           onCancel={() => {

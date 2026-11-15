@@ -10,13 +10,39 @@ import { censorDniComplete } from './dni_scripts/dni_censor'
 import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
 import ManualCensorModal from './ManualCensorModal';
+import ManualCropModal from './ManualCropModal';
 import { validateDniConsistencyFlags } from '../utils/OCRhelpers'
 // Importamos la API
 import { dniApi } from '../services/dniApi';
 
+// Etiqueta de cada cara en la vista previa. Si se puede, lleva al lado el botón para corregir su recorte
+function EtiquetaCara({ texto, colores, nombreCara, onAjustar }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <div className={`${colores} text-xs sm:text-sm font-medium px-2 py-1 rounded inline-block`}>
+        {texto}
+      </div>
+      {onAjustar && (
+        <button
+          type="button"
+          onClick={onAjustar}
+          aria-label={`Ajustar recorte de la parte ${nombreCara}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full shadow-sm hover:text-primary-700 hover:border-primary-300 transition-colors"
+        >
+          <i className="bi bi-crop"></i>
+          Ajustar recorte
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function DNIEditor({
   frontFile,
   backFile,
+  frontMetadata = null,
+  backMetadata = null,
+  onAdjustCrop,
   onBack,
   onProcessed,
   initialOcrData = null,
@@ -78,6 +104,24 @@ export default function DNIEditor({
   const [processedResult, setProcessedResult] = useState(null);
   const [processingError, setProcessingError] = useState(null);
   const [validationPopup, setValidationPopup] = useState(null);
+
+  // Cara cuyo recorte se está corrigiendo a mano ('front' o 'back'). Se puede si se guardó la foto que se envió
+  // al servidor, y no mientras se procesa, porque el resultado que llegase sería de la foto anterior
+  const [cropSide, setCropSide] = useState(null);
+  const metadataDe = (side) => (side === 'front' ? frontMetadata : side === 'back' ? backMetadata : null);
+  const ajustarCara = (side) =>
+    !DEMO_MODE.enabled && onAdjustCrop && metadataDe(side)?.original && !isProcessing
+      ? () => setCropSide(side)
+      : null;
+
+  const handleCropAdjusted = (croppedFile, esquinas) => {
+    onAdjustCrop(cropSide, croppedFile, esquinas);
+    setCropSide(null);
+    // Con la foto nueva el resultado anterior ya no vale y hay que procesar otra vez
+    setProcessedResult(null);
+    setManualCensorList(null);
+    setProcessingError(null);
+  };
 
   const selectedFrontCount = Object.values(selectedFrontFields).filter(Boolean).length;
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
@@ -688,9 +732,12 @@ export default function DNIEditor({
 
                   {/* Mostrar imágenes procesadas */}
                   <div className="mb-4">
-                    <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                      ANVERSO - PROCESADO
-                    </div>
+                    <EtiquetaCara
+                      texto="ANVERSO - PROCESADO"
+                      colores="bg-primary-100 text-primary-800"
+                      nombreCara="delantera"
+                      onAjustar={ajustarCara('front')}
+                    />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={processedResult.frontImageUrl}
@@ -702,9 +749,12 @@ export default function DNIEditor({
 
                   {processedResult.backImageUrl && (
                     <div className="mb-4">
-                      <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                        REVERSO - PROCESADO
-                      </div>
+                      <EtiquetaCara
+                        texto="REVERSO - PROCESADO"
+                        colores="bg-secondary-100 text-secondary-800"
+                        nombreCara="trasera"
+                        onAjustar={ajustarCara('back')}
+                      />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
                           src={processedResult.backImageUrl}
@@ -787,9 +837,12 @@ export default function DNIEditor({
                 <>
                   {/* Mostrar imágenes originales */}
                   <div className="mb-4 flex-shrink-0">
-                    <div className="bg-primary-100 text-primary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                      ANVERSO
-                    </div>
+                    <EtiquetaCara
+                      texto="ANVERSO"
+                      colores="bg-primary-100 text-primary-800"
+                      nombreCara="delantera"
+                      onAjustar={ajustarCara('front')}
+                    />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
@@ -801,9 +854,12 @@ export default function DNIEditor({
 
                   {backFile && (
                     <div className="mb-4 flex-shrink-0">
-                      <div className="bg-secondary-100 text-secondary-800 text-xs sm:text-sm font-medium px-2 py-1 rounded mb-2 inline-block">
-                        REVERSO
-                      </div>
+                      <EtiquetaCara
+                        texto="REVERSO"
+                        colores="bg-secondary-100 text-secondary-800"
+                        nombreCara="trasera"
+                        onAjustar={ajustarCara('back')}
+                      />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
                           src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : URL.createObjectURL(backFile)}
@@ -1136,6 +1192,18 @@ export default function DNIEditor({
             setManualCensorList(null);
             setProcessedResult(null); // Resetear para volver a mostrar imágenes originales
           }}
+        />
+      )}
+
+      {/* Corregir el recorte de una cara sobre la foto original, empezando en las esquinas que usó el servidor */}
+      {cropSide && metadataDe(cropSide)?.original && (
+        <ManualCropModal
+          file={metadataDe(cropSide).original}
+          initialCorners={metadataDe(cropSide).esquinas}
+          titulo="Ajustar recorte"
+          subtitulo={`Parte ${cropSide === 'front' ? 'delantera' : 'trasera'} del DNI`}
+          onCrop={handleCropAdjusted}
+          onCancel={() => setCropSide(null)}
         />
       )}
     </>

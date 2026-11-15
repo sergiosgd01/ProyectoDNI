@@ -1,3 +1,18 @@
+// Esquinas con las que el servidor ha recortado el DNI, en píxeles de la foto enviada y en orden superior
+// izquierda, superior derecha, inferior derecha e inferior izquierda. Sirven para abrir el recorte manual ya
+// colocado. Devuelve null si el servidor no las manda o no tienen la forma esperada
+function leerEsquinas(cabecera) {
+  if (!cabecera) return null;
+  try {
+    const { ancho, alto, puntos } = JSON.parse(cabecera);
+    const valido = ancho > 0 && alto > 0 && Array.isArray(puntos) && puntos.length === 4 &&
+      puntos.every((p) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite));
+    return valido ? { ancho, alto, puntos: puntos.map(([x, y]) => ({ x, y })) } : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_API_URL || 'http://localhost:8000/process', timeout = 90000 } = {}) {
 
   // ✅ Validación básica
@@ -64,7 +79,8 @@ export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_AP
       const confidenceHeader = res.headers.get('x-confidence');
       const confidence = confidenceHeader ? parseFloat(confidenceHeader) : null;
       const blobUrl = URL.createObjectURL(blob);
-      return { ok: true, blob, blobUrl, confidence };
+      const esquinas = leerEsquinas(res.headers.get('x-esquinas'));
+      return { ok: true, blob, blobUrl, confidence, esquinas };
     }
 
     // Si el backend devolvió JSON (error controlado)
