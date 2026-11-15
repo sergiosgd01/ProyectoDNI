@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
@@ -387,6 +387,18 @@ export default function DNIEditor({
     }
   };
 
+  const handleReprocess = async () => {
+    setProcessedResult(null);
+    setProcessingError(null);
+    await handleProcessDNI();
+  };
+
+  // En móvil, «Descargar» de la barra fija lleva a los botones de descarga, que están bajo las fotos
+  const descargasRef = useRef(null);
+  const irADescargas = () => {
+    descargasRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   // Función para combinar ambas imágenes en JPG con marca de agua
   const handleDownloadCombined = async () => {
     if (!processedResult) return;
@@ -620,7 +632,8 @@ export default function DNIEditor({
           </button>
         </div>
       )}
-      <div className="min-h-screen bg-gray-100 py-4 sm:py-8">
+      {/* Abajo deja sitio para la barra fija del móvil */}
+      <div className="min-h-screen bg-gray-100 pt-4 sm:pt-8 pb-28 lg:pb-8">
         <div className="container mx-auto px-4 max-w-7xl relative">
           {/* Navegación - Controles flotantes */}
           <div className="mb-8 flex flex-wrap gap-3 sm:absolute sm:-top-4 sm:left-4 z-10">
@@ -703,7 +716,7 @@ export default function DNIEditor({
                   )}
 
                   {/* Botones de descarga */}
-                  <div className="flex flex-col gap-3 mt-2">
+                  <div ref={descargasRef} className="flex flex-col gap-3 mt-2">
                     {/* Fila 1: Anverso y Reverso */}
                     <div className="flex gap-3">
                       <button
@@ -999,6 +1012,7 @@ export default function DNIEditor({
                   maxLength={50}
                 />
 
+                {/* En móvil y tablet estos botones van en la barra fija de abajo */}
                 {!processedResult ? (
                   <button
                     onClick={handleProcessDNI}
@@ -1007,7 +1021,7 @@ export default function DNIEditor({
                       backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
                       cursor: isProcessing ? 'not-allowed' : 'pointer'
                     }}
-                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
+                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
                   >
                     {isProcessing ? (
                       <>
@@ -1023,17 +1037,13 @@ export default function DNIEditor({
                   </button>
                 ) : (
                   <button
-                    onClick={async () => {
-                      setProcessedResult(null);
-                      setProcessingError(null);
-                      await handleProcessDNI();
-                    }}
+                    onClick={handleReprocess}
                     disabled={isProcessing}
                     style={{
                       backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
                       cursor: isProcessing ? 'not-allowed' : 'pointer'
                     }}
-                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity flex items-center justify-center"
+                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
                   >
                     {isProcessing ? (
                       <>
@@ -1068,6 +1078,53 @@ export default function DNIEditor({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Barra fija en móvil y tablet con la acción principal, para no tener que bajar hasta el final.
+          Primero «Procesar DNI» y, con el resultado, «Descargar» */}
+      <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        {processedResult ? (
+          <div className="flex gap-3 max-w-xl mx-auto">
+            <button
+              onClick={handleReprocess}
+              disabled={isProcessing}
+              className="flex-auto inline-flex items-center justify-center gap-2 py-3 px-3 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              <i className="bi bi-arrow-repeat text-lg"></i>
+              Procesar de nuevo
+            </button>
+            <button
+              onClick={irADescargas}
+              style={{ backgroundColor: colors.button.primary }}
+              className="flex-auto inline-flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-white font-semibold text-sm"
+            >
+              <i className="bi bi-cloud-arrow-down-fill text-lg"></i>
+              Descargar
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleProcessDNI}
+            disabled={isProcessing}
+            style={{
+              backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
+              cursor: isProcessing ? 'not-allowed' : 'pointer'
+            }}
+            className="w-full max-w-xl mx-auto flex items-center justify-center gap-3 py-3.5 px-6 rounded-lg text-white font-semibold text-lg"
+          >
+            {isProcessing ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Procesando...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-gear-fill text-xl"></i>
+                Procesar DNI
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {manualCensorList && (
