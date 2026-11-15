@@ -4,6 +4,8 @@ import * as ort from 'onnxruntime-web';
 // Configurar ruta base de los archivos .wasm para evitar problemas con el servidor de desarrollo Vite
 // (Error: expected magic word 00 61 73 6d, found 3c 21 64 6f)
 import '../../config/onnxConfig';
+// El modelo se ejecuta en un worker para no parar la página. Si no se puede, se ejecuta aquí como antes
+import { usarWorker, desactivarWorker, cargarEnWorker, ejecutarEnWorker } from '../../utils/detectorWorker';
 
 const MODEL_PATH = "/models/best.onnx";
 const MODEL_INPUT_SIZE = 640;
@@ -42,7 +44,15 @@ const ensureSession = () => {
  * Descarga y prepara el modelo por adelantado, para que el primer «Procesar» no tenga que esperarlo.
  * Devuelve true si el modelo quedó listo. Si falla no lanza el error, la detección lo volverá a intentar.
  */
-export const preloadDetector = () => ensureSession().then(() => true, () => false);
+export const preloadDetector = () => {
+  const enEsteHilo = () => ensureSession().then(() => true, () => false);
+  if (!usarWorker()) return enEsteHilo();
+  return cargarEnWorker(MODEL_PATH).then(() => true, (error) => {
+    console.error('[dni_detector] El worker del detector no ha cargado, se sigue en el hilo principal:', error);
+    desactivarWorker();
+    return enEsteHilo();
+  });
+};
 
 // --- 2. PREPROCESAMIENTO ---
 const preprocessing = (sourceCanvas, targetSize) => {
@@ -173,6 +183,18 @@ const postprocessing = (outputTensor, meta) => {
 
 // --- 4. FUNCIÓN CORE ---
 const runYoloInference = async (canvas) => {
+  if (usarWorker()) {
+    try {
+      const { tensor, meta } = preprocessing(canvas, MODEL_INPUT_SIZE);
+      const { datos, forma } = await ejecutarEnWorker(MODEL_PATH, tensor.data, tensor.dims);
+      return postprocessing({ data: datos, dims: forma }, meta);
+    } catch (error) {
+      // La entrada se entregó al worker, así que más abajo se prepara otra vez desde el lienzo
+      console.error('[dni_detector] El worker del detector ha fallado, se sigue en el hilo principal:', error);
+      desactivarWorker();
+    }
+  }
+
   const session = await ensureSession();
   const { tensor, meta } = preprocessing(canvas, MODEL_INPUT_SIZE);
 
