@@ -10,36 +10,6 @@ export default function HomePage({ onStartProcess }) {
   // Scroll inicial al principio de la página
   useScrollToTop();
 
-  const scrollToUpload = () => {
-    const section = document.getElementById('upload-section');
-    const ctaAnchor = document.getElementById('upload-cta-anchor');
-
-    if (!section) return;
-
-    const headerOffset = 90;
-    const sectionTop = section.getBoundingClientRect().top + window.pageYOffset;
-    const minTarget = sectionTop - headerOffset;
-
-    // Intentamos dejar el CTA visible en la parte baja de pantalla sin saltarnos el inicio de la seccion.
-    let targetPosition = minTarget;
-
-    if (ctaAnchor) {
-      const ctaRect = ctaAnchor.getBoundingClientRect();
-      const ctaTop = ctaRect.top + window.pageYOffset;
-      const ctaBottom = ctaTop + ctaRect.height;
-      const bottomMargin = 20;
-      targetPosition = ctaBottom - (window.innerHeight - bottomMargin);
-    }
-
-    const maxTarget = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    const finalTarget = Math.min(maxTarget, Math.max(minTarget, targetPosition));
-
-    window.scrollTo({
-      top: finalTarget,
-      behavior: 'smooth'
-    });
-  };
-
   return (
     <div className="pt-16"> {/* Compensar el header fixed */}
 
@@ -65,8 +35,9 @@ export default function HomePage({ onStartProcess }) {
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                {/* Abre la subida directamente, sin pasar por los tres pasos de más abajo */}
                 <button
-                  onClick={scrollToUpload}
+                  onClick={onStartProcess}
                   className="inline-flex justify-center items-center px-8 py-4 bg-primary-600 text-white font-bold text-lg rounded-xl hover:bg-primary-700 transition-all duration-200 shadow-xl hover:shadow-primary-500/30 hover:-translate-y-1"
                 >
                   Procesar mi DNI ahora

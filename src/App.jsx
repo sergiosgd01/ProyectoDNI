@@ -333,7 +333,7 @@ function App() {
 
       {/* Renderizar Header solo en la vista inicial */}
       {currentView === VIEWS.HOME && (
-        <Header onShowHome={goHome} />
+        <Header onShowHome={goHome} onStartProcess={handleStartProcess} />
       )}
 
       {renderContent()}
