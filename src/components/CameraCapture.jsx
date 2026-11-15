@@ -2,8 +2,11 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
 import ManualCropModal from './ManualCropModal';
 import { useAutoCapture } from '../hooks/useAutoCapture';
-import { CROP_MARGIN, expandRect, guideRectInVideo } from '../utils/liveCapture';
+import { captureArea, guideRectInVideo } from '../utils/liveCapture';
 import { prepareImageForUpload } from '../utils/imageResize';
+
+// La zona del DNI que vio el detector sirve para recortar el fotograma si es de hace poco
+const PLACEMENT_MAX_AGE_MS = 3000;
 
 // Colores del recuadro según lo que ve la captura automática
 const GUIDE_TONES = {
@@ -255,10 +258,13 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
       }
     }
 
-    // El recuadro se pasa a píxeles del vídeo teniendo en cuenta object-cover y se deja un margen
-    // para no cortar el borde del DNI. Sin recuadro se envía el fotograma entero
+    // El recuadro se pasa a píxeles del vídeo teniendo en cuenta object-cover y se deja un margen. Si el
+    // detector ha visto el DNI hace poco, la zona se amplía para que entre entero aunque se salga del recuadro.
+    // Sin recuadro se envía el fotograma entero
     const guideRect = guide ? guideRectInVideo(video, guide) : null;
-    const area = (guideRect && expandRect(guideRect, CROP_MARGIN, video.videoWidth, video.videoHeight))
+    const seen = autoCapture.placementRef.current;
+    const cardRect = seen && performance.now() - seen.at < PLACEMENT_MAX_AGE_MS ? seen.docRect : null;
+    const area = (guideRect && captureArea(guideRect, cardRect, video.videoWidth, video.videoHeight))
       || { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
 
     canvas.width = Math.round(area.width);

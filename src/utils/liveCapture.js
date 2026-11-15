@@ -54,8 +54,10 @@ export const ANALYSIS_WIDTH = 400;
 export const DETECTOR_MAX_SIDE = 640;
 // Margen alrededor del recuadro que ve el detector, para notar si el DNI se sale o está descentrado
 export const DETECTION_MARGIN = 0.25;
-// Margen del recorte cuando no se puede hacer la foto a resolución completa, para no cortar el borde del DNI
+// Margen del recorte cuando no se puede hacer la foto a resolución completa, para no cortar el borde del DNI.
+// Se deja alrededor del recuadro y, si se sabe dónde está el DNI, también alrededor de él
 export const CROP_MARGIN = 0.1;
+export const CARD_CROP_MARGIN = 0.15;
 
 export const HINTS = {
   loading: 'Preparando la detección del DNI',
@@ -348,4 +350,22 @@ export function imageQualityHint(metrics, sharpness, bestSharpness = 0) {
   if (sharpness < QUALITY.minSharpness) return HINTS.blurry;
   if (sharpness < bestSharpness * QUALITY.sharpnessRatio) return HINTS.blurry;
   return null;
+}
+
+/**
+ * Zona del fotograma que se sube cuando no se puede hacer la foto a resolución completa: el recuadro con margen
+ * y, si se sabe dónde está el DNI, también el DNI con margen. La captura da por bueno un DNI algo más grande que
+ * el recuadro o algo descentrado, y sin esto la foto salía con el borde del DNI cortado.
+ * @param {object} guideRect - Recuadro guía en píxeles del vídeo
+ * @param {object|null} cardRect - Zona del DNI según el detector, en píxeles del vídeo, o null si no se sabe
+ */
+export function captureArea(guideRect, cardRect, videoWidth, videoHeight) {
+  const guideArea = expandRect(guideRect, CROP_MARGIN, videoWidth, videoHeight);
+  const cardArea = cardRect ? expandRect(cardRect, CARD_CROP_MARGIN, videoWidth, videoHeight) : null;
+  if (!guideArea || !cardArea) return guideArea || cardArea;
+  const x = Math.min(guideArea.x, cardArea.x);
+  const y = Math.min(guideArea.y, cardArea.y);
+  const right = Math.max(guideArea.x + guideArea.width, cardArea.x + cardArea.width);
+  const bottom = Math.max(guideArea.y + guideArea.height, cardArea.y + cardArea.height);
+  return { x, y, width: right - x, height: bottom - y };
 }
