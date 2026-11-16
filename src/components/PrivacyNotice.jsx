@@ -31,7 +31,7 @@ export default function PrivacyNotice() {
       </p>
 
       <details className="mt-3 text-left">
-        <summary className="cursor-pointer text-center text-secondary-600 hover:text-secondary-700">
+        <summary className="cursor-pointer text-center py-2 text-secondary-600 hover:text-secondary-700">
           Información básica sobre protección de datos
         </summary>
         <LegalTable

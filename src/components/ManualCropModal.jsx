@@ -573,7 +573,7 @@ function ManualCropModal({
         <div className="flex items-center space-x-3">
           <button
             onClick={onCancel}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            className="w-11 h-11 flex items-center justify-center hover:bg-gray-700 rounded-xl transition-colors"
             aria-label="Volver"
           >
             <i className="bi bi-arrow-left text-xl"></i>

@@ -26,7 +26,7 @@ const MainSection = ({
               {/* Botón para eliminar imagen */}
               <button
                 onClick={onClearImage}
-                className="absolute top-3 right-3 bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full p-2 transition-all duration-200 hover:scale-110"
+                className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center bg-gray-800 bg-opacity-70 hover:bg-opacity-90 shadow-lg rounded-full transition-colors duration-200"
                 title="Eliminar imagen"
               >
                 <i className="bi bi-x-lg text-white"></i>
