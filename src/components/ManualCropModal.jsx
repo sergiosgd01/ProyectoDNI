@@ -1,4 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import Aviso from './Aviso';
+
+// Lado mínimo del recorte. En la pantalla, dos esquinas a menos de 20 píxeles se tocan, y en la foto el servidor
+// tampoco recorta nada de menos de 50 píxeles
+const LADO_MINIMO_PANTALLA = 20;
+const LADO_MINIMO_FOTO = 50;
+
+const AVISO_RECORTE_FALLIDO = { tipo: 'recorte-fallido', texto: 'No se ha podido recortar la foto. Vuelve a intentarlo.' };
 
 // Esquinas de partida en píxeles de la foto. Solo valen si son de una foto del mismo tamaño que la cargada,
 // porque si no, por ejemplo con la foto girada, caerían fuera del DNI
@@ -37,6 +45,9 @@ function ManualCropModal({
   // Estado de los 4 puntos del polígono (esquinas del DNI)
   const [points, setPoints] = useState(null);
   const [draggingPoint, setDraggingPoint] = useState(null);
+
+  // Aviso si no se puede recortar ({ tipo, texto }), en vez de alert()
+  const [aviso, setAviso] = useState(null);
 
   // Cargar imagen cuando cambia el archivo
   useEffect(() => {
@@ -423,8 +434,9 @@ function ManualCropModal({
 
   // Recortar imagen con corrección de perspectiva
   const handleCrop = async () => {
+    setAviso(null);
     if (!points || !originalImage) {
-      alert('Por favor, ajusta las 4 esquinas del DNI');
+      setAviso({ tipo: 'esquinas', texto: 'Coloca las cuatro esquinas sobre el DNI antes de recortar.' });
       return;
     }
 
@@ -454,6 +466,13 @@ function ManualCropModal({
 
     const outputWidth = Math.round(Math.max(topWidth, bottomWidth));
     const outputHeight = Math.round(Math.max(leftHeight, rightHeight));
+
+    // Con las esquinas juntas el recorte sería una tira sin el DNI
+    const ladoMenor = Math.min(outputWidth, outputHeight);
+    if (ladoMenor * scale < LADO_MINIMO_PANTALLA || ladoMenor < LADO_MINIMO_FOTO) {
+      setAviso({ tipo: 'esquinas', texto: 'Separa las esquinas y pon cada una en una esquina del DNI.' });
+      return;
+    }
 
     // Crear canvas temporal para el resultado
     const tempCanvas = document.createElement('canvas');
@@ -524,6 +543,8 @@ function ManualCropModal({
             alto: originalImage.height,
             puntos: originalPoints
           });
+        } else {
+          setAviso(AVISO_RECORTE_FALLIDO);
         }
       },
       'image/jpeg',
@@ -531,9 +552,18 @@ function ManualCropModal({
     );
   };
 
+  // Si el recorte falla, por ejemplo por falta de memoria con una foto enorme, se avisa en vez de no hacer nada
+  const recortar = () => {
+    handleCrop().catch((error) => {
+      console.error('❌ Error al recortar:', error);
+      setAviso(AVISO_RECORTE_FALLIDO);
+    });
+  };
+
   // Reset puntos
   const handleReset = () => {
     setPoints(null);
+    setAviso(null);
   };
 
   return (
@@ -601,6 +631,11 @@ function ManualCropModal({
 
       {/* Footer con acciones - Responsive */}
       <div className="bg-gray-900 p-3 md:p-4 border-t border-gray-700">
+        {aviso && (
+          <Aviso tipo={aviso.tipo} oscuro onCerrar={() => setAviso(null)} className="max-w-4xl mx-auto mb-3">
+            {aviso.texto}
+          </Aviso>
+        )}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
           {/* Info de selección */}
           <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
@@ -626,8 +661,7 @@ function ManualCropModal({
                 className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial"
               >
                 <i className="bi bi-arrow-counterclockwise"></i>
-                <span className="hidden sm:inline">Reiniciar</span>
-                <span className="sm:hidden">Reset</span>
+                <span>Reiniciar</span>
               </button>
             )}
             
@@ -639,7 +673,7 @@ function ManualCropModal({
             </button>
 
             <button
-              onClick={handleCrop}
+              onClick={recortar}
               disabled={!points}
               className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
                 points

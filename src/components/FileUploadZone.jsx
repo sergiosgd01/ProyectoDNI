@@ -1,12 +1,25 @@
 import React, { useState, useId, useEffect } from 'react';
 import CameraCapture from './CameraCapture';
 import ManualCropModal from './ManualCropModal';
+import Aviso from './Aviso';
 import { processWithYolo } from '../services/processWithYolo';
 import { validateFileComplete, sanitizeFileName, MAX_UPLOAD_SIZE } from '../utils/fileValidation';
 import { prepareImageForUpload } from '../utils/imageResize';
 import { fileUploadLimiter } from '../utils/rateLimiter';
 import logger from '../utils/logger';
 import { useUploadSlotRegistration } from '../hooks/useUploadSlots';
+import { useCloseOnBack } from '../hooks/useNavigation';
+
+// Por qué no se puede usar un archivo, según el motivo que da fileValidation.js
+const TEXTO_RECHAZO = {
+  formato: 'Solo se admiten fotos JPG, PNG o WEBP.',
+  heic: 'Las fotos HEIC todavía no se admiten. Guárdala como JPG o elige otra foto.',
+  peso: 'La foto pesa más de 30 MB. Elige otra más ligera.',
+  dimensiones: 'La foto es demasiado grande. Elige otra más pequeña.',
+  contenido: 'No se ha podido abrir la foto. Prueba con otra.'
+};
+
+const esHeic = (file) => /hei[cf]/i.test(file?.type || '') || /\.hei[cf]$/i.test(file?.name || '');
 
 // Ordenador con ratón o trackpad. Ahí se puede arrastrar o pegar la foto y no se ofrece la webcam,
 // que saca el DNI poco nítido. En móvil y tablet se ofrece primero la cámara del dispositivo
@@ -21,7 +34,13 @@ function FileUploadZone({ onFileSelect }) {
   const [conRaton, setConRaton] = useState(() => window.matchMedia(CONSULTA_RATON).matches);
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState(null);
+  // Archivo rechazado antes de enviarlo ({ tipo, titulo, texto }). Se enseña encima del recuadro
+  const [aviso, setAviso] = useState(null);
   const fileInputId = useId();
+
+  // Atrás cierra la cámara o el recorte manual y se queda en la subida
+  useCloseOnBack(showCamera, () => setShowCamera(false));
+  useCloseOnBack(showManualCrop, () => setShowManualCrop(false));
 
   // Se vuelve a mirar si cambia, por ejemplo al conectar un ratón a una tablet
   useEffect(() => {
@@ -44,10 +63,16 @@ function FileUploadZone({ onFileSelect }) {
 
   // ✅ Función para procesar archivo con YOLO
   const processAndSelectFile = async (file) => {
+    setAviso(null);
+
     // 🔒 RATE LIMITING - Prevenir abuso
     if (!fileUploadLimiter.canMakeRequest()) {
-      const waitTime = Math.ceil(fileUploadLimiter.getTimeUntilNextRequest() / 1000);
-      alert(`⚠️ Has excedido el límite de subidas.\nPor favor, espera ${waitTime} segundos.`);
+      const segundos = Math.max(1, Math.ceil(fileUploadLimiter.getTimeUntilNextRequest() / 1000));
+      setAviso({
+        tipo: 'limite-subidas',
+        titulo: 'Espera un momento',
+        texto: `Has subido varias fotos seguidas. Vuelve a probar dentro de ${segundos} ${segundos === 1 ? 'segundo' : 'segundos'}.`
+      });
       return;
     }
 
@@ -56,8 +81,11 @@ function FileUploadZone({ onFileSelect }) {
       await validateFileComplete(file);
     } catch (error) {
       logger.error('❌ [FileUploadZone] Validación fallida:', error.message);
-      // Mensaje genérico al usuario, sin exponer detalles internos
-      alert(`⚠️ El archivo no es válido.\nAsegúrate de subir una imagen JPG, PNG o WEBP menor a 30MB.`);
+      setAviso({
+        tipo: 'archivo-no-valido',
+        titulo: 'No se puede usar este archivo',
+        texto: error.motivo === 'formato' && esHeic(file) ? TEXTO_RECHAZO.heic : TEXTO_RECHAZO[error.motivo] || TEXTO_RECHAZO.contenido
+      });
       return;
     }
 
@@ -76,7 +104,11 @@ function FileUploadZone({ onFileSelect }) {
       // El servidor no admite más de 10MB. Solo se llega aquí si una foto grande no se pudo reducir
       if (uploadFile.size > MAX_UPLOAD_SIZE) {
         setIsProcessing(false);
-        alert(`⚠️ El archivo no es válido.\nAsegúrate de subir una imagen JPG, PNG o WEBP menor a 30MB.`);
+        setAviso({
+          tipo: 'archivo-no-valido',
+          titulo: 'No se puede usar este archivo',
+          texto: 'No se ha podido reducir la foto para enviarla. Elige otra de menos de 10 MB.'
+        });
         return;
       }
 
@@ -146,7 +178,9 @@ function FileUploadZone({ onFileSelect }) {
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
-    processAndSelectFile(file); // ✅ Procesar con YOLO
+    // Se vacía la selección para que, tras un aviso, se pueda volver a elegir la misma foto
+    event.target.value = '';
+    if (file) processAndSelectFile(file); // ✅ Procesar con YOLO
   };
 
   const handleCameraCapture = (file, metadata) => {
@@ -196,6 +230,13 @@ function FileUploadZone({ onFileSelect }) {
 
   return (
     <>
+      {/* Fuera del recuadro, porque con ratón un clic dentro abre el selector de archivos */}
+      {aviso && (
+        <Aviso tipo={aviso.tipo} titulo={aviso.titulo} onCerrar={() => setAviso(null)} className="mb-3">
+          {aviso.texto}
+        </Aviso>
+      )}
+
       {/* Con el dedo el recuadro es compacto, para que «Hacer foto» se vea nada más entrar.
           Si hay un error necesita sitio para el mensaje y sus botones */}
       <div
@@ -235,8 +276,9 @@ function FileUploadZone({ onFileSelect }) {
         )}
 
         {/* ✅ Overlay de error */}
+        {/* data-error lleva el tipo de error (network_error, server_error...) para que el banco no dependa del texto */}
         {processingError && !isProcessing && (
-          <div className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 rounded-2xl p-8">
+          <div data-error={processingError.type} className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 rounded-2xl p-8">
             <div className="w-16 h-16 rounded-full flex items-center justify-center bg-red-100 mb-4">
               <i className={`bi ${getErrorIcon(processingError.type)} text-3xl text-red-600`}></i>
             </div>

@@ -8,6 +8,8 @@ import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
 import { censorDniComplete } from './dni_scripts/dni_censor'
 import WatermarkInput from './WatermarkInput';
+import Aviso from './Aviso';
+import { useCloseOnBack } from '../hooks/useNavigation';
 import { DEMO_MODE } from '../config/demoMode';
 import ManualCensorModal from './ManualCensorModal';
 import ManualCropModal from './ManualCropModal';
@@ -20,31 +22,73 @@ import { completarCampos, construirDeteccion, obtenerVersionModelo } from '../ut
 // El contrato es que la imagen de un File no cambia nunca. Todo lo que cambia la imagen de una cara (subir otra foto,
 // «Ajustar recorte» o «Girar») crea un File nuevo, e «Intercambiar caras» intercambia los File de las dos caras.
 // Así las detecciones guardadas de un File siguen valiendo para él, esté en la cara que esté.
-// Se guardan cuando un procesado termina y envía sus métricas, para que cada detección cuente una sola vez.
-// Con un WeakMap la entrada desaparece cuando la web deja de usar la foto.
+// Cada entrada apunta también en qué caras ('front' o 'back') se ha contado ya esa foto en un registro de métricas.
+// El registro dice por cara si se encontró el documento y si se censuró sola, así que después de «Intercambiar caras»
+// las dos fotos se cuentan otra vez en su cara nueva, con las mismas detecciones.
+// Se apuntan cuando un procesado termina bien, justo al decidir si se envían sus métricas, para que cada foto
+// cuente una sola vez en cada cara. Con un WeakMap la entrada desaparece cuando la web deja de usar la foto.
 const deteccionesPorFoto = new WeakMap();
+
+// Guarda las detecciones de una foto, si no estaban, y apunta que ya se ha contado en esa cara
+function apuntarDetecciones(foto, detecciones, cara) {
+  const guardadas = deteccionesPorFoto.get(foto);
+  if (guardadas) guardadas.caras.add(cara);
+  else deteccionesPorFoto.set(foto, { detecciones, caras: new Set([cara]) });
+}
 
 // Clases del modelo que corresponden a elementos de seguridad del anverso
 const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
 
 // Etiqueta de cada cara en la vista previa. Si se puede, lleva al lado el botón para corregir su recorte
-function EtiquetaCara({ texto, colores, nombreCara, onAjustar }) {
+// y el de girar la foto. girando dice si se está girando esta cara y ocupado si se está girando alguna
+function EtiquetaCara({ texto, colores, nombreCara, onAjustar, onGirar, girando = false, ocupado = false }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
       <div className={`${colores} text-xs sm:text-sm font-medium px-2 py-1 rounded inline-block`}>
         {texto}
       </div>
-      {onAjustar && (
-        <button
-          type="button"
-          onClick={onAjustar}
-          aria-label={`Ajustar recorte de la parte ${nombreCara}`}
-          className="inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full shadow-sm hover:text-primary-700 hover:border-primary-300 transition-colors"
-        >
-          <i className="bi bi-crop"></i>
-          Ajustar recorte
-        </button>
+      {(onGirar || onAjustar) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {onGirar && (
+            <button
+              type="button"
+              onClick={onGirar}
+              disabled={girando || ocupado}
+              aria-label={`Girar la parte ${nombreCara} 90 grados a la derecha`}
+              className={CLASES_BOTON_CARA}
+            >
+              <i className={`bi bi-arrow-clockwise ${girando ? 'animate-spin' : ''}`}></i>
+              Girar
+            </button>
+          )}
+          {onAjustar && (
+            <button
+              type="button"
+              onClick={onAjustar}
+              aria-label={`Ajustar recorte de la parte ${nombreCara}`}
+              className={CLASES_BOTON_CARA}
+            >
+              <i className="bi bi-crop"></i>
+              Ajustar recorte
+            </button>
+          )}
+        </div>
       )}
+    </div>
+  );
+}
+
+// Botones pequeños de cada cara y el de intercambiar caras
+const CLASES_BOTON_CARA = 'inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full shadow-sm hover:text-primary-700 hover:border-primary-300 transition-colors disabled:opacity-60 disabled:cursor-wait';
+
+// Entre las dos caras, para cuando el anverso y el reverso se subieron cambiados
+function BotonIntercambiar({ onClick }) {
+  return (
+    <div className="flex justify-center -mt-2 mb-2">
+      <button type="button" onClick={onClick} title="Cambiar el anverso por el reverso" className={CLASES_BOTON_CARA}>
+        <i className="bi bi-arrow-down-up"></i>
+        Intercambiar caras
+      </button>
     </div>
   );
 }
@@ -55,6 +99,8 @@ export default function DNIEditor({
   frontMetadata = null,
   backMetadata = null,
   onAdjustCrop,
+  onRotate,
+  onSwapSides,
   onBack,
   onProcessed,
   initialOcrData = null,
@@ -126,13 +172,65 @@ export default function DNIEditor({
       ? () => setCropSide(side)
       : null;
 
-  const handleCropAdjusted = (croppedFile, esquinas) => {
-    onAdjustCrop(cropSide, croppedFile, esquinas);
+  // Cara cuya foto se está girando ('front' o 'back'). Mientras tanto no se puede volver a girar ni intercambiar
+  const [girando, setGirando] = useState(null);
+
+  const handleCropAdjusted = async (croppedFile, esquinas) => {
+    const side = cropSide;
     setCropSide(null);
     // Con la foto nueva el resultado anterior ya no vale y hay que procesar otra vez
     setProcessedResult(null);
     setManualCensorList(null);
     setProcessingError(null);
+    // Si la cara se había girado, el recorte nuevo se gira igual antes de ponerlo. Mientras, cuenta como girando
+    setGirando(side);
+    try {
+      await onAdjustCrop(side, croppedFile, esquinas);
+    } finally {
+      setGirando(null);
+    }
+  };
+
+  // Atrás cierra la censura o el recorte manual en vez de salir del editor. Cerrar la censura es como «Cancelar»
+  const cancelarCensuraManual = () => {
+    setManualCensorList(null);
+    setProcessedResult(null); // Resetear para volver a mostrar imágenes originales
+  };
+  useCloseOnBack(Boolean(manualCensorList), cancelarCensuraManual);
+  useCloseOnBack(Boolean(cropSide), () => setCropSide(null));
+
+  // «Girar» e «Intercambiar caras» arreglan a mano el DNI girado, boca abajo o con las caras cambiadas, que si no
+  // acaba en censura manual. Como con «Ajustar recorte», no se puede mientras se procesa y el resultado anterior se borra
+  const [avisoGiro, setAvisoGiro] = useState(null);
+  const olvidarResultado = () => {
+    setProcessedResult(null);
+    setManualCensorList(null);
+    setProcessingError(null);
+  };
+
+  const girarCara = (side) =>
+    !DEMO_MODE.enabled && onRotate && !isProcessing && (side === 'front' ? frontFile : backFile)
+      ? async () => {
+        setGirando(side);
+        setAvisoGiro(null);
+        try {
+          await onRotate(side);
+          olvidarResultado();
+        } catch (error) {
+          console.error('❌ No se pudo girar la foto:', error);
+          setAvisoGiro('No se ha podido girar la foto. Vuelve a intentarlo.');
+        } finally {
+          setGirando(null);
+        }
+      }
+      : null;
+
+  // Mientras se gira una cara no se puede procesar, porque se procesaría la foto de antes del giro
+  const procesarBloqueado = isProcessing || Boolean(girando);
+  const puedeIntercambiar = Boolean(!DEMO_MODE.enabled && onSwapSides && frontFile && backFile && !isProcessing && !girando);
+  const intercambiarCaras = () => {
+    onSwapSides();
+    olvidarResultado();
   };
 
   const selectedFrontCount = Object.values(selectedFrontFields).filter(Boolean).length;
@@ -374,7 +472,7 @@ export default function DNIEditor({
 
       // Si la foto ya se detectó en un procesado anterior, sus detecciones salen de la caché
       const frontGuardadas = deteccionesPorFoto.get(frontFileToProcess);
-      const frontDetections = frontGuardadas || await detectDniFromFile(frontFileToProcess);
+      const frontDetections = frontGuardadas?.detecciones || await detectDniFromFile(frontFileToProcess);
       if (!vigente()) return;
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
       console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
@@ -392,7 +490,7 @@ export default function DNIEditor({
       let backGuardadas = null;
       if (backFileToProcess) {
         backGuardadas = deteccionesPorFoto.get(backFileToProcess);
-        backDetections = backGuardadas || await detectDniFromFile(backFileToProcess);
+        backDetections = backGuardadas?.detecciones || await detectDniFromFile(backFileToProcess);
         if (!vigente()) return;
         const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
         console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
@@ -422,11 +520,12 @@ export default function DNIEditor({
       // --- GUARDAR EN BACKEND ---
       // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
       // Nunca se envía el número de DNI ni ningún dato leído del documento.
-      // Un solo registro por detección. Solo se guarda si alguna cara se ha detectado ahora, así que volver
-      // a tapar las mismas fotos con otra selección no guarda otro.
+      // Un solo registro por foto y cara. Solo se guarda si alguna foto no se ha contado aún en la cara en la que está.
+      // Volver a tapar las mismas fotos con otra selección no guarda otro. Después de subir otra foto, «Ajustar recorte»,
+      // «Girar» o «Intercambiar caras» sí, salvo si al cuarto giro vuelve la foto de partida y ya estaba contada.
       // No se espera la respuesta. El resultado ya está listo y el guardado tarda entre
       // 0,7 s y 2 s, según el backend esté o no en frío. Si falla, solo se registra el error
-      if (!frontGuardadas || (backFileToProcess && !backGuardadas)) {
+      if (!frontGuardadas?.caras.has('front') || (backFileToProcess && !backGuardadas?.caras.has('back'))) {
         console.log("💾 Guardando métricas de uso...");
         const caras = {
           front: { detecciones: frontDetections, manual: Boolean(manualFiles.front) },
@@ -441,8 +540,8 @@ export default function DNIEditor({
             console.error("❌ Error al guardar en backend:", saveError);
           });
       }
-      deteccionesPorFoto.set(frontFileToProcess, frontDetections);
-      if (backFileToProcess) deteccionesPorFoto.set(backFileToProcess, backDetections);
+      apuntarDetecciones(frontFileToProcess, frontDetections, 'front');
+      if (backFileToProcess) apuntarDetecciones(backFileToProcess, backDetections, 'back');
       // --------------------------
 
       if (Object.keys(manualFiles).length > 0) {
@@ -758,6 +857,12 @@ export default function DNIEditor({
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-800">Vista previa</h3>
               </div>
 
+              {avisoGiro && (
+                <Aviso tipo="girar" onCerrar={() => setAvisoGiro(null)} className="mb-4">
+                  {avisoGiro}
+                </Aviso>
+              )}
+
               {/* MOSTRAR resultado procesado si existe */}
               {processedResult ? (
                 <div className="space-y-4">
@@ -775,6 +880,9 @@ export default function DNIEditor({
                       colores="bg-primary-100 text-primary-800"
                       nombreCara="delantera"
                       onAjustar={ajustarCara('front')}
+                      onGirar={girarCara('front')}
+                      girando={girando === 'front'}
+                      ocupado={Boolean(girando)}
                     />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
@@ -785,6 +893,8 @@ export default function DNIEditor({
                     </div>
                   </div>
 
+                  {puedeIntercambiar && processedResult.backImageUrl && <BotonIntercambiar onClick={intercambiarCaras} />}
+
                   {processedResult.backImageUrl && (
                     <div className="mb-4">
                       <EtiquetaCara
@@ -792,6 +902,9 @@ export default function DNIEditor({
                         colores="bg-secondary-100 text-secondary-800"
                         nombreCara="trasera"
                         onAjustar={ajustarCara('back')}
+                        onGirar={girarCara('back')}
+                        girando={girando === 'back'}
+                        ocupado={Boolean(girando)}
                       />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
@@ -880,6 +993,9 @@ export default function DNIEditor({
                       colores="bg-primary-100 text-primary-800"
                       nombreCara="delantera"
                       onAjustar={ajustarCara('front')}
+                      onGirar={girarCara('front')}
+                      girando={girando === 'front'}
+                      ocupado={Boolean(girando)}
                     />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
@@ -890,6 +1006,8 @@ export default function DNIEditor({
                     </div>
                   </div>
 
+                  {puedeIntercambiar && <BotonIntercambiar onClick={intercambiarCaras} />}
+
                   {backFile && (
                     <div className="mb-4 flex-shrink-0">
                       <EtiquetaCara
@@ -897,6 +1015,9 @@ export default function DNIEditor({
                         colores="bg-secondary-100 text-secondary-800"
                         nombreCara="trasera"
                         onAjustar={ajustarCara('back')}
+                        onGirar={girarCara('back')}
+                        girando={girando === 'back'}
+                        ocupado={Boolean(girando)}
                       />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
@@ -1110,10 +1231,10 @@ export default function DNIEditor({
                 {!processedResult ? (
                   <button
                     onClick={handleProcessDNI}
-                    disabled={isProcessing}
+                    disabled={procesarBloqueado}
                     style={{
-                      backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
-                      cursor: isProcessing ? 'not-allowed' : 'pointer'
+                      backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
+                      cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
                     }}
                     className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
                   >
@@ -1132,10 +1253,10 @@ export default function DNIEditor({
                 ) : (
                   <button
                     onClick={handleReprocess}
-                    disabled={isProcessing}
+                    disabled={procesarBloqueado}
                     style={{
-                      backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
-                      cursor: isProcessing ? 'not-allowed' : 'pointer'
+                      backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
+                      cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
                     }}
                     className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
                   >
@@ -1181,7 +1302,7 @@ export default function DNIEditor({
           <div className="flex gap-3 max-w-xl mx-auto">
             <button
               onClick={handleReprocess}
-              disabled={isProcessing}
+              disabled={procesarBloqueado}
               className="flex-auto inline-flex items-center justify-center gap-2 py-3 px-3 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <i className="bi bi-arrow-repeat text-lg"></i>
@@ -1199,10 +1320,10 @@ export default function DNIEditor({
         ) : (
           <button
             onClick={handleProcessDNI}
-            disabled={isProcessing}
+            disabled={procesarBloqueado}
             style={{
-              backgroundColor: isProcessing ? colors.BUTTON_DISABLED : colors.button.primary,
-              cursor: isProcessing ? 'not-allowed' : 'pointer'
+              backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
+              cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
             }}
             className="w-full max-w-xl mx-auto flex items-center justify-center gap-3 py-3.5 px-6 rounded-lg text-white font-semibold text-lg"
           >
@@ -1226,10 +1347,7 @@ export default function DNIEditor({
           frontFile={manualCensorList?.front}
           backFile={manualCensorList?.back}
           onComplete={handleManualCensorComplete}
-          onCancel={() => {
-            setManualCensorList(null);
-            setProcessedResult(null); // Resetear para volver a mostrar imágenes originales
-          }}
+          onCancel={cancelarCensuraManual}
         />
       )}
 

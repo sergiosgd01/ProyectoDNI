@@ -12,6 +12,9 @@ export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_DIMENSION = 10000; // 10000x10000 píxeles máximo
 
+// Error con el motivo del rechazo ('formato', 'peso', 'dimensiones' o 'contenido'), para explicárselo a la persona con un texto propio
+const errorDeValidacion = (mensaje, motivo) => Object.assign(new Error(mensaje), { motivo });
+
 /**
  * Valida el tipo MIME y el tamaño del archivo
  * @param {File} file - Archivo a validar
@@ -19,18 +22,18 @@ const MAX_IMAGE_DIMENSION = 10000; // 10000x10000 píxeles máximo
  */
 export const validateFile = (file) => {
   if (!file) {
-    throw new Error('No se proporcionó ningún archivo');
+    throw errorDeValidacion('No se proporcionó ningún archivo', 'contenido');
   }
 
   // Validar tipo MIME exacto (no solo startsWith)
   if (!ALLOWED_TYPES.includes(file.type)) {
-    throw new Error('Solo se permiten imágenes JPG, PNG o WEBP');
+    throw errorDeValidacion('Solo se permiten imágenes JPG, PNG o WEBP', 'formato');
   }
 
   // Validar tamaño del archivo
   if (file.size > MAX_FILE_SIZE) {
     const sizeMB = (file.size / 1024 / 1024).toFixed(2);
-    throw new Error(`El archivo (${sizeMB}MB) excede el límite de 30MB`);
+    throw errorDeValidacion(`El archivo (${sizeMB}MB) excede el límite de 30MB`, 'peso');
   }
 
   console.log('✅ Validación básica pasada:', file.name, `(${(file.size / 1024).toFixed(2)}KB)`);
@@ -51,14 +54,14 @@ export const validateImageContent = (file) => {
       // Verificar dimensiones razonables
       if (img.width > MAX_IMAGE_DIMENSION || img.height > MAX_IMAGE_DIMENSION) {
         URL.revokeObjectURL(objectUrl);
-        reject(new Error(`Imagen demasiado grande (${img.width}x${img.height}). Máximo: ${MAX_IMAGE_DIMENSION}x${MAX_IMAGE_DIMENSION}`));
+        reject(errorDeValidacion(`Imagen demasiado grande (${img.width}x${img.height}). Máximo: ${MAX_IMAGE_DIMENSION}x${MAX_IMAGE_DIMENSION}`, 'dimensiones'));
         return;
       }
 
       // Verificar que tenga dimensiones válidas
       if (img.width === 0 || img.height === 0) {
         URL.revokeObjectURL(objectUrl);
-        reject(new Error('La imagen no tiene dimensiones válidas'));
+        reject(errorDeValidacion('La imagen no tiene dimensiones válidas', 'contenido'));
         return;
       }
 
@@ -69,7 +72,7 @@ export const validateImageContent = (file) => {
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error('El archivo no es una imagen válida o está corrupto'));
+      reject(errorDeValidacion('El archivo no es una imagen válida o está corrupto', 'contenido'));
     };
 
     img.src = objectUrl;

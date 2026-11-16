@@ -1,4 +1,29 @@
 import React from 'react';
+import { useAppNavigation } from '../hooks/useNavigation';
+import { VIEWS } from '../constants/views';
+import { LEGAL_PATHS } from '../content/legal';
+
+// Enlace a una página de la propia web. Cambia de vista sin recargar, así no se pierden las fotos subidas.
+// Con Ctrl, ⌘, Mayúsculas o la rueda del ratón se abre en otra pestaña, como cualquier enlace
+function EnlaceVista({ view, href, children }) {
+  const navegacion = useAppNavigation();
+
+  const abrir = (event) => {
+    if (!navegacion || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (navegacion.currentView === view) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navegacion.goTo(view);
+    }
+  };
+
+  return (
+    <a href={href} onClick={abrir} className="text-gray-400 hover:text-white transition-colors">
+      {children}
+    </a>
+  );
+}
 
 function Footer() {
   return (
@@ -59,8 +84,8 @@ function Footer() {
             © {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.
           </p>
           <nav className="flex items-center gap-4 text-xs mb-4 md:mb-0" aria-label="Información legal">
-            <a href="/aviso-legal" className="text-gray-400 hover:text-white transition-colors">Aviso legal</a>
-            <a href="/privacidad" className="text-gray-400 hover:text-white transition-colors">Política de privacidad</a>
+            <EnlaceVista view={VIEWS.AVISO_LEGAL} href={LEGAL_PATHS.avisoLegal}>Aviso legal</EnlaceVista>
+            <EnlaceVista view={VIEWS.PRIVACIDAD} href={LEGAL_PATHS.privacidad}>Política de privacidad</EnlaceVista>
           </nav>
           <div className="flex items-center space-x-2 text-xs text-gray-600">
             <i className="bi bi-shield-lock-fill text-green-500"></i>

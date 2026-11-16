@@ -80,7 +80,8 @@ export default function AvisoLegalPage({ onGoHome }) {
           Los textos, el diseño, el código y los modelos de la herramienta pertenecen a {info.titularDerechos},
           salvo las librerías de código abierto, que mantienen sus propias licencias. Las que se ejecutan en tu
           navegador y sus licencias están en la{' '}
-          <a href="/licencias/LEEME.txt" className="text-primary-700 underline">
+          {/* No es una página de la web. Se abre en otra pestaña para no perder las fotos subidas */}
+          <a href="/licencias/LEEME.txt" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline">
             lista de librerías de terceros
           </a>
           . Las imágenes que subes siguen siendo tuyas y no se guardan.

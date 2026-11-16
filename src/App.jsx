@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Header from './components/Header';
 import DNIEditor from './components/DNIEditor';
 import HomePage from './components/pages/HomePage';
@@ -8,10 +8,11 @@ import AvisoLegalPage from './components/pages/AvisoLegalPage';
 import PrivacidadPage from './components/pages/PrivacidadPage';
 import ProcessingLoader from './components/ProcessingLoader';
 import { useDNIFiles } from './hooks/useDNIFiles';
-import { useNavigation } from './hooks/useNavigation';
+import { useNavigation, NavigationContext } from './hooks/useNavigation';
 import { useAutoNavigation } from './hooks/useAutoNavigation';
 import { VIEWS } from './constants/views';
 import { DEMO_MODE } from './config/demoMode';
+import { girarFoto } from './utils/girarFoto';
 import './index.css';
 
 function App() {
@@ -46,6 +47,9 @@ function App() {
     resolveView,
     onHistoryNavigate: handleHistoryNavigate
   });
+
+  // Para los enlaces del pie, que cambian de vista sin recargar la página
+  const navegacion = useMemo(() => ({ currentView, goTo }), [currentView, goTo]);
 
   // Estado para controlar el loader de procesamiento (solo en modo demo)
   const [showProcessingLoader, setShowProcessingLoader] = useState(false);
@@ -220,13 +224,50 @@ function App() {
   };
 
   // Recorte de una cara corregido a mano desde el editor. Cuenta como recorte manual y guarda las esquinas
-  // elegidas, para que un segundo ajuste empiece donde se dejó el primero
-  const handleAdjustCrop = useCallback((side, file, esquinas) => {
+  // elegidas, para que un segundo ajuste empiece donde se dejó el primero.
+  // Si la cara se había girado, el recorte nuevo se gira igual, porque el ajuste se hace sobre la foto original
+  const handleAdjustCrop = useCallback(async (side, file, esquinas) => {
     const [metadata, select] = side === 'front'
       ? [frontMetadata, handleFrontFileSelect]
       : [backMetadata, handleBackFileSelect];
-    select(file, { ...metadata, manualCrop: true, recorteAjustado: true, esquinas });
+    const giro = metadata?.recorteSinGirar ? metadata.giro || 0 : 0;
+    let girado = null;
+    if (giro) {
+      try {
+        girado = await girarFoto(file, giro);
+      } catch (error) {
+        console.error('❌ No se pudo girar el recorte ajustado:', error);
+      }
+    }
+    select(girado || file, {
+      ...metadata,
+      manualCrop: true,
+      recorteAjustado: true,
+      esquinas,
+      giro: girado ? giro : 0,
+      recorteSinGirar: girado ? file : null
+    });
   }, [frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
+
+  // Gira 90° a la derecha la foto recortada de una cara. Siempre se gira el recorte sin girar, para no perder
+  // calidad al volver a comprimir, y se crea un archivo nuevo sin tocar el anterior. Al cuarto giro vuelve el recorte de partida
+  const handleRotate = useCallback(async (side) => {
+    const [file, metadata, select] = side === 'front'
+      ? [frontFile, frontMetadata, handleFrontFileSelect]
+      : [backFile, backMetadata, handleBackFileSelect];
+    if (!file) return;
+    const sinGirar = metadata?.recorteSinGirar || file;
+    const giro = ((metadata?.recorteSinGirar ? metadata.giro || 0 : 0) + 1) % 4;
+    const girado = giro === 0 ? sinGirar : await girarFoto(sinGirar, giro);
+    select(girado, { ...metadata, giro, recorteSinGirar: giro === 0 ? null : sinGirar });
+  }, [frontFile, backFile, frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
+
+  // Cambia el anverso por el reverso con todo lo de cada cara (foto original, esquinas, giro...).
+  // Se intercambian los mismos archivos, sin copiarlos
+  const handleSwapSides = useCallback(() => {
+    handleFrontFileSelect(backFile, backMetadata);
+    handleBackFileSelect(frontFile, frontMetadata);
+  }, [frontFile, backFile, frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
 
   const handleBackToStep = () => {
     // Cuando se regresa desde el editor, NO permitir auto-navegación
@@ -302,6 +343,8 @@ function App() {
             frontMetadata={frontMetadata}
             backMetadata={backMetadata}
             onAdjustCrop={handleAdjustCrop}
+            onRotate={handleRotate}
+            onSwapSides={handleSwapSides}
             manualDetection={isManualDetection}
             onBack={handleBackToStep}
             onProcess={handleDNIProcess}
@@ -338,19 +381,21 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Loader de procesamiento - SOLO SE MUESTRA EN MODO DEMO */}
-      {DEMO_MODE.enabled && showProcessingLoader && (
-        <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
-      )}
+    <NavigationContext.Provider value={navegacion}>
+      <div className="min-h-screen bg-gray-100">
+        {/* Loader de procesamiento - SOLO SE MUESTRA EN MODO DEMO */}
+        {DEMO_MODE.enabled && showProcessingLoader && (
+          <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
+        )}
 
-      {/* Renderizar Header solo en la vista inicial */}
-      {currentView === VIEWS.HOME && (
-        <Header onShowHome={goHome} onStartProcess={handleStartProcess} />
-      )}
+        {/* Renderizar Header solo en la vista inicial */}
+        {currentView === VIEWS.HOME && (
+          <Header onShowHome={goHome} onStartProcess={handleStartProcess} />
+        )}
 
-      {renderContent()}
-    </div>
+        {renderContent()}
+      </div>
+    </NavigationContext.Provider>
   );
 }
 
