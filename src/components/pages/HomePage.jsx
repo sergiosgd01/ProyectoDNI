@@ -148,7 +148,7 @@ export default function HomePage({ onStartProcess }) {
       </section>
 
       <div id="security-section">
-        <SecuritySection />
+        <SecuritySection onStartProcess={onStartProcess} />
       </div>
 
       <div id="faq-section">
