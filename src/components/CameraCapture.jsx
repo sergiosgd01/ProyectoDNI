@@ -384,8 +384,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     onClose();
   };
 
-  // Mira si la foto ya recortada sirve para censurarla sola, con el mismo detector y la misma regla que el
-  // editor. Devuelve null si no se puede comprobar, y entonces la foto se da por buena como antes
+  // Mira con el mismo detector que el editor si en la foto ya recortada se leen los datos (ver
+  // FINAL_MIN_DETECTIONS). Devuelve null si no se puede comprobar, y entonces la foto se da por buena como antes
   const checkCapture = async (file) => {
     // Con el ahorro de datos activado no se descarga el modelo solo para esto
     if (navigator.connection?.saveData) return null;
@@ -435,9 +435,9 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
           return;
         }
 
-        // El servidor ha recortado el DNI, pero con esta foto el editor no podría censurar solo.
+        // El servidor ha recortado el DNI, pero en esta foto no se leen bien los datos.
         // Se guarda la mejor por si al final se decide seguir con ella
-        console.warn('⚠️ [capturePhoto] La foto no sirve para censurar sola:', check.reason, check.detections);
+        console.warn('⚠️ [capturePhoto] La foto no sirve:', check.reason, check.detections);
         failedChecksRef.current += 1;
         const attempt = { file: processedFile, metadata, detections: check.detections, rightSide: check.reason !== 'side' };
         const best = bestAttemptRef.current;

@@ -50,11 +50,17 @@ export const PLACEMENT = {
 };
 
 /**
- * Detecciones que tiene que dar la foto ya recortada para que el editor la censure sola, contando la del
- * documento. Son los mismos números que usa DNIEditor. Con menos, el editor pasa a censura manual, así que
- * la cámara repite la foto antes de darla por buena
+ * Detecciones que tiene que dar la foto ya recortada, contando la del documento, para darla por buena.
+ *
+ * No son las del editor (15 y 6 para censurar solo). El 16/11/2026 tres fotos nítidas del anverso hechas con la
+ * cámara de un Galaxy S24 Ultra dieron 9, 10 y 11, y una foto normal del mismo DNI, hecha con la cámara del móvil,
+ * 17 y 18. Con la misma foto normal reducida o desenfocada 3 px seguían saliendo 16 o 17, y con menos contraste 10.
+ * El detector encuentra menos campos con la luz desigual y el poco contraste de las fotos del navegador, no por
+ * falta de nitidez. Si se pidieran 15 y 6, la cámara repetiría sin fin fotos que se leen bien.
+ * Aquí solo se descartan las fotos que no sirven (movidas o desenfocadas de verdad, que en el banco dan 4 y 2).
+ * Si luego no llegan a 15 y 6, el editor pide tapar a mano lo que falte, igual que con una foto de la galería
  */
-export const FINAL_MIN_DETECTIONS = { anverso: 15, reverso: 6 };
+export const FINAL_MIN_DETECTIONS = { anverso: 8, reverso: 3 };
 
 export const ANALYSIS_WIDTH = 400;
 // El modelo trabaja a 640 px, no sirve de nada pasarle más
@@ -82,7 +88,7 @@ export const HINTS = {
   blurry: 'Enfocando. Mantén el DNI quieto',
   hold: 'Muy bien, no te muevas',
   capturing: 'Haciendo la foto, no te muevas',
-  retryBlurry: 'La foto no ha salido nítida. Vamos a repetirla',
+  retryBlurry: 'En la foto no se leen bien los datos. Vamos a repetirla',
   retryNoDocument: 'En la foto no se reconoce el DNI. Vamos a repetirla',
 };
 
@@ -380,8 +386,8 @@ export function captureArea(guideRect, cardRect, videoWidth, videoHeight) {
 }
 
 /**
- * Mira si la foto ya recortada sirve para censurarla sola, con la misma regla que el editor: tiene que verse
- * el documento de esa cara y dar al menos FINAL_MIN_DETECTIONS detecciones.
+ * Mira si la foto ya recortada sirve: tiene que verse el documento de esa cara y dar al menos
+ * FINAL_MIN_DETECTIONS detecciones.
  * @param {Array} boxes - Detecciones sobre la foto recortada
  * @param {'anverso'|'reverso'|null} expectedSide - Cara que se pedía, o null si valía cualquiera
  * @returns {{ok: boolean, detections: number, reason: 'side'|'document'|'fields'|null, hint: string|null}}
