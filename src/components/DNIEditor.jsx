@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
@@ -298,6 +298,15 @@ export default function DNIEditor({
     }));
   };
 
+  // Cada «Procesar» lleva un número. Si mientras procesa se cierra el editor, se sale de la vista o cambia la foto
+  // de alguna cara, ese número deja de ser el vigente y el procesado ya no aplica su resultado ni guarda métricas.
+  // Va en useLayoutEffect para que el número cambie en el mismo momento en que se quita el editor, no un poco después
+  const ejecucionRef = useRef(0);
+  const enCursoRef = useRef(null);
+  useLayoutEffect(() => () => {
+    ejecucionRef.current += 1;
+  }, [frontFile, backFile]);
+
   // Registro anónimo de uso que se envía a /save, uno por cada detección nueva (ver handleProcessDNI).
   // Lleva qué se eligió tapar y cómo fue el procesado, nunca datos leídos del DNI.
   // caras.front y caras.back traen las detecciones de esa cara, también cuando salen de la caché,
@@ -316,6 +325,12 @@ export default function DNIEditor({
   });
 
   const handleProcessDNI = async () => {
+    // Una segunda pulsación mientras se procesa no lanza otro procesado
+    if (enCursoRef.current === ejecucionRef.current) return;
+    const ejecucion = ++ejecucionRef.current;
+    enCursoRef.current = ejecucion;
+    const vigente = () => ejecucionRef.current === ejecucion;
+
     try {
       setIsProcessing(true);
       setProcessingError(null);
@@ -347,6 +362,7 @@ export default function DNIEditor({
       // Si la foto ya se detectó en un procesado anterior, sus detecciones salen de la caché
       const frontGuardadas = deteccionesPorFoto.get(frontFileToProcess);
       const frontDetections = frontGuardadas || await detectDniFromFile(frontFileToProcess);
+      if (!vigente()) return;
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
       console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
       if (!frontDocument) {
@@ -364,6 +380,7 @@ export default function DNIEditor({
       if (backFileToProcess) {
         backGuardadas = deteccionesPorFoto.get(backFileToProcess);
         backDetections = backGuardadas || await detectDniFromFile(backFileToProcess);
+        if (!vigente()) return;
         const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
         console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
 
@@ -385,6 +402,7 @@ export default function DNIEditor({
         { frontFields: selectedFrontFields, backFields: selectedBackFields },
         { frontDetections, backDetections }
       );
+      if (!vigente()) return;
       if (!manualFiles.front) result.frontImageUrl = censurado.frontImageUrl;
       if (backFileToProcess && !manualFiles.back) result.backImageUrl = censurado.backImageUrl;
 
@@ -425,10 +443,14 @@ export default function DNIEditor({
       setProcessedResult(result);
 
     } catch (error) {
+      if (!vigente()) return;
       console.error('Error procesando DNI:', error);
       setProcessingError(error.message || 'Error inesperado');
     } finally {
-      setIsProcessing(false);
+      if (enCursoRef.current === ejecucion) {
+        enCursoRef.current = null;
+        setIsProcessing(false);
+      }
     }
   };
 
