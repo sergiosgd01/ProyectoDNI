@@ -1,96 +1,46 @@
 import React from 'react';
-import { useAppNavigation } from '../hooks/useNavigation';
+import EnlaceVista from './EnlaceVista';
 import { VIEWS } from '../constants/views';
 import { LEGAL_PATHS } from '../content/legal';
 
-// Enlace a una página de la propia web. Cambia de vista sin recargar, así no se pierden las fotos subidas.
-// Con Ctrl, ⌘, Mayúsculas o la rueda del ratón se abre en otra pestaña, como cualquier enlace
-function EnlaceVista({ view, href, children }) {
-  const navegacion = useAppNavigation();
-
-  const abrir = (event) => {
-    if (!navegacion || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    if (navegacion.currentView === view) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      navegacion.goTo(view);
-    }
-  };
-
-  return (
-    <a href={href} onClick={abrir} className="text-gray-400 hover:text-white transition-colors">
-      {children}
-    </a>
-  );
-}
+const ENLACE = 'text-gray-400 hover:text-white transition-colors';
 
 function Footer() {
   return (
-    <footer className="bg-gray-900 border-t border-gray-800 relative overflow-hidden">
-      {/* Elementos decorativos de fondo */}
-      <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-primary-500/50 to-transparent"></div>
-      <div className="absolute top-1/2 left-0 w-96 h-96 bg-primary-900/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2"></div>
-      <div className="absolute top-1/2 right-0 w-96 h-96 bg-secondary-900/20 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2"></div>
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-8 items-center justify-between">
-
-          {/* Logo y Eslogan */}
-          <div className="flex flex-col items-center md:items-start space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-lg p-2 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-                <img
-                  src="/logo-web.png"
-                  alt="Logo Protector DNI"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <h3 className="text-2xl font-bold text-white tracking-tight">
-                Protector<span className="text-primary-400">DNI</span>
-              </h3>
+    <footer className="bg-gray-900 text-gray-400">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
+        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between md:gap-16">
+          <div className="max-w-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-white p-1.5">
+                <img src="/logo-web.png" alt="" className="h-full w-full object-contain" />
+              </span>
+              <span className="text-xl font-bold tracking-tight text-white">Protector DNI</span>
             </div>
-            <p className="text-gray-400 text-sm max-w-sm text-center md:text-left leading-relaxed">
+            <p className="mt-4 text-sm leading-relaxed">
               La herramienta gratuita para proteger tu documento de identidad antes de compartirlo.
             </p>
           </div>
 
-          {/* Financiación (Reemplaza a ProjectInfo) */}
-          <div className="flex flex-col items-center md:items-end w-full">
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-6 text-center md:text-right max-w-lg shadow-xl hover:bg-gray-800/70 transition-colors duration-300">
-              <h4 className="font-semibold text-primary-400 text-sm tracking-wider uppercase mb-3">
-                Financiado por Next Generation EU
-              </h4>
-              <p className="text-xs text-gray-400 leading-relaxed mb-4">
-                Iniciativa del Plan de Recuperación, Transformación y Resiliencia, financiada por la UE en el proyecto C108/23 "Detección de Falsificación de Documentos mediante IA".
-              </p>
-              <div className="flex items-center justify-center md:justify-end">
-                <div className="bg-white p-2 rounded-lg inline-block">
-                  <img
-                    src="/footer_incibe.jpg"
-                    alt="Logo INCIBE"
-                    className="h-10 w-auto opacity-90 hover:opacity-100 transition-opacity"
-                  />
-                </div>
-              </div>
-            </div>
+          <div className="max-w-md md:text-right">
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-300">Financiado por Next Generation EU</p>
+            <p className="mt-3 text-xs leading-relaxed">
+              Iniciativa del Plan de Recuperación, Transformación y Resiliencia, financiada por la UE en el proyecto C108/23 «Detección de Falsificación de Documentos mediante IA».
+            </p>
+            <img src="/footer_incibe.jpg" alt="Logo INCIBE" className="mt-4 inline-block h-14 w-auto rounded-lg bg-white p-2" />
           </div>
-
         </div>
 
-        {/* Copyright */}
-        <div className="mt-16 pt-8 border-t border-gray-800/50 flex flex-col md:flex-row items-center justify-between text-center md:text-left">
-          <p className="text-xs text-gray-500 mb-4 md:mb-0">
-            © {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.
-          </p>
-          <nav className="flex items-center gap-4 text-xs mb-4 md:mb-0" aria-label="Información legal">
-            <EnlaceVista view={VIEWS.AVISO_LEGAL} href={LEGAL_PATHS.avisoLegal}>Aviso legal</EnlaceVista>
-            <EnlaceVista view={VIEWS.PRIVACIDAD} href={LEGAL_PATHS.privacidad}>Política de privacidad</EnlaceVista>
+        <div className="mt-12 flex flex-col gap-4 border-t border-gray-800 pt-6 text-xs md:flex-row md:items-center md:justify-between">
+          <p>© {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.</p>
+          <nav className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Información legal">
+            <EnlaceVista view={VIEWS.AVISO_LEGAL} href={LEGAL_PATHS.avisoLegal} className={ENLACE}>Aviso legal</EnlaceVista>
+            <EnlaceVista view={VIEWS.PRIVACIDAD} href={LEGAL_PATHS.privacidad} className={ENLACE}>Política de privacidad</EnlaceVista>
           </nav>
-          <div className="flex items-center space-x-2 text-xs text-gray-600">
-            <i className="bi bi-shield-lock-fill text-green-500"></i>
-            <span>Tus fotos no se guardan</span>
-          </div>
+          <p className="flex items-center gap-2">
+            <i className="bi bi-shield-lock" aria-hidden="true"></i>
+            Tus fotos no se guardan
+          </p>
         </div>
       </div>
     </footer>

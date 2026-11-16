@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import EnlaceVista from './EnlaceVista';
+import { VIEWS } from '../constants/views';
+import { LEGAL_PATHS } from '../content/legal';
 
 // Preguntas frecuentes de la portada y de la página de subida.
 // Cada respuesta se abre y se cierra por su cuenta, sin cerrar las demás, y la primera sale abierta.
@@ -56,13 +59,14 @@ function FAQ() {
           <p className="text-lg leading-relaxed text-gray-600 text-pretty">
             Lo que más nos preguntan sobre la foto, tus datos y la copia que descargas.
           </p>
-          <a
-            href="/privacidad"
+          <EnlaceVista
+            view={VIEWS.PRIVACIDAD}
+            href={LEGAL_PATHS.privacidad}
             className="mt-1.5 inline-flex items-center gap-2 self-start text-[15px] font-semibold text-secondary-600 hover:text-secondary-700 transition-colors"
           >
             Lee la política de privacidad
             <i className="bi bi-arrow-right" aria-hidden="true"></i>
-          </a>
+          </EnlaceVista>
         </div>
 
         <div className="min-w-0 flex-[2_1_560px] border-t border-gray-900">
