@@ -3,7 +3,8 @@ import ProfileSelector from './ProfileSelector';
 import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
-import { detectDniFromFile } from './dni_scripts/dni_detector';
+import { detectDniFromCanvas } from './dni_scripts/dni_detector';
+import { detectWithFlatLight } from '../utils/flatLight';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
 import { censorDniComplete, mapUiToYolo } from './dni_scripts/dni_censor'
@@ -471,9 +472,12 @@ export default function DNIEditor({
         manualCensor: false
       };
 
-      // Si la foto ya se detectó en un procesado anterior, sus detecciones salen de la caché
+      // Si la foto ya se detectó en un procesado anterior, sus detecciones salen de la caché.
+      // Los campos se buscan en la foto y en una copia con la luz aplanada, porque con la luz desigual de las fotos
+      // de la cámara el detector se deja campos pequeños (ver utils/flatLight.js)
       const frontGuardadas = deteccionesPorFoto.get(frontFileToProcess);
-      const frontDetections = frontGuardadas?.detecciones || await detectDniFromFile(frontFileToProcess);
+      const frontDetections = frontGuardadas?.detecciones
+        || await detectWithFlatLight(frontFileToProcess, detectDniFromCanvas);
       if (!vigente()) return;
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
       console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
@@ -496,7 +500,8 @@ export default function DNIEditor({
       let backGuardadas = null;
       if (backFileToProcess) {
         backGuardadas = deteccionesPorFoto.get(backFileToProcess);
-        backDetections = backGuardadas?.detecciones || await detectDniFromFile(backFileToProcess);
+        backDetections = backGuardadas?.detecciones
+          || await detectWithFlatLight(backFileToProcess, detectDniFromCanvas);
         if (!vigente()) return;
         const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
         console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
