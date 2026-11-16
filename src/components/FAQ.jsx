@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Preguntas frecuentes de la portada y de la página de subida.
-// Las respuestas se despliegan de una en una y la primera sale abierta.
+// Cada respuesta se abre y se cierra por su cuenta, sin cerrar las demás, y la primera sale abierta.
 // Las cerradas llevan inert, así que ni se leen con lector de pantalla ni reciben el foco mientras están plegadas
 const faqs = [
   {
@@ -31,8 +31,20 @@ const faqs = [
 ];
 
 function FAQ() {
-  // Índice de la pregunta abierta, o -1 si están todas cerradas
-  const [abierta, setAbierta] = useState(0);
+  // Índices de las preguntas abiertas
+  const [abiertas, setAbiertas] = useState(() => new Set([0]));
+
+  const alternar = (index) => {
+    setAbiertas((anteriores) => {
+      const siguientes = new Set(anteriores);
+      if (siguientes.has(index)) {
+        siguientes.delete(index);
+      } else {
+        siguientes.add(index);
+      }
+      return siguientes;
+    });
+  };
 
   return (
     <section className="bg-white py-16 sm:py-20 lg:py-24">
@@ -55,7 +67,7 @@ function FAQ() {
 
         <div className="min-w-0 flex-[2_1_560px] border-t border-gray-900">
           {faqs.map((faq, index) => {
-            const estaAbierta = abierta === index;
+            const estaAbierta = abiertas.has(index);
             return (
               <div key={faq.question} className="border-b border-gray-200">
                 <h3>
@@ -64,7 +76,7 @@ function FAQ() {
                     id={`faq-pregunta-${index}`}
                     aria-expanded={estaAbierta}
                     aria-controls={`faq-respuesta-${index}`}
-                    onClick={() => setAbierta(estaAbierta ? -1 : index)}
+                    onClick={() => alternar(index)}
                     className="group flex w-full items-center gap-5 rounded-sm py-5 sm:py-[22px] text-left text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2"
                   >
                     <span
