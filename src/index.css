@@ -13,6 +13,50 @@
   }
 }
 
+/* Botones de toda la web. Hay tres tipos y dos tamaños, y cada botón combina .btn, un tipo y, si es
+   pequeño, .btn-sm. Por ejemplo «btn btn-principal» o «btn btn-sm btn-secundario».
+   - .btn-principal. Rojo con letra blanca, la acción importante de cada pantalla.
+   - .btn-secundario. Blanco con borde gris, el resto de acciones.
+   - .btn-oscuro. Gris oscuro, el secundario dentro de las ventanas de fondo negro (recorte y censura manual).
+   El normal mide 48 px de alto y el pequeño 36 px. Si el texto no cabe, el botón crece en vez de cortarlo.
+   Las clases de Tailwind que se pongan al lado (w-full, flex-1, px-4...) mandan sobre estas */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 min-h-[3rem] px-6 py-2 rounded-xl
+      text-base font-semibold leading-tight text-center select-none transition-colors duration-150
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500 focus-visible:ring-offset-2
+      disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-sm {
+    @apply min-h-[2.25rem] px-3 py-1.5 gap-1.5 text-sm font-medium;
+  }
+
+  .btn-principal {
+    @apply bg-secondary-600 text-white shadow-sm;
+  }
+
+  .btn-principal:hover:not(:disabled) {
+    @apply bg-secondary-700;
+  }
+
+  .btn-secundario {
+    @apply bg-white text-gray-800 border border-gray-300;
+  }
+
+  .btn-secundario:hover:not(:disabled) {
+    @apply bg-gray-50 border-gray-400;
+  }
+
+  .btn-oscuro {
+    @apply bg-gray-700 text-white;
+  }
+
+  .btn-oscuro:hover:not(:disabled) {
+    @apply bg-gray-600;
+  }
+}
+
 /* Custom Utilities for Animations if needed */
 @layer utilities {
   .animate-fade-in {

@@ -64,25 +64,26 @@
   border-radius: 0.5rem;
 }
 
-/* 🎯 ESTADOS DE INTERACCIÓN */
+/* Botones de la cámara (CameraCapture). Toman los colores de .btn-principal y .btn-secundario de index.css,
+   que son los del resto de la web. El tamaño y la forma los pone cada botón. Antes .btn-primary era
+   amarillo con letra blanca y no se leía */
 .btn-primary {
-  background-color: var(--color-primary);
+  background-color: #d12e32;
   color: white;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
-.btn-primary:hover {
-  filter: brightness(0.9);
-  transform: translateY(-1px);
+.btn-primary:hover:not(:disabled) {
+  background-color: #b8262a;
 }
 
 .btn-secondary {
-  background-color: var(--color-secondary);
-  color: white;
-  transition: all 0.2s ease;
+  background-color: #ffffff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  transition: background-color 0.2s ease;
 }
 
-.btn-secondary:hover {
-  filter: brightness(0.9);
-  transform: translateY(-1px);
+.btn-secondary:hover:not(:disabled) {
+  background-color: #f9fafb;
 }

@@ -79,8 +79,8 @@ function EtiquetaCara({ texto, colores, nombreCara, onAjustar, onGirar, girando 
   );
 }
 
-// Botones pequeños de cada cara y el de intercambiar caras
-const CLASES_BOTON_CARA = 'inline-flex items-center gap-1.5 px-3 py-1 text-xs sm:text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-full shadow-sm hover:text-primary-700 hover:border-primary-300 transition-colors disabled:opacity-60 disabled:cursor-wait';
+// Botones pequeños de cada cara y el de intercambiar caras (ver .btn en index.css)
+const CLASES_BOTON_CARA = 'btn btn-sm btn-secundario';
 
 // Entre las dos caras, para cuando el anverso y el reverso se subieron cambiados
 function BotonIntercambiar({ onClick }) {
@@ -831,18 +831,18 @@ export default function DNIEditor({
             {onGoHome && (
               <button
                 onClick={onGoHome}
-                className="group inline-flex items-center px-4 py-2 bg-white/70 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+                className="btn btn-sm btn-secundario"
               >
-                <i className="bi bi-house-door mr-2"></i>
+                <i className="bi bi-house-door"></i>
                 Inicio
               </button>
             )}
             {onBack && (
               <button
                 onClick={onBack}
-                className="group inline-flex items-center px-4 py-2 bg-white/70 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+                className="btn btn-sm btn-secundario"
               >
-                <i className="bi bi-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+                <i className="bi bi-arrow-left"></i>
                 Cambiar fotos
               </button>
             )}
@@ -929,21 +929,16 @@ export default function DNIEditor({
                   {/* Botones de descarga */}
                   <div ref={descargasRef} className="flex flex-col gap-3 mt-2">
                     {/* Fila 1: Anverso y Reverso */}
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <button
                         onClick={() => downloadImageWithWatermark(
                           processedResult.frontImageUrl,
                           'dni-front-processed.jpg',
                           { text: watermarkText }
                         )}
-                        className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
-                        style={{
-                          background: `linear-gradient(135deg, #f5c842 0%, #eaaf0f 60%, #d49a00 100%)`,
-                          focusRingColor: '#eaaf0f',
-                          color: '#1a1000'
-                        }}
+                        className="btn btn-secundario flex-1 px-4"
                       >
-                        <i className="bi bi-cloud-arrow-down-fill text-base group-hover:translate-y-0.5 transition-transform duration-200" />
+                        <i className="bi bi-cloud-arrow-down-fill" />
                         <span>Descargar Anverso</span>
                       </button>
 
@@ -954,12 +949,9 @@ export default function DNIEditor({
                             'dni-back-processed.jpg',
                             { text: watermarkText }
                           )}
-                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
-                          style={{
-                            background: `linear-gradient(135deg, #ff5f63 0%, #E53338 60%, #c0272b 100%)`
-                          }}
+                          className="btn btn-secundario flex-1 px-4"
                         >
-                          <i className="bi bi-cloud-arrow-down-fill text-base group-hover:translate-y-0.5 transition-transform duration-200" />
+                          <i className="bi bi-cloud-arrow-down-fill" />
                           <span>Descargar Reverso</span>
                         </button>
                       )}
@@ -967,26 +959,20 @@ export default function DNIEditor({
 
                     {/* Fila 2: Completo JPG y PDF (solo si hay reverso) */}
                     {processedResult.backImageUrl && (
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <button
                           onClick={handleDownloadCombined}
-                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
-                          style={{
-                            background: `linear-gradient(135deg, #6b7280 0%, #4b5563 60%, #374151 100%)`
-                          }}
+                          className="btn btn-secundario flex-1 px-4"
                         >
-                          <i className="bi bi-file-earmark-image-fill text-base group-hover:scale-110 transition-transform duration-200" />
+                          <i className="bi bi-file-earmark-image-fill" />
                           <span>Completo JPG</span>
                         </button>
 
                         <button
                           onClick={handleDownloadCombinedPDF}
-                          className="group flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-white text-sm font-semibold shadow-md hover:shadow-lg active:scale-95 active:shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-700"
-                          style={{
-                            background: `linear-gradient(135deg, #c0392b 0%, #96231b 60%, #7b1c15 100%)`
-                          }}
+                          className="btn btn-secundario flex-1 px-4"
                         >
-                          <i className="bi bi-file-earmark-pdf-fill text-base group-hover:scale-110 transition-transform duration-200" />
+                          <i className="bi bi-file-earmark-pdf-fill" />
                           <span>Completo PDF</span>
                         </button>
                       </div>
@@ -1210,19 +1196,19 @@ export default function DNIEditor({
               {/* Acciones rápidas */}
               <div className="mb-4 sm:mb-6 flex-shrink-0">
                 <h4 className="font-medium text-gray-700 mb-3 text-sm sm:text-base">Acciones rápidas</h4>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     onClick={handleSelectAll}
-                    className="px-2 py-1 sm:px-3 sm:py-2 bg-red-100 text-red-700 text-xs sm:text-sm rounded-lg hover:bg-red-200 transition-colors flex items-center gap-1.5"
+                    className="btn btn-sm btn-secundario"
                   >
-                    <i className="bi bi-x-circle-fill"></i>
+                    <i className="bi bi-x-circle-fill text-secondary-600"></i>
                     Censurar todo
                   </button>
                   <button
                     onClick={handleDeselectAll}
-                    className="px-2 py-1 sm:px-3 sm:py-2 bg-primary-100 text-primary-700 text-xs sm:text-sm rounded-lg hover:bg-primary-200 transition-colors flex items-center gap-1.5"
+                    className="btn btn-sm btn-secundario"
                   >
-                    <i className="bi bi-check-circle-fill"></i>
+                    <i className="bi bi-check-circle-fill text-success-600"></i>
                     Mostrar todo
                   </button>
                 </div>
@@ -1242,20 +1228,16 @@ export default function DNIEditor({
                   <button
                     onClick={handleProcessDNI}
                     disabled={procesarBloqueado}
-                    style={{
-                      backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
-                      cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
-                    }}
-                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
+                    className="btn btn-principal w-full hidden lg:flex"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                         Procesando...
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-gear-fill text-xl mr-3"></i>
+                        <i className="bi bi-gear-fill text-lg"></i>
                         Procesar DNI
                       </>
                     )}
@@ -1264,20 +1246,16 @@ export default function DNIEditor({
                   <button
                     onClick={handleReprocess}
                     disabled={procesarBloqueado}
-                    style={{
-                      backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
-                      cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
-                    }}
-                    className="w-full text-white py-4 px-8 rounded-lg font-semibold text-lg hover:opacity-90 transition-opacity hidden lg:flex items-center justify-center"
+                    className="btn btn-principal w-full hidden lg:flex"
                   >
                     {isProcessing ? (
                       <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                         Procesando...
                       </>
                     ) : (
                       <>
-                        <i className="bi bi-arrow-repeat text-xl mr-3"></i>
+                        <i className="bi bi-arrow-repeat text-lg"></i>
                         Procesar de nuevo
                       </>
                     )}
@@ -1294,9 +1272,9 @@ export default function DNIEditor({
                 {/* Botón de regreso */}
                 <button
                   onClick={onBack}
-                  className="w-full inline-flex items-center justify-center px-4 py-2 sm:px-6 sm:py-3 bg-gray-500 text-white font-semibold text-sm sm:text-base rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                  className="btn btn-secundario w-full"
                 >
-                  <i className="bi bi-arrow-left mr-1 sm:mr-2 text-sm sm:text-base"></i>
+                  <i className="bi bi-arrow-left"></i>
                   Cambiar fotos
                 </button>
               </div>
@@ -1313,15 +1291,14 @@ export default function DNIEditor({
             <button
               onClick={handleReprocess}
               disabled={procesarBloqueado}
-              className="flex-auto inline-flex items-center justify-center gap-2 py-3 px-3 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              className="btn btn-secundario flex-auto px-3"
             >
               <i className="bi bi-arrow-repeat text-lg"></i>
               Procesar de nuevo
             </button>
             <button
               onClick={irADescargas}
-              style={{ backgroundColor: colors.button.primary }}
-              className="flex-auto inline-flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-white font-semibold text-sm"
+              className="btn btn-principal flex-auto px-4"
             >
               <i className="bi bi-cloud-arrow-down-fill text-lg"></i>
               Descargar
@@ -1331,11 +1308,7 @@ export default function DNIEditor({
           <button
             onClick={handleProcessDNI}
             disabled={procesarBloqueado}
-            style={{
-              backgroundColor: procesarBloqueado ? colors.BUTTON_DISABLED : colors.button.primary,
-              cursor: procesarBloqueado ? 'not-allowed' : 'pointer'
-            }}
-            className="w-full max-w-xl mx-auto flex items-center justify-center gap-3 py-3.5 px-6 rounded-lg text-white font-semibold text-lg"
+            className="btn btn-principal flex w-full max-w-xl mx-auto"
           >
             {isProcessing ? (
               <>
@@ -1344,7 +1317,7 @@ export default function DNIEditor({
               </>
             ) : (
               <>
-                <i className="bi bi-gear-fill text-xl"></i>
+                <i className="bi bi-gear-fill text-lg"></i>
                 Procesar DNI
               </>
             )}

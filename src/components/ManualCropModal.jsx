@@ -658,7 +658,7 @@ function ManualCropModal({
             {points && (
               <button
                 onClick={handleReset}
-                className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial"
+                className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
               >
                 <i className="bi bi-arrow-counterclockwise"></i>
                 <span>Reiniciar</span>
@@ -667,7 +667,7 @@ function ManualCropModal({
             
             <button
               onClick={onCancel}
-              className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm flex-1 sm:flex-initial"
+              className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
             >
               Cancelar
             </button>
@@ -675,11 +675,7 @@ function ManualCropModal({
             <button
               onClick={recortar}
               disabled={!points}
-              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 flex-1 sm:flex-initial ${
-                points
-                  ? 'bg-primary-600 text-white hover:bg-primary-500 shadow-lg'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              }`}
+              className="btn btn-principal flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
             >
               <i className="bi bi-crop"></i>
               <span>Recortar</span>

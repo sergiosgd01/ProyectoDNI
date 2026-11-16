@@ -305,7 +305,7 @@ function FileUploadZone({ onFileSelect }) {
                     e.stopPropagation();
                     setShowManualCrop(true);
                   }}
-                  className="px-6 py-2 bg-primary-400 text-black rounded-lg hover:bg-primary-500 transition-colors flex items-center justify-center space-x-2"
+                  className="btn btn-secundario"
                 >
                   <i className="bi bi-crop"></i>
                   <span>Recortar manualmente</span>
@@ -318,7 +318,7 @@ function FileUploadZone({ onFileSelect }) {
                   setProcessingError(null);
                   setOriginalFileForCrop(null);
                 }}
-                className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="btn btn-principal"
               >
                 Intentar con otra imagen
               </button>
@@ -355,14 +355,7 @@ function FileUploadZone({ onFileSelect }) {
                   document.getElementById(fileInputId).click();
                 }}
                 disabled={isProcessing}
-                className={`
-                  px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform flex items-center justify-center space-x-2
-                  ${isDragOver
-                    ? 'bg-primary-600 text-white shadow-lg scale-105'
-                    : 'bg-white text-primary-600 border-2 border-primary-600 hover:bg-primary-600 hover:text-white hover:scale-105 hover:shadow-lg'
-                  }
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                `}
+                className="btn btn-principal"
               >
                 <i className="bi bi-folder text-lg"></i>
                 <span>Seleccionar Archivo</span>
@@ -375,7 +368,7 @@ function FileUploadZone({ onFileSelect }) {
               type="button"
               onClick={() => setShowCamera(true)}
               disabled={isProcessing}
-              className="w-full px-6 py-3.5 rounded-xl font-semibold text-white bg-primary-600 hover:bg-primary-700 shadow-md active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-principal w-full"
             >
               <i className="bi bi-camera-fill text-lg"></i>
               <span>Hacer foto</span>
@@ -384,7 +377,7 @@ function FileUploadZone({ onFileSelect }) {
               type="button"
               onClick={() => document.getElementById(fileInputId).click()}
               disabled={isProcessing}
-              className="w-full px-6 py-3 rounded-xl font-semibold text-primary-600 bg-white border-2 border-primary-600 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn btn-secundario w-full"
             >
               <i className="bi bi-images text-lg"></i>
               <span>Elegir de la galería</span>

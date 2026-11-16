@@ -20,9 +20,9 @@ export default function LegalPageLayout({ title, onGoHome, children }) {
         <div className="max-w-3xl mx-auto">
           <button
             onClick={onGoHome}
-            className="group inline-flex items-center mb-6 px-4 py-2 bg-white/60 hover:bg-white border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm transition-all duration-200"
+            className="btn btn-sm btn-secundario mb-6"
           >
-            <i className="bi bi-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+            <i className="bi bi-arrow-left"></i>
             Volver al inicio
           </button>
 

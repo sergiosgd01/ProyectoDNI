@@ -653,9 +653,9 @@ function ManualCensorModal({
                 handleSwitchSide('front');
                 setHighlightSide(null);
               }}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'front'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              className={`btn btn-sm ${currentSide === 'front'
+                ? 'bg-white text-gray-900'
+                : 'btn-oscuro'
                 } ${highlightSide === 'front'
                   ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
                   : ''
@@ -680,9 +680,9 @@ function ManualCensorModal({
                 handleSwitchSide('back');
                 setHighlightSide(null);
               }}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2 ${currentSide === 'back'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+              className={`btn btn-sm ${currentSide === 'back'
+                ? 'bg-white text-gray-900'
+                : 'btn-oscuro'
                 } ${highlightSide === 'back'
                   ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
                   : ''
@@ -769,10 +769,7 @@ function ManualCensorModal({
             <button
               onClick={handleUndo}
               disabled={getCurrentRectangles().length === 0}
-              className={`p-2 rounded-lg transition-colors ${getCurrentRectangles().length > 0
-                ? 'bg-gray-700 text-white hover:bg-gray-600'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                }`}
+              className="btn btn-oscuro w-12 px-0 flex-shrink-0"
               title="Deshacer última"
             >
               <i className="bi bi-arrow-counterclockwise text-lg"></i>
@@ -782,10 +779,7 @@ function ManualCensorModal({
             <button
               onClick={handleClearAll}
               disabled={getCurrentRectangles().length === 0}
-              className={`p-2 rounded-lg transition-colors ${getCurrentRectangles().length > 0
-                ? 'bg-red-600 text-white hover:bg-red-500'
-                : 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                }`}
+              className="btn btn-oscuro w-12 px-0 flex-shrink-0 text-red-300"
               title="Limpiar todo"
             >
               <i className="bi bi-trash text-lg"></i>
@@ -794,7 +788,7 @@ function ManualCensorModal({
             {/* Cancelar */}
             <button
               onClick={handleCancel}
-              className="px-3 md:px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors text-xs md:text-sm"
+              className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
             >
               Cancelar
             </button>
@@ -803,10 +797,7 @@ function ManualCensorModal({
             <button
               onClick={handleComplete}
               disabled={totalRectangles === 0 || isGenerating}
-              className={`px-4 md:px-6 py-2 rounded-lg font-medium transition-colors text-xs md:text-sm flex items-center justify-center gap-1.5 ${totalRectangles > 0 && !isGenerating
-                ? 'bg-green-600 text-white hover:bg-green-500 shadow-lg'
-                : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
+              className="btn btn-principal flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
             >
               {isGenerating ? (
                 <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></span>
@@ -841,16 +832,16 @@ function ManualCensorModal({
             <div className="flex gap-3">
               <button
                 onClick={handleBackToEdit}
-                className="flex-1 px-4 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                className="btn btn-oscuro flex-1 px-4"
               >
-                <i className="bi bi-pencil mr-2"></i>
+                <i className="bi bi-pencil"></i>
                 Volver a editar
               </button>
               <button
                 onClick={processAndComplete}
-                className="flex-1 px-4 py-2.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-500 transition-colors font-medium"
+                className="btn btn-principal flex-1 px-4"
               >
-                <i className="bi bi-check-lg mr-2"></i>
+                <i className="bi bi-check-lg"></i>
                 Continuar así
               </button>
             </div>

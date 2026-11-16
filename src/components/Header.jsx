@@ -96,14 +96,14 @@ function Header({ onShowHome, onStartProcess }) {
           <div className="flex items-center space-x-4">
             <button
               onClick={onStartProcess}
-              className="hidden sm:inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold text-white transition-all duration-200 bg-primary-600 rounded-full hover:bg-primary-700 hover:shadow-lg hover:-translate-y-0.5"
+              className="btn btn-sm btn-principal hidden sm:inline-flex px-4"
             >
               Procesar DNI
             </button>
             <button
               onClick={onStartProcess}
               aria-label="Procesar DNI"
-              className="sm:hidden inline-flex items-center justify-center p-2 text-primary-600 bg-primary-50 rounded-full hover:bg-primary-100"
+              className="btn btn-sm btn-principal sm:hidden w-11 px-0"
             >
               <i className="bi bi-upload text-lg"></i>
             </button>

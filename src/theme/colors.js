@@ -6,7 +6,7 @@
   // transparente, y por eso había mensajes de éxito en rojo y textos que apenas se leían.
   //
   // Para qué se usa cada uno
-  // - secondary (rojo). Botones principales, enlaces e iconos. El 600 es el de
+  // - secondary (rojo). Botones principales (.btn-principal en index.css), enlaces e iconos. El 600 es el de
   //   los botones y los textos, porque el 500 con letra blanca no llega al contraste mínimo (4,5 a 1).
   // - primary (amarillo). Fondos suaves, insignias, la selección de un perfil y barras. Nunca para texto
   //   sobre blanco ni con letra blanca encima, porque no se lee.

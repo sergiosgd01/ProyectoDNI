@@ -38,10 +38,10 @@ export default function HomePage({ onStartProcess }) {
                 {/* Abre la subida directamente, sin pasar por los tres pasos de más abajo */}
                 <button
                   onClick={onStartProcess}
-                  className="inline-flex justify-center items-center px-8 py-4 bg-primary-600 text-white font-bold text-lg rounded-xl hover:bg-primary-700 transition-all duration-200 shadow-xl hover:shadow-primary-500/30 hover:-translate-y-1"
+                  className="btn btn-principal px-8 shadow-lg"
                 >
                   Procesar mi DNI ahora
-                  <i className="bi bi-arrow-right ml-2 text-xl"></i>
+                  <i className="bi bi-arrow-right text-lg"></i>
                 </button>
               </div>
             </div>
@@ -134,9 +134,9 @@ export default function HomePage({ onStartProcess }) {
                 <div id="upload-cta-anchor" className="border-t border-gray-200 pt-6 sm:pt-8 text-center">
                 <button
                   onClick={onStartProcess}
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-7 sm:px-10 py-4 sm:py-5 bg-gray-900 text-white font-bold text-lg sm:text-xl rounded-xl hover:bg-gray-800 transition-all duration-200 shadow-xl hover:-translate-y-1 group"
+                    className="btn btn-principal w-full sm:w-auto px-10 shadow-lg"
                 >
-                    <i className="bi bi-upload mr-3 text-xl sm:text-2xl group-hover:-translate-y-1 transition-transform"></i>
+                    <i className="bi bi-upload text-lg"></i>
                   Subir mi DNI
                 </button>
               </div>

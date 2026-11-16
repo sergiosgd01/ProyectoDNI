@@ -177,9 +177,9 @@ export default function UploadPage({
           <div className="mb-3 sm:mb-4 sm:absolute sm:-top-8 sm:left-0 z-10">
             <button
               onClick={onGoHome}
-              className="group inline-flex items-center px-4 py-2 bg-white/60 hover:bg-white backdrop-blur-sm border border-gray-200 hover:border-gray-300 text-sm font-medium text-gray-600 hover:text-primary-600 rounded-full shadow-sm hover:shadow transition-all duration-200"
+              className="btn btn-sm btn-secundario"
             >
-              <i className="bi bi-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
+              <i className="bi bi-arrow-left"></i>
               Volver al inicio
             </button>
           </div>
@@ -303,9 +303,9 @@ export default function UploadPage({
                     <button
                       onClick={onContinueToEditor}
                       disabled={isValidating}
-                      className="inline-flex items-center px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 transition-colors duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      className="btn btn-principal"
                     >
-                      <i className="bi bi-arrow-right mr-2"></i>
+                      <i className="bi bi-arrow-right"></i>
                       {isValidating ? 'Validando...' : 'Continuar al editor'}
                     </button>
                   </>

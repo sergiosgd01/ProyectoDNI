@@ -66,9 +66,9 @@ const MainSection = ({
               <div className="mt-4 text-center">
                 <button
                   onClick={onContinue}
-                  className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium text-sm rounded-lg hover:bg-primary-700 transition-colors duration-200"
+                  className="btn btn-sm btn-principal"
                 >
-                  <i className="bi bi-arrow-right mr-2"></i>
+                  <i className="bi bi-arrow-right"></i>
                   {stepInfo?.current === 1 ? 'Continuar con parte trasera' : 'Ir al editor'}
                 </button>
               </div>
