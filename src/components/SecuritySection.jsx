@@ -338,8 +338,8 @@ function SecuritySection({ onStartProcess }) {
               </p>
               {onStartProcess && (
                 <button type="button" onClick={onStartProcess} className="btn btn-principal">
-                  Proteger mi DNI
-                  <i className="bi bi-arrow-right" aria-hidden="true"></i>
+                  <i className="bi bi-upload text-lg" aria-hidden="true"></i>
+                  Subir mi DNI
                 </button>
               )}
             </div>
