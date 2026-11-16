@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { preloadDetector } from '../components/dni_scripts/dni_detector';
+import { obtenerVersionModelo } from '../utils/metricasDeteccion';
 
 /**
  * Prepara el modelo de detección mientras la persona sube las fotos.
@@ -17,6 +18,8 @@ export function usePreloadDetector() {
 
     const preload = () => {
       preloadDetector();
+      // La versión del modelo para las métricas se pide a la vez que se carga el modelo, así coinciden
+      obtenerVersionModelo();
     };
 
     if ('requestIdleCallback' in window) {

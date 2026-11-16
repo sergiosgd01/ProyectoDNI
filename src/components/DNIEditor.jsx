@@ -13,6 +13,7 @@ import ManualCensorModal from './ManualCensorModal';
 import ManualCropModal from './ManualCropModal';
 // Importamos la API
 import { dniApi } from '../services/dniApi';
+import { completarCampos, construirDeteccion, obtenerVersionModelo } from '../utils/metricasDeteccion';
 
 // Detecciones del modelo de campos para cada foto, guardadas por la identidad de su File o Blob.
 // «Procesar de nuevo» y procesar con otra selección las reutilizan y solo vuelven a tapar, sin pasar otra vez el modelo.
@@ -311,17 +312,27 @@ export default function DNIEditor({
   // Lleva qué se eligió tapar y cómo fue el procesado, nunca datos leídos del DNI.
   // caras.front y caras.back traen las detecciones de esa cara, también cuando salen de la caché,
   // y manual, que dice si esa cara va a censura manual. caras.back es null si no hay reverso.
+  // modelo es la versión del modelo de campos (ver obtenerVersionModelo en metricasDeteccion.js).
   // Los datos nuevos se añaden aquí
-  const armarMetricas = (caras) => ({
+  const armarMetricas = (caras, modelo) => ({
     profileUsed: selectedProfile || 'personalizado',
+    // Siempre los 12 campos del anverso y los 8 del reverso, a true los que se tapan
     hiddenFields: {
-      frontFields: selectedFrontFields,
-      backFields: selectedBackFields
+      frontFields: completarCampos(frontfields, selectedFrontFields),
+      backFields: completarCampos(backfields, selectedBackFields)
     },
     manualCensor: caras.front.manual || Boolean(caras.back?.manual),
     manualDetection: manualDetection,
     hologramReadable: caras.front.detecciones.some(d => HOLOGRAM_CLASSES.includes(d.label)),
-    watermarkText: watermarkText
+    watermarkText: watermarkText,
+    // Qué clases encontró el detector en cada cara y con qué confianza, sin cajas ni textos
+    deteccion: construirDeteccion({
+      anverso: caras.front.detecciones,
+      reverso: caras.back ? caras.back.detecciones : null,
+      anversoAutomatico: !caras.front.manual,
+      reversoAutomatico: Boolean(caras.back) && !caras.back.manual,
+      modelo
+    })
   });
 
   const handleProcessDNI = async () => {
@@ -336,6 +347,8 @@ export default function DNIEditor({
       setProcessingError(null);
       setValidationPopup(null);
       setProcessedResult(null);
+      // La versión del modelo se pide ya, a la vez que la detección, para tenerla lista al guardar
+      obtenerVersionModelo();
 
       let frontFileToProcess = frontFile;
       let backFileToProcess = backFile || null;
@@ -415,10 +428,12 @@ export default function DNIEditor({
       // 0,7 s y 2 s, según el backend esté o no en frío. Si falla, solo se registra el error
       if (!frontGuardadas || (backFileToProcess && !backGuardadas)) {
         console.log("💾 Guardando métricas de uso...");
-        dniApi.saveDniRecord(armarMetricas({
+        const caras = {
           front: { detecciones: frontDetections, manual: Boolean(manualFiles.front) },
           back: backFileToProcess ? { detecciones: backDetections, manual: Boolean(manualFiles.back) } : null
-        }))
+        };
+        // Normalmente la versión del modelo ya llegó. Si no, se espera como mucho 3 s (ver metricasDeteccion.js)
+        obtenerVersionModelo().then((modelo) => dniApi.saveDniRecord(armarMetricas(caras, modelo)))
           .then(() => {
             console.log("✅ Métricas anónimas guardadas");
           })
