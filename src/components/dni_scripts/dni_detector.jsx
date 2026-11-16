@@ -48,9 +48,13 @@ export const preloadDetector = () => {
   const enEsteHilo = () => ensureSession().then(() => true, () => false);
   if (!usarWorker()) return enEsteHilo();
   return cargarEnWorker(MODEL_PATH).then(() => true, (error) => {
-    console.error('[dni_detector] El worker del detector no ha cargado, se sigue en el hilo principal:', error);
-    desactivarWorker();
-    return enEsteHilo();
+    console.error('[dni_detector] El worker del detector no ha cargado el modelo:', error);
+    // Si en el hilo principal sí carga, el fallo era del worker y se deja de usar. Si tampoco carga, lo normal es
+    // que se haya cortado la red, y el siguiente intento vuelve a probar con el worker
+    return enEsteHilo().then((listo) => {
+      if (listo) desactivarWorker();
+      return listo;
+    });
   });
 };
 

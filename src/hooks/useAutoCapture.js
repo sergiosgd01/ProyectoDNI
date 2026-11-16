@@ -57,6 +57,10 @@ const WARMUP_MS = 600;
 const HINT_CONFIRM_FRAMES = 2;
 const MIN_HINT_MS = 700;
 
+// Veces que se vuelve a intentar cargar el detector si falla, por ejemplo por un corte de la red, y espera entre intentos
+const LOAD_RETRIES = 3;
+const LOAD_RETRY_MS = 3000;
+
 const IDLE = { status: 'inactivo', hint: null, progress: 0, debug: null };
 
 /**
@@ -182,9 +186,21 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
     let analysisEveryMs = null;
 
     if (detectorState === 'cargando') {
-      preloadDetector().then((ready) => {
-        if (!cancelled) detectorState = ready ? 'listo' : 'manual';
+      // Si falla, por ejemplo porque se ha cortado la red mientras se descargaba el modelo, se vuelve a intentar.
+      // Mientras tanto la foto se puede hacer con el botón
+      const load = (retriesLeft) => preloadDetector().then((ready) => {
+        if (cancelled) return;
+        if (ready) {
+          detectorState = 'listo';
+        } else if (retriesLeft > 0) {
+          setTimeout(() => {
+            if (!cancelled) load(retriesLeft - 1);
+          }, LOAD_RETRY_MS);
+        } else {
+          detectorState = 'manual';
+        }
       });
+      load(LOAD_RETRIES);
     }
 
     const publish = (status, hint, progress, info, now) => {
