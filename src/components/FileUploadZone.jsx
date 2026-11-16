@@ -269,8 +269,8 @@ function FileUploadZone({ onFileSelect }) {
         {/* ✅ Overlay de procesamiento */}
         {isProcessing && (
           <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 rounded-2xl">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary-600 mb-4"></div>
-            <p className="text-lg font-semibold text-primary-700 mb-1">Procesando imagen...</p>
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-secondary-600 mb-4"></div>
+            <p className="text-lg font-semibold text-gray-800 mb-1">Procesando imagen...</p>
             <p className="text-sm text-gray-600">Detectando y corrigiendo DNI...</p>
           </div>
         )}
@@ -338,12 +338,12 @@ function FileUploadZone({ onFileSelect }) {
               <i className="bi bi-cloud-arrow-up text-white text-5xl"></i>
             </div>
 
-            <h3 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${isDragOver ? 'text-primary-700' : 'text-gray-800 group-hover:text-primary-600'
+            <h3 className={`text-2xl font-bold mb-3 transition-colors duration-300 ${isDragOver ? 'text-secondary-600' : 'text-gray-800 group-hover:text-secondary-600'
               }`}>
               {isDragOver ? '¡Suelta tu imagen aquí!' : 'Arrastra tu DNI aquí'}
             </h3>
 
-            <p className={`text-lg font-medium mb-6 transition-colors duration-300 ${isDragOver ? 'text-primary-600' : 'text-gray-600 group-hover:text-primary-500'
+            <p className={`text-lg font-medium mb-6 transition-colors duration-300 ${isDragOver ? 'text-secondary-600' : 'text-gray-600'
               }`}>
               o pégalo con {ATAJO_PEGAR}
             </p>

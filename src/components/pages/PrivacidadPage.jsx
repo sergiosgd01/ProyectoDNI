@@ -7,7 +7,7 @@ export default function PrivacidadPage({ onGoHome }) {
   const info = LEGAL_INFO;
 
   const contactLink = info.correoContacto && (
-    <a href={`mailto:${info.correoContacto}`} className="text-primary-700 underline">
+    <a href={`mailto:${info.correoContacto}`} className="text-secondary-600 underline hover:text-secondary-700">
       {info.correoContacto}
     </a>
   );
@@ -141,7 +141,7 @@ export default function PrivacidadPage({ onGoHome }) {
           <li>
             Si crees que no hemos tratado bien tus datos, puedes reclamar ante la Agencia Española de Protección de
             Datos en{' '}
-            <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline">
+            <a href="https://www.aepd.es" target="_blank" rel="noopener noreferrer" className="text-secondary-600 underline hover:text-secondary-700">
               aepd.es
             </a>
             .

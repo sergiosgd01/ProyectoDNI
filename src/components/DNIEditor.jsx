@@ -772,7 +772,7 @@ export default function DNIEditor({
                 style={{ borderTopColor: colors.primary }}
               ></div>
             </div>
-            <h3 className="text-2xl font-bold mb-2" style={{ color: colors.primary }}>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">
               Procesando DNI
             </h3>
             <p className="text-gray-600 text-sm mb-4">
@@ -876,9 +876,9 @@ export default function DNIEditor({
               {/* MOSTRAR resultado procesado si existe */}
               {processedResult ? (
                 <div className="space-y-4">
-                  <div className="bg-primary-50 border border-secondary-200 rounded-lg p-3">
-                    <div className="flex items-center text-secondary-800 text-sm">
-                      <i className="bi bi-check-circle-fill mr-2"></i>
+                  <div className="bg-success-50 border border-success-200 rounded-lg p-3">
+                    <div className="flex items-center text-success-800 text-sm font-medium">
+                      <i className="bi bi-check-circle-fill text-success-600 mr-2"></i>
                       DNI procesado correctamente
                     </div>
                   </div>
@@ -1052,9 +1052,9 @@ export default function DNIEditor({
               )}
 
               {/* Información del perfil seleccionado */}
-              <div className="bg-primary-50 border border-primary-200 rounded-lg p-3 sm:p-4 mt-4">
-                <h4 className="font-semibold text-primary-800 mb-2 text-sm sm:text-base">Configuración actual</h4>
-                <div className="space-y-1 text-xs sm:text-sm text-primary-700">
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 mt-4">
+                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Configuración actual</h4>
+                <div className="space-y-1 text-xs sm:text-sm text-gray-700">
                   <div>
                     <strong>Perfil:</strong> {
                       selectedProfile
@@ -1065,7 +1065,7 @@ export default function DNIEditor({
                   <div><strong>Campos seleccionados:</strong> {selectedCount} de {totalFields}</div>
                   <div>
                     <strong>Estado:</strong>
-                    <span className={processedResult ? "text-secondary-600" : "text-primary-600"}>
+                    <span className={processedResult ? "text-success-700 font-medium" : ""}>
                       {processedResult ? ' Procesado' : ' Listo para procesar'}
                     </span>
                   </div>
@@ -1091,9 +1091,9 @@ export default function DNIEditor({
               </div>
 
               {/* Indicador de campos extraídos */}
-              <div className="bg-primary-50 border border-secondary-200 rounded-lg p-3 mb-4 flex-shrink-0">
-                <div className="flex items-center text-secondary-800 text-xs sm:text-sm">
-                  <i className="bi bi-check-circle-fill mr-2"></i>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 flex-shrink-0">
+                <div className="flex items-center text-gray-700 text-xs sm:text-sm">
+                  <i className="bi bi-info-circle mr-2"></i>
                   {totalFields} campos disponibles para configuración
                 </div>
               </div>
@@ -1104,7 +1104,7 @@ export default function DNIEditor({
                   <h4 className="font-medium text-gray-700 mb-1 text-sm sm:text-base">Campos individuales</h4>
                   <p className="text-xs text-gray-500 flex items-center">
                     <i className="bi bi-info-circle mr-1.5"></i>
-                    Marque los campos que desea <strong className="mx-1 text-red-600">censurar (ocultar)</strong> del documento
+                    Marque los campos que desea <strong className="mx-1 text-secondary-600">censurar (ocultar)</strong> del documento
                   </p>
                 </div>
 

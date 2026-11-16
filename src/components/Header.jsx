@@ -75,19 +75,19 @@ function Header({ onShowHome, onStartProcess }) {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 leading-tight">Protector DNI</h1>
-              <p className="text-xs text-primary-600 font-medium tracking-wide uppercase">Seguridad Digital</p>
+              <p className="text-xs text-secondary-600 font-medium tracking-wide uppercase">Seguridad Digital</p>
             </div>
           </div>
 
           {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a href="#upload-section" onClick={(e) => handleNavClick(e, 'upload-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+            <a href="#upload-section" onClick={(e) => handleNavClick(e, 'upload-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
               Cómo funciona
             </a>
-            <a href="#security-section" onClick={(e) => handleNavClick(e, 'security-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+            <a href="#security-section" onClick={(e) => handleNavClick(e, 'security-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
               Seguridad
             </a>
-            <a href="#faq-section" onClick={(e) => handleNavClick(e, 'faq-section')} className="text-sm font-medium text-gray-700 hover:text-primary-600 transition-colors">
+            <a href="#faq-section" onClick={(e) => handleNavClick(e, 'faq-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
               FAQ
             </a>
           </nav>

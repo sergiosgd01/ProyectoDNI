@@ -640,7 +640,7 @@ function ManualCropModal({
           {/* Info de selección */}
           <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
             {points ? (
-              <span className="text-secondary-400 flex items-center">
+              <span className="text-success-400 flex items-center">
                 <i className="bi bi-check-circle mr-1.5"></i>
                 <span className="hidden sm:inline">Listo para recortar</span>
                 <span className="sm:hidden">Listo</span>

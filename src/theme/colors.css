@@ -22,7 +22,7 @@
   --color-warning: #f59e0b;
   
   /* 🎯 USOS SEMÁNTICOS */
-  --color-success: var(--color-secondary);
+  --color-success: #16a34a;
   --color-text-primary: var(--color-gray-900);
   --color-text-secondary: var(--color-gray-600);
   --color-text-muted: var(--color-gray-500);

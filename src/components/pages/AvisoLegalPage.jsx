@@ -14,7 +14,7 @@ export default function AvisoLegalPage({ onGoHome }) {
     [
       'Correo de contacto',
       info.correoContacto && (
-        <a href={`mailto:${info.correoContacto}`} className="text-primary-700 underline">
+        <a href={`mailto:${info.correoContacto}`} className="text-secondary-600 underline hover:text-secondary-700">
           {info.correoContacto}
         </a>
       ),
@@ -81,7 +81,7 @@ export default function AvisoLegalPage({ onGoHome }) {
           salvo las librerías de código abierto, que mantienen sus propias licencias. Las que se ejecutan en tu
           navegador y sus licencias están en la{' '}
           {/* No es una página de la web. Se abre en otra pestaña para no perder las fotos subidas */}
-          <a href="/licencias/LEEME.txt" target="_blank" rel="noopener noreferrer" className="text-primary-700 underline">
+          <a href="/licencias/LEEME.txt" target="_blank" rel="noopener noreferrer" className="text-secondary-600 underline hover:text-secondary-700">
             lista de librerías de terceros
           </a>
           . Las imágenes que subes siguen siendo tuyas y no se guardan.

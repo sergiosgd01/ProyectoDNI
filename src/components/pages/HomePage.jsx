@@ -20,13 +20,13 @@ export default function HomePage({ onStartProcess }) {
 
             {/* Texto y CTAs */}
             <div className="text-center lg:text-left animate-slide-up">
-              <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 font-medium text-sm mb-6">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-800 font-medium text-sm mb-6">
                 <i className="bi bi-shield-check mr-2"></i>
                 Tus fotos no se guardan
               </div>
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight mb-6">
                 Protege tu DNI <br className="hidden lg:block" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-primary-400">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary-500 to-primary-400">
                   antes de compartirlo
                 </span>
               </h1>
@@ -52,7 +52,7 @@ export default function HomePage({ onStartProcess }) {
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-gradient-to-tr from-primary-200/40 to-secondary-200/40 blur-3xl rounded-full -z-10"></div>
 
               <div className="bg-white p-2 sm:p-4 rounded-2xl shadow-2xl border border-gray-100 relative z-10">
-                <div className="absolute -top-4 -right-4 bg-secondary-500 text-white font-bold px-4 py-1 rounded-full text-sm shadow-lg transform rotate-3">
+                <div className="absolute -top-4 -right-4 bg-secondary-600 text-white font-bold px-4 py-1 rounded-full text-sm shadow-lg transform rotate-3">
                   Pruébalo interactivo
                 </div>
                 {/* Contenedor adaptado para BeforeAfter */}
@@ -96,9 +96,9 @@ export default function HomePage({ onStartProcess }) {
                     <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
                     <div className="flex items-center justify-between mb-5 pt-2">
                       <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
-                        <i className="bi bi-credit-card-2-front text-xl text-primary-600"></i>
+                        <i className="bi bi-credit-card-2-front text-xl text-secondary-600"></i>
                       </div>
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">1</span>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-secondary-600 text-white text-sm font-bold">1</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el frontal</h3>
                     <p className="text-gray-600 text-sm leading-relaxed">Captura o sube la parte delantera de tu documento.</p>
@@ -109,9 +109,9 @@ export default function HomePage({ onStartProcess }) {
                     <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
                     <div className="flex items-center justify-between mb-5 pt-2">
                       <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
-                        <i className="bi bi-credit-card-2-back text-xl text-primary-600"></i>
+                        <i className="bi bi-credit-card-2-back text-xl text-secondary-600"></i>
                       </div>
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">2</span>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-secondary-600 text-white text-sm font-bold">2</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-lg mb-2">Sube el reverso</h3>
                     <p className="text-gray-600 text-sm leading-relaxed">Captura o sube la parte trasera para completarlo.</p>
@@ -122,9 +122,9 @@ export default function HomePage({ onStartProcess }) {
                     <div className="absolute top-0 left-0 h-1.5 w-full bg-gradient-to-r from-primary-500 to-secondary-500 rounded-t-2xl opacity-90"></div>
                     <div className="flex items-center justify-between mb-5 pt-2">
                       <div className="flex items-center justify-center w-11 h-11 bg-primary-100 rounded-xl">
-                        <i className="bi bi-shield-lock text-xl text-primary-600"></i>
+                        <i className="bi bi-shield-lock text-xl text-secondary-600"></i>
                       </div>
-                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary-600 text-white text-sm font-bold">3</span>
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-secondary-600 text-white text-sm font-bold">3</span>
                     </div>
                     <h3 className="font-bold text-gray-900 text-lg mb-2">Edita y protege</h3>
                     <p className="text-gray-600 text-sm leading-relaxed">Aplica marcas de agua y censura a tu gusto.</p>

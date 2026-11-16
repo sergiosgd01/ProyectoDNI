@@ -17,7 +17,7 @@ function SecuritySection() {
             {/* Ofuscación Inteligente */}
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="bi bi-eye text-primary-600 text-3xl"></i>
+                <i className="bi bi-eye text-secondary-600 text-3xl"></i>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-3">Ocultación Selectiva</h3>
               <p className="text-gray-600">
@@ -28,7 +28,7 @@ function SecuritySection() {
             {/* Marca de Agua Personalizable */}
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="bi bi-pencil-square text-primary-600 text-3xl"></i>
+                <i className="bi bi-pencil-square text-secondary-600 text-3xl"></i>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-3">Marca de Agua Personalizable</h3>
               <p className="text-gray-600">
@@ -39,7 +39,7 @@ function SecuritySection() {
             {/* Exportación Inmediata */}
             <div className="text-center p-6">
               <div className="w-16 h-16 bg-primary-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <i className="bi bi-file-earmark-arrow-down text-primary-600 text-3xl"></i>
+                <i className="bi bi-file-earmark-arrow-down text-secondary-600 text-3xl"></i>
               </div>
               <h3 className="text-xl font-semibold text-gray-800 mb-3">Descarga Instantánea</h3>
               <p className="text-gray-600">

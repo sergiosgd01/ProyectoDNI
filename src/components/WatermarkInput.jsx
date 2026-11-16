@@ -1,31 +1,20 @@
 import React from 'react';
-import { useColors } from '../theme/useColors';
 
+// Recuadro de la marca de agua. El título y los avisos van en gris, porque antes iban en amarillo sobre
+// blanco (no se leía) y en rojo aunque no hubiera ningún error. El contador solo cambia de color al final
 export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
-  const colors = useColors();
   const remainingChars = maxLength - value.length;
+  const colorContador = remainingChars < 5 ? 'text-red-600' : remainingChars < 10 ? 'text-amber-600' : 'text-gray-500';
 
   return (
-    <div 
-      className="border-2 rounded-lg p-4 mb-4"
-      style={{
-        backgroundColor: `${colors.primary}15`,
-        borderColor: `${colors.secondary}50`
-      }}
-    >
+    <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
       <div className="flex items-center mb-2">
-        <i 
-          className="bi bi-droplet mr-2"
-          style={{ color: colors.primary }}
-        ></i>
-        <h4 
-          className="font-semibold text-sm"
-          style={{ color: colors.primary }}
-        >
+        <i className="bi bi-droplet mr-2 text-primary-600"></i>
+        <h4 className="font-semibold text-sm text-gray-900">
           Marca de agua personalizada
         </h4>
       </div>
-      
+
       <div className="space-y-2">
         <input
           type="text"
@@ -37,33 +26,15 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
           }}
           maxLength={maxLength}
           placeholder="Ej: Uso exclusivo para Hotel"
-          className="w-full px-3 py-2 text-sm border-2 rounded-lg focus:outline-none focus:ring-2 transition-all"
-          style={{
-            background: colors.background.primary,
-            borderColor: colors.border.default,
-            focusRingColor: colors.secondary
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = colors.secondary;
-            e.target.style.boxShadow = `0 0 0 3px ${colors.secondary}20`;
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = colors.border.default;
-            e.target.style.boxShadow = 'none';
-          }}
+          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-100"
         />
-        
-        <div className="flex items-center justify-between text-xs">
-          <span style={{ color: colors.secondary }}>
+
+        <div className="flex items-start justify-between gap-3 text-xs text-gray-600">
+          <span>
             <i className="bi bi-info-circle mr-1"></i>
             Máximo {maxLength} caracteres para mejor visualización
           </span>
-          <span 
-            className="font-medium"
-            style={{ 
-              color: remainingChars < 5 ? '#dc2626' : remainingChars < 10 ? '#f59e0b' : colors.secondary 
-            }}
-          >
+          <span className={`font-medium flex-shrink-0 ${colorContador}`}>
             {remainingChars} restantes
           </span>
         </div>

@@ -9,20 +9,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 🎨 Solo 2 colores principales
+        // primary es el amarillo y secondary el rojo. Para qué se usa cada uno está en src/theme/colors.js
         primary: COLOR_VARIANTS.PRIMARY,
         secondary: COLOR_VARIANTS.SECONDARY,
-        
-        // 🌫️ Neutrales (overrideamos los grises por defecto)
+
+        // Neutrales (sustituyen a los grises de Tailwind)
         gray: COLORS.GRAY,
-        
-        // ⚠️ Estados críticos únicamente
-        error: COLORS.ERROR,
+
+        // Estados
+        success: COLOR_VARIANTS.SUCCESS,
+        error: COLOR_VARIANTS.SECONDARY,
+        danger: COLOR_VARIANTS.SECONDARY,
         warning: COLORS.WARNING,
-        
-        // 🎯 Aliases semánticos
-        success: COLOR_VARIANTS.SECONDARY,  // El éxito usa el color secundario
-        danger: COLORS.ERROR,
       }
     },
   },

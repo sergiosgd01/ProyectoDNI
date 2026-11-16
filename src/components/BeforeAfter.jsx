@@ -81,10 +81,10 @@ function BeforeAfter({ originalImage, processedImage }) {
         </div>
 
         {/* Etiquetas fijas - fuera del clipPath */}
-        <div className="absolute top-4 left-4 bg-primary-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
+        <div className="absolute top-4 left-4 bg-primary-500 text-gray-900 px-3 py-1 rounded-full text-sm font-semibold z-30">
           ANTES
         </div>
-        <div className="absolute top-4 right-4 bg-secondary-500 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
+        <div className="absolute top-4 right-4 bg-secondary-600 text-white px-3 py-1 rounded-full text-sm font-semibold z-30">
           DESPUÉS
         </div>
 

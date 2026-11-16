@@ -10,14 +10,14 @@ export default function PrivacyNotice() {
       href={LEGAL_PATHS.privacidad}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-primary-700 underline hover:text-primary-800"
+      className="text-secondary-600 underline hover:text-secondary-700"
     >
       política de privacidad
     </a>
   );
 
   const contactLink = (
-    <a href={`mailto:${LEGAL_INFO.correoContacto}`} className="text-primary-700 underline">
+    <a href={`mailto:${LEGAL_INFO.correoContacto}`} className="text-secondary-600 underline hover:text-secondary-700">
       {LEGAL_INFO.correoContacto}
     </a>
   );
@@ -25,13 +25,13 @@ export default function PrivacyNotice() {
   return (
     <div className="mt-6 max-w-3xl mx-auto text-center text-sm text-gray-600">
       <p>
-        <i className="bi bi-shield-lock mr-1.5 text-primary-600"></i>
+        <i className="bi bi-shield-lock mr-1.5 text-secondary-600"></i>
         Tu foto se envía cifrada a nuestro servidor solo para recortarla y no se guarda. Más información en la{' '}
         {privacyLink}.
       </p>
 
       <details className="mt-3 text-left">
-        <summary className="cursor-pointer text-center text-primary-700 hover:text-primary-800">
+        <summary className="cursor-pointer text-center text-secondary-600 hover:text-secondary-700">
           Información básica sobre protección de datos
         </summary>
         <LegalTable

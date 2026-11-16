@@ -34,16 +34,16 @@ const MainSection = ({
             </div>
           </div>
 
-          {/* Información de confirmación */}
-          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
-            <div className="flex items-center justify-center text-primary-700 mb-3">
+          {/* Información de confirmación, en verde porque todo ha ido bien */}
+          <div className="bg-success-50 border border-success-200 rounded-lg p-4">
+            <div className="flex items-center justify-center text-success-800 mb-3">
               <i className="bi bi-check-circle-fill mr-2 text-lg"></i>
               <span className="font-semibold">
                 ¡Parte {stepInfo?.side || ''} seleccionada!
               </span>
             </div>
             
-            <p className="text-primary-600 text-sm text-center mb-3">
+            <p className="text-success-800 text-sm text-center mb-3">
               {stepInfo?.current === 1 ? 
                 'Perfecto. Ahora procederemos a cargar la parte trasera de tu DNI.' :
                 'Excelente. Tienes ambas partes cargadas. Procederás al editor para seleccionar los campos.'
@@ -52,10 +52,10 @@ const MainSection = ({
             
             {stepInfo && (
               <div className="flex items-center justify-center">
-                <span className="bg-primary-600 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
+                <span className="bg-success-700 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
                   {stepInfo.current}/{stepInfo.total}
                 </span>
-                <span className="text-primary-600 text-sm">
+                <span className="text-success-800 text-sm">
                   {stepInfo.current === 1 ? 'Continuarás con la parte trasera' : 'Listo para el editor'}
                 </span>
               </div>

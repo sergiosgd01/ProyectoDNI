@@ -212,7 +212,7 @@ export default function UploadPage({
             <div data-upload-side="front" className="bg-white rounded-lg shadow-xl p-4 sm:p-6">
               <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 mb-4 text-left sm:block sm:text-center sm:mb-6">
                 <div className="row-span-2 inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 bg-primary-100 rounded-full sm:mb-4">
-                  <span className="text-lg sm:text-xl font-bold text-primary-500">1</span>
+                  <span className="text-lg sm:text-xl font-bold text-primary-800">1</span>
                 </div>
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight sm:mb-2">
                   Parte Delantera
@@ -273,29 +273,29 @@ export default function UploadPage({
           {/* Mensaje cuando ambas fotos estén cargadas */}
           {hasAllFiles && (
             <div ref={completionMessageRef} className="text-center mt-8 transition-all duration-500">
-              <div className="bg-secondary-50 border border-secondary-200 rounded-lg p-6">
-                <div className="flex items-center justify-center text-secondary-700 mb-3">
+              <div className="bg-success-50 border border-success-200 rounded-lg p-6">
+                <div className="flex items-center justify-center text-success-800 mb-3">
                   <i className="bi bi-check-circle-fill text-2xl mr-3"></i>
                   <span className="text-lg font-bold">¡Ambas partes cargadas correctamente!</span>
                 </div>
 
                 {shouldAutoNavigate ? (
                   <>
-                    <p className="text-secondary-600 mb-4">
+                    <p className="text-success-800 mb-4">
                       Dirigiéndote automáticamente al editor para seleccionar los campos...
                     </p>
 
                     {/* Indicador de carga */}
                     <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mr-3"></div>
-                      <span className="text-primary-600 font-medium">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-success-700 mr-3"></div>
+                      <span className="text-success-800 font-medium">
                         {isValidating ? 'Validando documentación...' : 'Procesando...'}
                       </span>
                     </div>
                   </>
                 ) : (
                   <>
-                    <p className="text-secondary-600 mb-4">
+                    <p className="text-success-800 mb-4">
                       ¿Quieres continuar con estas fotos o cambiar alguna?
                     </p>
 
