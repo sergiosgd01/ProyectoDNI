@@ -6,7 +6,8 @@ import { useScrollToTop } from '../hooks/useScrollToTop';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
 import jsPDF from 'jspdf';
 import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
-import { censorDniComplete } from './dni_scripts/dni_censor'
+import { censorDniComplete, mapUiToYolo } from './dni_scripts/dni_censor'
+import { camposSinDetectar } from '../utils/camposSinDetectar';
 import WatermarkInput from './WatermarkInput';
 import Aviso from './Aviso';
 import { useCloseOnBack } from '../hooks/useNavigation';
@@ -482,6 +483,11 @@ export default function DNIEditor({
       } else if (frontDetections.length < 15) {
         console.warn(`⚠️ [ANVERSO] → CENSURA MANUAL (solo ${frontDetections.length} detecciones, mínimo 15)`);
         manualFiles.front = frontFileToProcess;
+      } else if (camposSinDetectar(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo).length > 0) {
+        // Con 15 detecciones o más puede faltar justo un campo que se tapa (ver utils/camposSinDetectar.js)
+        const faltan = camposSinDetectar(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo);
+        console.warn(`⚠️ [ANVERSO] → CENSURA MANUAL (no se han encontrado: ${faltan.join(', ')})`);
+        manualFiles.front = frontFileToProcess;
       } else {
         console.log('✅ [ANVERSO] → CENSURA AUTOMÁTICA');
       }
@@ -500,6 +506,10 @@ export default function DNIEditor({
           manualFiles.back = backFileToProcess;
         } else if (backDetections.length < 6) {
           console.warn(`⚠️ [REVERSO] → CENSURA MANUAL (solo ${backDetections.length} detecciones, mínimo 6)`);
+          manualFiles.back = backFileToProcess;
+        } else if (camposSinDetectar(selectedBackFields, backDetections, 'reverso', mapUiToYolo).length > 0) {
+          const faltan = camposSinDetectar(selectedBackFields, backDetections, 'reverso', mapUiToYolo);
+          console.warn(`⚠️ [REVERSO] → CENSURA MANUAL (no se han encontrado: ${faltan.join(', ')})`);
           manualFiles.back = backFileToProcess;
         } else {
           console.log('✅ [REVERSO] → CENSURA AUTOMÁTICA');

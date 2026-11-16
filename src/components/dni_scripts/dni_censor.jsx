@@ -55,37 +55,38 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front', 
   return url;
 }
 
+/**
+ * 1. CENSURA: Mapeo completo de clases YOLO
+ * Convertimos las keys de la UI (ej: 'fechaNacimiento') a las clases de YOLO (ej: 'NACIMIENTO')
+ * para que la función de censura encuentre las cajas.
+ * Se exporta para que el editor compruebe antes de tapar solo que ha encontrado los campos que se tapan
+ */
+export const mapUiToYolo = {
+  // ANVERSO
+  nombre: 'NOMBRE',
+  apellidos: 'APELLIDOS',
+  dni: ['NUM_DNI','NUM_DNI_MIN'],
+  fechaNacimiento: 'NACIMIENTO',
+  sexo: 'SEXO',
+  nacionalidad: 'NACIONALIDAD',
+  fechaExpedicion: 'EMISIÓN',
+  fechaCaducidad: 'VALIDEZ',
+  numeroSoporte: ['SOPORTE', 'SOPORTE_MIN'],
+  can: 'CAN',
+  firma: 'FIRMA',
+  cli: 'CLI',
+  // REVERSO
+  mrz: 'MRZ',
+  domicilio: 'DIRECCION',
+  municipio: 'DOMICILIO',
+  lugarNacimiento: 'LUGAR_NACIMIENTO',
+  equipoExpedidor: 'EQUIPO',
+  progenitores: 'HIJO_DE',
+  ventanaSoporte: 'SOPORTE_MIN'
+};
+
 export async function censorDniComplete(frontFile, backFile, fields, options = {}) {
   const { frontDetections = [], backDetections = [] } = options;
-
-  /**
-   * 1. CENSURA: Mapeo completo de clases YOLO
-   * Convertimos las keys de la UI (ej: 'fechaNacimiento') a las clases de YOLO (ej: 'NACIMIENTO')
-   * para que la función de censura encuentre las cajas.
-   */
-  const mapUiToYolo = {
-    // ANVERSO
-    nombre: 'NOMBRE',
-    apellidos: 'APELLIDOS',
-    dni: ['NUM_DNI','NUM_DNI_MIN'],
-    fechaNacimiento: 'NACIMIENTO',
-    sexo: 'SEXO',
-    nacionalidad: 'NACIONALIDAD',
-    fechaExpedicion: 'EMISIÓN',
-    fechaCaducidad: 'VALIDEZ',
-    numeroSoporte: ['SOPORTE', 'SOPORTE_MIN'],
-    can: 'CAN',
-    firma: 'FIRMA',
-    cli: 'CLI',
-    // REVERSO
-    mrz: 'MRZ',
-    domicilio: 'DIRECCION',
-    municipio: 'DOMICILIO',
-    lugarNacimiento: 'LUGAR_NACIMIENTO',
-    equipoExpedidor: 'EQUIPO',
-    progenitores: 'HIJO_DE',
-    ventanaSoporte: 'SOPORTE_MIN'
-  };
 
   const getLabelsToRedact = (selectedFields) => {
     return Object.entries(selectedFields)
