@@ -249,7 +249,8 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       }
       candidate = candidate.key === key ? { key, count: candidate.count + 1 } : { key, count: 1 };
       const fixed = status === 'manual' || status === 'cargando';
-      const settled = shown.status !== 'ajustando' || status === 'listo' || now - shown.since >= MIN_HINT_MS;
+      // Vale para todos los avisos, no solo los de «ajustando». Si no, «Hay poca luz» salía y se iba en 0,2 s
+      const settled = shown.status === 'listo' || status === 'listo' || now - shown.since >= MIN_HINT_MS;
       if (fixed || shown.key === '' || (candidate.count >= HINT_CONFIRM_FRAMES && settled)) {
         shown = { key, status, hint, since: now };
         candidate = { key: '', count: 0 };
