@@ -173,8 +173,8 @@ export default function UploadPage({
             </div>
           )}
 
-          {/* Botón Volver al Inicio integrado de forma profesional */}
-          <div className="mb-3 sm:mb-4 sm:absolute sm:-top-8 sm:left-0 z-10">
+          {/* Botón Volver al inicio. Va encima del título y solo se pone a su lado desde 1024 px, porque en tableta se montaba sobre él */}
+          <div className="mb-3 sm:mb-4 lg:mb-0 lg:absolute lg:-top-8 lg:left-0 z-10">
             <button
               onClick={onGoHome}
               className="btn btn-sm btn-secundario"

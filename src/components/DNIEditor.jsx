@@ -826,8 +826,9 @@ export default function DNIEditor({
       {/* Abajo deja sitio para la barra fija del móvil */}
       <div className="min-h-screen bg-gray-100 pt-4 sm:pt-8 pb-28 lg:pb-8">
         <div className="container mx-auto px-4 max-w-7xl relative">
-          {/* Navegación - Controles flotantes */}
-          <div className="mb-8 flex flex-wrap gap-3 sm:absolute sm:-top-4 sm:left-4 z-10">
+          {/* Inicio y Cambiar fotos. Van encima del título y solo se ponen a su lado desde 1024 px,
+              porque en tableta se montaban sobre él */}
+          <div className="mb-4 lg:mb-0 flex flex-wrap gap-3 lg:absolute lg:-top-4 lg:left-4 z-10">
             {onGoHome && (
               <button
                 onClick={onGoHome}
@@ -849,7 +850,7 @@ export default function DNIEditor({
           </div>
 
           {/* Header */}
-          <div className="text-center mb-6 sm:mb-8 mt-4 sm:mt-0">
+          <div className="text-center mb-6 sm:mb-8">
             <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 mb-2 sm:mb-4">
               Configurar DNI
             </h1>
