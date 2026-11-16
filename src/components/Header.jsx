@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import 'flag-icons/css/flag-icons.min.css';
 
-// onStartProcess abre la subida. Los enlaces del menú solo bajan a cada sección de la portada
+// Enlaces del menú. Solo bajan a cada sección de la portada
+const ENLACES = [
+  { id: 'upload-section', texto: 'Cómo funciona' },
+  { id: 'security-section', texto: 'Pruébalo' },
+  { id: 'faq-section', texto: 'FAQ' },
+];
+
+// onStartProcess abre la subida. El botón se llama «Subir mi DNI», como el resto de la portada, y el banco de
+// pruebas lo busca por ese nombre. En el móvil los enlaces van en un menú que se abre con el botón de las tres
+// rayas y se cierra al elegir un enlace o con Escape
 function Header({ onShowHome, onStartProcess }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   // Detectar scroll para cambiar estilo del header
   useEffect(() => {
@@ -14,8 +24,18 @@ function Header({ onShowHome, onStartProcess }) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (!menuAbierto) return undefined;
+    const alPulsarTecla = (e) => {
+      if (e.key === 'Escape') setMenuAbierto(false);
+    };
+    window.addEventListener('keydown', alPulsarTecla);
+    return () => window.removeEventListener('keydown', alPulsarTecla);
+  }, [menuAbierto]);
+
   const handleNavClick = (e, targetId) => {
     e.preventDefault();
+    setMenuAbierto(false);
     if (onShowHome) onShowHome(); // Asegurarse de estar en la vista principal
 
     // Pequeño delay para permitir que el renderizado de la "home" ocurra si estábamos en el proceso
@@ -59,56 +79,75 @@ function Header({ onShowHome, onStartProcess }) {
     }, 100);
   };
 
+  // El logo lleva a la portada sin recargar. Con Ctrl, ⌘ o Mayúsculas se abre en otra pestaña, como un enlace
+  const irAlInicio = (e) => {
+    setMenuAbierto(false);
+    if (!onShowHome || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    onShowHome();
+  };
+
   return (
-    <header className={`fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-gray-200 py-3 transition-shadow duration-300 ${scrolled ? 'shadow-md' : 'shadow-sm'}`}>
+    // Con el menú abierto la cabecera es opaca, para que no se vea el texto de detrás entre los enlaces
+    <header className={`fixed top-0 left-0 right-0 z-50 border-b border-gray-200 transition-shadow duration-300 ${menuAbierto ? 'bg-white' : 'bg-white/95 backdrop-blur-sm'} ${scrolled || menuAbierto ? 'shadow-md' : 'shadow-sm'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between gap-2 py-3">
+          <a
+            href="/"
+            onClick={irAlInicio}
+            className="flex min-w-0 items-center gap-2.5 sm:gap-3 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-secondary-500"
+          >
+            <img src="/logo-web.png" alt="" className="h-9 w-9 sm:h-10 sm:w-10 flex-none object-contain" />
+            <span className="min-w-0 max-[359px]:hidden">
+              <span className="block truncate text-base sm:text-xl font-bold leading-tight text-gray-900">Protector DNI</span>
+              <span className="hidden sm:block text-xs font-medium uppercase tracking-wide text-secondary-600">Seguridad digital</span>
+            </span>
+          </a>
 
-          {/* Logo y nombre */}
-          <div className="flex items-center cursor-pointer group" onClick={onShowHome}>
-            <div className="flex items-center justify-center mr-3 w-10 h-10">
-              <img
-                src="/logo-web.png"
-                alt="Logo Protector DNI"
-                className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 leading-tight">Protector DNI</h1>
-              <p className="text-xs text-secondary-600 font-medium tracking-wide uppercase">Seguridad Digital</p>
-            </div>
-          </div>
-
-          {/* Navegación Desktop */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <a href="#upload-section" onClick={(e) => handleNavClick(e, 'upload-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
-              Cómo funciona
-            </a>
-            <a href="#security-section" onClick={(e) => handleNavClick(e, 'security-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
-              Seguridad
-            </a>
-            <a href="#faq-section" onClick={(e) => handleNavClick(e, 'faq-section')} className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors">
-              FAQ
-            </a>
+          <nav aria-label="Secciones de la portada" className="hidden md:flex items-center gap-8">
+            {ENLACES.map((enlace) => (
+              <a
+                key={enlace.id}
+                href={`#${enlace.id}`}
+                onClick={(e) => handleNavClick(e, enlace.id)}
+                className="text-sm font-medium text-gray-700 hover:text-secondary-600 transition-colors"
+              >
+                {enlace.texto}
+              </a>
+            ))}
           </nav>
 
-          {/* CTA Header */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={onStartProcess}
-              className="btn btn-sm btn-principal hidden sm:inline-flex px-4"
-            >
-              Procesar DNI
+          <div className="flex flex-none items-center gap-2">
+            <button type="button" onClick={onStartProcess} className="btn btn-sm btn-principal px-3 sm:px-4">
+              Subir mi DNI
             </button>
             <button
-              onClick={onStartProcess}
-              aria-label="Procesar DNI"
-              className="btn btn-sm btn-principal sm:hidden w-11 px-0"
+              type="button"
+              onClick={() => setMenuAbierto((abierto) => !abierto)}
+              aria-expanded={menuAbierto}
+              aria-controls="menu-movil"
+              aria-label={menuAbierto ? 'Cerrar el menú' : 'Abrir el menú'}
+              className="btn btn-sm btn-secundario w-11 px-0 md:hidden"
             >
-              <i className="bi bi-upload text-lg"></i>
+              <i className={`bi ${menuAbierto ? 'bi-x-lg' : 'bi-list'} text-xl`} aria-hidden="true"></i>
             </button>
           </div>
         </div>
+
+        {menuAbierto && (
+          <nav id="menu-movil" aria-label="Secciones de la portada" className="md:hidden border-t border-gray-200 pb-2">
+            {ENLACES.map((enlace) => (
+              <a
+                key={enlace.id}
+                href={`#${enlace.id}`}
+                onClick={(e) => handleNavClick(e, enlace.id)}
+                className="flex min-h-[48px] items-center border-b border-gray-100 last:border-b-0 text-base font-medium text-gray-800"
+              >
+                {enlace.texto}
+              </a>
+            ))}
+          </nav>
+        )}
       </div>
     </header>
   );
