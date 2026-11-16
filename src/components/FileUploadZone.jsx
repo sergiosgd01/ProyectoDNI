@@ -24,6 +24,12 @@ const esHeic = (file) => /hei[cf]/i.test(file?.type || '') || /\.hei[cf]$/i.test
 // Ordenador con ratón o trackpad. Ahí se puede arrastrar o pegar la foto y no se ofrece la webcam,
 // que saca el DNI poco nítido. En móvil y tablet se ofrece primero la cámara del dispositivo
 const CONSULTA_RATON = '(hover: hover) and (pointer: fine)';
+
+// Errores en los que el servidor no encuentra el DNI en la foto. Para ellos la web pone su propio texto,
+// porque el del servidor habla de segmentación y de confianza, que no dicen nada a quien sube la foto
+const ERRORES_SIN_DNI = ['no_detection', 'no_mask', 'low_confidence', 'extraction_failed'];
+const MENSAJE_SIN_DNI = 'No hemos encontrado el DNI en la foto.';
+const SUGERENCIA_SIN_DNI = 'Prueba con otra foto en la que se vea el DNI entero, con buena luz y sin reflejos, o recórtalo tú a mano.';
 const ATAJO_PEGAR = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? '⌘V' : 'Ctrl+V';
 
 function FileUploadZone({ onFileSelect }) {
@@ -146,12 +152,11 @@ function FileUploadZone({ onFileSelect }) {
         // Guardar la foto para el recorte manual. Se usa la preparada para subir, que el navegador maneja mejor
         setOriginalFileForCrop(uploadFile);
 
+        const sinDni = ERRORES_SIN_DNI.includes(result.errorType);
         setProcessingError({
           type: result.errorType || 'unknown_error',
-          message: result.message || 'No se pudo procesar la imagen',
-          suggestion: result.suggestion || 'Intenta con otra imagen.',
-          confidence: result.confidence,
-          minRequired: result.minRequired
+          message: sinDni ? MENSAJE_SIN_DNI : (result.message || 'No se pudo procesar la imagen.'),
+          suggestion: sinDni ? SUGERENCIA_SIN_DNI : (result.suggestion || '')
         });
       }
     } catch (error) {
@@ -228,6 +233,8 @@ function FileUploadZone({ onFileSelect }) {
     }
   };
 
+  const conError = Boolean(processingError) && !isProcessing;
+
   return (
     <>
       {/* Fuera del recuadro, porque con ratón un clic dentro abre el selector de archivos */}
@@ -238,24 +245,26 @@ function FileUploadZone({ onFileSelect }) {
       )}
 
       {/* Con el dedo el recuadro es compacto, para que «Hacer foto» se vea nada más entrar.
-          Si hay un error necesita sitio para el mensaje y sus botones */}
+          Con un error, el mensaje ocupa el recuadro en lugar de su contenido y un clic ya no abre el selector */}
       <div
         className={`
           w-full flex flex-col items-center justify-center border-2 rounded-2xl
           transition-all duration-300 ease-in-out relative
-          ${conRaton ? 'p-8 md:p-16 min-h-[400px] border-dashed cursor-pointer group' : 'p-4 border-solid'}
-          ${!conRaton && processingError && !isProcessing ? 'min-h-[440px]' : ''}
-          ${isDragOver && conRaton
-            ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-secondary-100 scale-[1.02] shadow-xl'
-            : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white group-data-[arrastrando=true]/subida:border-primary-300 group-data-[arrastrando=true]/subida:from-primary-50'
+          ${conRaton ? 'p-8 md:p-16 min-h-[400px] border-dashed' : 'p-4 border-solid'}
+          ${conRaton && !conError ? 'cursor-pointer group' : ''}
+          ${conError
+            ? 'border-red-200 bg-red-50'
+            : isDragOver && conRaton
+              ? 'border-primary-400 bg-gradient-to-br from-primary-50 to-secondary-100 scale-[1.02] shadow-xl'
+              : 'border-gray-300 bg-gradient-to-br from-gray-50 to-white group-data-[arrastrando=true]/subida:border-primary-300 group-data-[arrastrando=true]/subida:from-primary-50'
           }
-          ${conRaton ? 'hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50' : ''}
+          ${conRaton && !conError ? 'hover:border-primary-300 hover:shadow-lg hover:bg-gradient-to-br hover:from-primary-50 hover:to-secondary-50' : ''}
           ${isProcessing ? 'pointer-events-none opacity-75' : ''}
         `}
         onDragOver={conRaton ? handleDragOver : undefined}
         onDragLeave={conRaton ? handleDragLeave : undefined}
         onDrop={conRaton ? handleDrop : undefined}
-        onClick={conRaton && !isProcessing ? () => document.getElementById(fileInputId).click() : undefined}
+        onClick={conRaton && !isProcessing && !conError ? () => document.getElementById(fileInputId).click() : undefined}
       >
         <input
           type="file"
@@ -275,58 +284,44 @@ function FileUploadZone({ onFileSelect }) {
           </div>
         )}
 
-        {/* ✅ Overlay de error */}
-        {/* data-error lleva el tipo de error (network_error, server_error...) para que el banco no dependa del texto */}
-        {processingError && !isProcessing && (
-          <div data-error={processingError.type} className="absolute inset-0 bg-red-50/95 flex flex-col items-center justify-center z-20 rounded-2xl p-8">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center bg-red-100 mb-4">
-              <i className={`bi ${getErrorIcon(processingError.type)} text-3xl text-red-600`}></i>
+        {conError ? (
+          // data-error lleva el tipo de error (network_error, server_error...) para que el banco no dependa del texto.
+          // El banco lee también el título (p.text-xl), el mensaje (p.text-sm.text-red-600) y los botones por su texto
+          <div data-error={processingError.type} className="w-full flex flex-col items-center text-center">
+            <div className="w-14 h-14 rounded-full flex items-center justify-center bg-red-100 mb-3">
+              <i className={`bi ${getErrorIcon(processingError.type)} text-2xl text-red-600`}></i>
             </div>
-            <p className="text-xl font-bold text-red-700 mb-2">{getErrorTitle(processingError.type)}</p>
-            <p className="text-sm text-red-600 text-center mb-4 max-w-md">{processingError.message}</p>
+            <p className="text-xl font-bold text-red-700 mb-1">{getErrorTitle(processingError.type)}</p>
+            <p className="text-sm text-red-600 max-w-md">{processingError.message}</p>
             {processingError.suggestion && (
-              <div className="bg-white/80 rounded-lg p-3 mb-4 max-w-md">
-                <p className="text-xs text-gray-700 whitespace-pre-line">{processingError.suggestion}</p>
-              </div>
-            )}
-            {processingError.confidence !== undefined && (
-              <p className="text-xs text-red-500 mb-4">
-                Confianza: {(processingError.confidence * 100).toFixed(1)}%
-                {processingError.minRequired && ` (mínimo: ${(processingError.minRequired * 100).toFixed(0)}%)`}
-              </p>
+              <p className="text-sm text-gray-700 max-w-md mt-2 whitespace-pre-line">{processingError.suggestion}</p>
             )}
 
-            {/* Botones de acción */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Botón para recorte manual */}
+            {/* En columna y con el principal arriba, porque en fila no caben en el recuadro */}
+            <div className="w-full max-w-xs flex flex-col-reverse gap-3 mt-5">
               {originalFileForCrop && (
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowManualCrop(true);
-                  }}
-                  className="btn btn-secundario"
+                  type="button"
+                  onClick={() => setShowManualCrop(true)}
+                  className="btn btn-secundario w-full"
                 >
                   <i className="bi bi-crop"></i>
                   <span>Recortar manualmente</span>
                 </button>
               )}
-
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                type="button"
+                onClick={() => {
                   setProcessingError(null);
                   setOriginalFileForCrop(null);
                 }}
-                className="btn btn-principal"
+                className="btn btn-principal w-full"
               >
                 Intentar con otra imagen
               </button>
             </div>
           </div>
-        )}
-
-        {conRaton ? (
+        ) : conRaton ? (
           <>
             <div className={`
               p-4 rounded-full mb-6 transition-all duration-300
@@ -385,7 +380,7 @@ function FileUploadZone({ onFileSelect }) {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500">
+        <div className={`${conError ? 'hidden' : 'flex'} flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500`}>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
             Formatos: JPG, PNG, WEBP
