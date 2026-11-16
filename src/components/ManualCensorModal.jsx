@@ -597,7 +597,8 @@ function ManualCensorModal({
   const totalRectangles = frontRectangles.length + backRectangles.length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
+    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con el aviso
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
       <div className="bg-gray-900 text-white p-3 md:p-4 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center space-x-3">
@@ -624,17 +625,17 @@ function ManualCensorModal({
       </div>
 
       {/* Mensaje de advertencia cuando falla la detección automática */}
-      <div className="bg-yellow-900/40 border-b border-yellow-700/50 p-3 md:p-4">
+      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
-              <i className="bi bi-exclamation-triangle-fill text-white text-sm"></i>
+              <i className="bi bi-exclamation-triangle-fill text-gray-900 text-sm"></i>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-yellow-100 text-sm md:text-base font-medium mb-1">
+              <p className="text-white text-sm md:text-base font-medium mb-1">
                 Detección automática no disponible
               </p>
-              <p className="text-yellow-200/80 text-xs md:text-sm leading-relaxed">
+              <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
                 {singleSideName
                   ? `No hemos podido detectar automáticamente los campos del ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
                   : 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'}

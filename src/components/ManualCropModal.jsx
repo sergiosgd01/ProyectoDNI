@@ -567,7 +567,8 @@ function ManualCropModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
+    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con las instrucciones
+    <div className="fixed inset-0 z-50 bg-black flex flex-col">
       {/* Header */}
       <div className="bg-gray-900 text-white p-3 md:p-4 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center space-x-3">
@@ -586,17 +587,17 @@ function ManualCropModal({
       </div>
 
       {/* Instrucciones mejoradas */}
-      <div className="bg-primary-900/40 border-b border-primary-700/50 p-3 md:p-4">
+      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center mt-0.5">
-              <i className="bi bi-info-lg text-white text-sm"></i>
+              <i className="bi bi-info-lg text-gray-900 text-sm"></i>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-primary-100 text-sm md:text-base font-medium mb-1">
+              <p className="text-white text-sm md:text-base font-medium mb-1">
                 Ajusta las 4 esquinas del DNI moviendo los puntos rojos
               </p>
-              <p className="text-primary-200/70 text-xs md:text-sm">
+              <p className="text-gray-300 text-xs md:text-sm">
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva
               </p>
             </div>
