@@ -14,6 +14,18 @@ import ManualCropModal from './ManualCropModal';
 // Importamos la API
 import { dniApi } from '../services/dniApi';
 
+// Detecciones del modelo de campos para cada foto, guardadas por la identidad de su File o Blob.
+// «Procesar de nuevo» y procesar con otra selección las reutilizan y solo vuelven a tapar, sin pasar otra vez el modelo.
+// El contrato es que la imagen de un File no cambia nunca. Todo lo que cambia la imagen de una cara (subir otra foto,
+// «Ajustar recorte» o «Girar») crea un File nuevo, e «Intercambiar caras» intercambia los File de las dos caras.
+// Así las detecciones guardadas de un File siguen valiendo para él, esté en la cara que esté.
+// Se guardan cuando un procesado termina y envía sus métricas, para que cada detección cuente una sola vez.
+// Con un WeakMap la entrada desaparece cuando la web deja de usar la foto.
+const deteccionesPorFoto = new WeakMap();
+
+// Clases del modelo que corresponden a elementos de seguridad del anverso
+const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
+
 // Etiqueta de cada cara en la vista previa. Si se puede, lleva al lado el botón para corregir su recorte
 function EtiquetaCara({ texto, colores, nombreCara, onAjustar }) {
   return (
@@ -286,6 +298,23 @@ export default function DNIEditor({
     }));
   };
 
+  // Registro anónimo de uso que se envía a /save, uno por cada detección nueva (ver handleProcessDNI).
+  // Lleva qué se eligió tapar y cómo fue el procesado, nunca datos leídos del DNI.
+  // caras.front y caras.back traen las detecciones de esa cara, también cuando salen de la caché,
+  // y manual, que dice si esa cara va a censura manual. caras.back es null si no hay reverso.
+  // Los datos nuevos se añaden aquí
+  const armarMetricas = (caras) => ({
+    profileUsed: selectedProfile || 'personalizado',
+    hiddenFields: {
+      frontFields: selectedFrontFields,
+      backFields: selectedBackFields
+    },
+    manualCensor: caras.front.manual || Boolean(caras.back?.manual),
+    manualDetection: manualDetection,
+    hologramReadable: caras.front.detecciones.some(d => HOLOGRAM_CLASSES.includes(d.label)),
+    watermarkText: watermarkText
+  });
+
   const handleProcessDNI = async () => {
     try {
       setIsProcessing(true);
@@ -315,7 +344,9 @@ export default function DNIEditor({
         manualCensor: false
       };
 
-      const frontDetections = await detectDniFromFile(frontFileToProcess);
+      // Si la foto ya se detectó en un procesado anterior, sus detecciones salen de la caché
+      const frontGuardadas = deteccionesPorFoto.get(frontFileToProcess);
+      const frontDetections = frontGuardadas || await detectDniFromFile(frontFileToProcess);
       const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
       console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
       if (!frontDocument) {
@@ -326,19 +357,13 @@ export default function DNIEditor({
         manualFiles.front = frontFileToProcess;
       } else {
         console.log('✅ [ANVERSO] → CENSURA AUTOMÁTICA');
-        const frontResult = await censorDniComplete(
-          frontFileToProcess,
-          backFileToProcess,
-          { frontFields: selectedFrontFields, backFields: {} },
-          { frontDetections, backDetections: [] }
-        );
-        result.frontImageUrl = frontResult.frontImageUrl; //imagen censurada
-        console.log('✅ [ANVERSO] Censura automática completada');
       }
 
       let backDetections = [];
+      let backGuardadas = null;
       if (backFileToProcess) {
-        backDetections = await detectDniFromFile(backFileToProcess);
+        backGuardadas = deteccionesPorFoto.get(backFileToProcess);
+        backDetections = backGuardadas || await detectDniFromFile(backFileToProcess);
         const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
         console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
 
@@ -350,44 +375,41 @@ export default function DNIEditor({
           manualFiles.back = backFileToProcess;
         } else {
           console.log('✅ [REVERSO] → CENSURA AUTOMÁTICA');
-          const backResult = await censorDniComplete(
-            frontFileToProcess,
-            backFileToProcess,
-            { frontFields: {}, backFields: selectedBackFields },
-            { frontDetections: [], backDetections }
-          );
-          result.backImageUrl = backResult.backImageUrl; //imagen censurada
-          console.log('✅ [REVERSO] Censura automática completada');
         }
       }
 
-      //Validacion de elementos de seguridad
-      const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
-      const hologramDetected = frontDetections.some(d => HOLOGRAM_CLASSES.includes(d.label));
+      // Se tapa cada cara automática una sola vez. La que va a censura manual se salta
+      const censurado = await censorDniComplete(
+        manualFiles.front ? null : frontFileToProcess,
+        manualFiles.back ? null : backFileToProcess,
+        { frontFields: selectedFrontFields, backFields: selectedBackFields },
+        { frontDetections, backDetections }
+      );
+      if (!manualFiles.front) result.frontImageUrl = censurado.frontImageUrl;
+      if (backFileToProcess && !manualFiles.back) result.backImageUrl = censurado.backImageUrl;
 
       // --- GUARDAR EN BACKEND ---
       // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
       // Nunca se envía el número de DNI ni ningún dato leído del documento.
+      // Un solo registro por detección. Solo se guarda si alguna cara se ha detectado ahora, así que volver
+      // a tapar las mismas fotos con otra selección no guarda otro.
       // No se espera la respuesta. El resultado ya está listo y el guardado tarda entre
       // 0,7 s y 2 s, según el backend esté o no en frío. Si falla, solo se registra el error
-      console.log("💾 Guardando métricas de uso...");
-      dniApi.saveDniRecord({
-        profileUsed: selectedProfile || 'personalizado',
-        hiddenFields: {
-          frontFields: selectedFrontFields,
-          backFields: selectedBackFields
-        },
-        manualCensor: Object.keys(manualFiles).length > 0,
-        manualDetection: manualDetection,
-        hologramReadable: hologramDetected,
-        watermarkText: watermarkText
-      })
-        .then(() => {
-          console.log("✅ Métricas anónimas guardadas");
-        })
-        .catch((saveError) => {
-          console.error("❌ Error al guardar en backend:", saveError);
-        });
+      if (!frontGuardadas || (backFileToProcess && !backGuardadas)) {
+        console.log("💾 Guardando métricas de uso...");
+        dniApi.saveDniRecord(armarMetricas({
+          front: { detecciones: frontDetections, manual: Boolean(manualFiles.front) },
+          back: backFileToProcess ? { detecciones: backDetections, manual: Boolean(manualFiles.back) } : null
+        }))
+          .then(() => {
+            console.log("✅ Métricas anónimas guardadas");
+          })
+          .catch((saveError) => {
+            console.error("❌ Error al guardar en backend:", saveError);
+          });
+      }
+      deteccionesPorFoto.set(frontFileToProcess, frontDetections);
+      if (backFileToProcess) deteccionesPorFoto.set(backFileToProcess, backDetections);
       // --------------------------
 
       if (Object.keys(manualFiles).length > 0) {

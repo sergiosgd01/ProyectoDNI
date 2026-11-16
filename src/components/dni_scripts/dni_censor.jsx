@@ -96,8 +96,9 @@ export async function censorDniComplete(frontFile, backFile, fields, options = {
   const frontToRedact = getLabelsToRedact(fields.frontFields || {});
   const backToRedact = getLabelsToRedact(fields.backFields || {});
 
+  // Cada cara se tapa una sola vez. La que llega sin foto (null) se salta, por ejemplo la que va a censura manual
   const [frontImageUrl, backImageUrl] = await Promise.all([
-    censorDniImage(frontFile, frontToRedact, 'front', frontDetections),
+    frontFile ? censorDniImage(frontFile, frontToRedact, 'front', frontDetections) : Promise.resolve(null),
     backFile ? censorDniImage(backFile, backToRedact, 'back', backDetections) : Promise.resolve(null)
   ]);
 
