@@ -402,6 +402,38 @@ export function captureArea(guideRect, cardRect, videoWidth, videoHeight) {
 }
 
 /**
+ * Pasa un rectángulo de píxeles del vídeo a píxeles de la foto hecha con ImageCapture. El vídeo es la parte central
+ * de la foto, a la misma escala en los dos ejes. En un Galaxy S24 Ultra la foto es 3:4 y el vídeo 9:16, así que el
+ * vídeo es la franja central de la foto. Con la misma proporción, como en un Xiaomi Poco X3 NFC, solo cambia la escala
+ */
+export function videoRectInPhoto(rect, videoWidth, videoHeight, photoWidth, photoHeight) {
+  const scale = Math.min(photoWidth / videoWidth, photoHeight / videoHeight);
+  const offsetX = (photoWidth - videoWidth * scale) / 2;
+  const offsetY = (photoHeight - videoHeight * scale) / 2;
+  return {
+    x: rect.x * scale + offsetX,
+    y: rect.y * scale + offsetY,
+    width: rect.width * scale,
+    height: rect.height * scale,
+  };
+}
+
+// La foto de ImageCapture se usa salvo que el fotograma del vídeo se vea claramente más nítido. En un Xiaomi Poco X3
+// NFC la foto salía borrosa aunque el vídeo se viera nítido. Si la foto sale bien, como en un Galaxy S24 Ultra, es
+// mejor que el fotograma porque tiene más resolución y menos ruido
+export const PHOTO_SHARPNESS_MARGIN = 1.5;
+
+/**
+ * Qué se sube, la foto o el fotograma del vídeo, según la nitidez de cada una sobre el DNI a la misma escala
+ * @returns {'foto'|'video'}
+ */
+export function sharperCapture(photoSharpness, frameSharpness) {
+  if (!(frameSharpness > 0)) return 'foto';
+  if (!(photoSharpness > 0)) return 'video';
+  return frameSharpness > photoSharpness * PHOTO_SHARPNESS_MARGIN ? 'video' : 'foto';
+}
+
+/**
  * Mira si la foto ya recortada sirve: tiene que verse el documento de esa cara y dar al menos
  * FINAL_MIN_DETECTIONS detecciones.
  * @param {Array} boxes - Detecciones sobre la foto recortada

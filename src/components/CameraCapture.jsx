@@ -2,7 +2,16 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { processWithYolo } from '../services/processWithYolo';
 import ManualCropModal from './ManualCropModal';
 import { useAutoCapture } from '../hooks/useAutoCapture';
-import { HINTS, captureArea, checkFinalPhoto, guideRectInVideo } from '../utils/liveCapture';
+import {
+  HINTS,
+  captureArea,
+  checkFinalPhoto,
+  expandRect,
+  guideRectInVideo,
+  measureFrame,
+  sharperCapture,
+  videoRectInPhoto,
+} from '../utils/liveCapture';
 import { prepareImageForUpload } from '../utils/imageResize';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
 
@@ -12,6 +21,22 @@ const MAX_AUTO_RETRIES = 2;
 const RETRY_PAUSE_MS = 2500;
 // La zona del DNI que vio el detector sirve para recortar el fotograma si es de hace poco
 const PLACEMENT_MAX_AGE_MS = 3000;
+// Ancho al que se reduce el DNI para comparar la nitidez de la foto con la del fotograma del vídeo
+const SHARPNESS_SAMPLE_WIDTH = 480;
+
+// Nitidez de una zona de una imagen (el lienzo con el fotograma o la foto ya abierta), reducida a un ancho fijo
+// para que las dos se puedan comparar
+function sharpnessOf(source, rect) {
+  const width = SHARPNESS_SAMPLE_WIDTH;
+  const height = Math.max(8, Math.round((width * rect.height) / rect.width));
+  const sample = document.createElement('canvas');
+  sample.width = width;
+  sample.height = height;
+  const context = sample.getContext('2d', { willReadFrequently: true });
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, width, height);
+  return measureFrame(context.getImageData(0, 0, width, height)).sharpness;
+}
 
 // Qué se le dice a la persona cuando la foto no sirve, según lo que falle
 const PROBLEM_TEXTS = {
@@ -301,25 +326,12 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     initializeCamera();
   }, [selectedDeviceId, initializeCamera]);
 
-  // Foto a resolución completa si el navegador lo permite (Chrome en Android) y, si no, el fotograma
-  // del vídeo recortado al recuadro con margen
-  const grabPhoto = async (video, canvas, guide) => {
-    const track = streamRef.current?.getVideoTracks()[0];
-
-    if ('ImageCapture' in window && track && track.readyState === 'live') {
-      try {
-        const imageCapture = new ImageCapture(track);
-        const photo = await imageCapture.takePhoto();
-        console.log('📸 Foto a resolución completa:', photo.size, photo.type);
-        return photo;
-      } catch (err) {
-        console.warn('⚠️ Falló ImageCapture, se usa el fotograma del vídeo:', err);
-      }
-    }
-
-    // El recuadro se pasa a píxeles del vídeo teniendo en cuenta object-cover y se deja un margen. Si el
-    // detector ha visto el DNI hace poco, la zona se amplía para que entre entero aunque se salga del recuadro.
-    // Sin recuadro se envía el fotograma entero
+  // Dibuja en el lienzo el fotograma del vídeo recortado al recuadro con margen. El recuadro se pasa a píxeles del
+  // vídeo teniendo en cuenta object-cover. Si el detector ha visto el DNI hace poco, la zona se amplía para que entre
+  // entero aunque se salga del recuadro. Sin recuadro se dibuja el fotograma entero.
+  // Devuelve la zona dibujada y dónde medir la nitidez (el DNI, o si no se sabe el recuadro, sin los bordes),
+  // las dos en píxeles del vídeo
+  const drawVideoArea = (video, canvas, guide) => {
     const guideRect = guide ? guideRectInVideo(video, guide) : null;
     const seen = autoCapture.placementRef.current;
     const cardRect = seen && performance.now() - seen.at < PLACEMENT_MAX_AGE_MS ? seen.docRect : null;
@@ -333,8 +345,59 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
       area.x, area.y, area.width, area.height,
       0, 0, canvas.width, canvas.height
     );
-    console.log('✂️ Fotograma recortado:', `${canvas.width}x${canvas.height} px`);
+    const target = expandRect(cardRect || guideRect || area, -0.15, video.videoWidth, video.videoHeight);
+    return { area, target };
+  };
 
+  // Con ImageCapture la foto se hace aparte del vídeo, y en algunos móviles sale borrosa aunque el vídeo se vea
+  // nítido. Se compara sobre el DNI con el fotograma que se acaba de dibujar y se dice cuál se sube
+  const choosePhotoOrFrame = async (photo, canvas, frame, video) => {
+    if (!frame.target) return 'foto';
+    let bitmap = null;
+    try {
+      bitmap = await createImageBitmap(photo);
+      const { target, area } = frame;
+      const frameSharpness = sharpnessOf(canvas, { ...target, x: target.x - area.x, y: target.y - area.y });
+      const photoRect = videoRectInPhoto(target, video.videoWidth, video.videoHeight, bitmap.width, bitmap.height);
+      const photoSharpness = sharpnessOf(bitmap, photoRect);
+      const choice = sharperCapture(photoSharpness, frameSharpness);
+      // Con ?depurar-camara queda apuntado para poder revisarlo desde el ordenador
+      if (new URLSearchParams(window.location.search).has('depurar-camara')) {
+        (window.__capturas ||= []).push({
+          fuente: choice,
+          nitidezFoto: Math.round(photoSharpness),
+          nitidezVideo: Math.round(frameSharpness),
+          foto: `${bitmap.width}x${bitmap.height}`,
+        });
+      }
+      return choice;
+    } catch (err) {
+      console.error('[CameraCapture] No se pudo comparar la foto con el vídeo:', err);
+      return 'foto';
+    } finally {
+      bitmap?.close();
+    }
+  };
+
+  // Foto a resolución completa si el navegador lo permite (Chrome en Android), salvo que salga más borrosa que el
+  // fotograma del vídeo. Si no, el fotograma del vídeo recortado al recuadro con margen
+  const grabPhoto = async (video, canvas, guide) => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    // El fotograma se guarda antes de hacer la foto, porque es el que la captura automática acaba de ver nítido
+    const frame = drawVideoArea(video, canvas, guide);
+
+    if ('ImageCapture' in window && track && track.readyState === 'live') {
+      try {
+        const photo = await new ImageCapture(track).takePhoto();
+        console.log('📸 Foto a resolución completa:', photo.size, photo.type);
+        if (await choosePhotoOrFrame(photo, canvas, frame, video) === 'foto') return photo;
+        console.log('📸 El fotograma del vídeo se ve más nítido que la foto, se usa el fotograma');
+      } catch (err) {
+        console.warn('⚠️ Falló ImageCapture, se usa el fotograma del vídeo:', err);
+      }
+    }
+
+    console.log('✂️ Fotograma recortado:', `${canvas.width}x${canvas.height} px`);
     return new Promise((resolve) => {
       canvas.toBlob(resolve, 'image/jpeg', 0.95);
     });

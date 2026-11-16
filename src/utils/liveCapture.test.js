@@ -16,6 +16,8 @@ import {
   imageQualityHint,
   measureFrame,
   median,
+  sharperCapture,
+  videoRectInPhoto,
 } from './liveCapture.js';
 
 test('el análisis deja libre al menos lo que tarda, sin bajar del mínimo ni pasar del máximo', () => {
@@ -26,6 +28,30 @@ test('el análisis deja libre al menos lo que tarda, sin bajar del mínimo ni pa
   assert.equal(analysisInterval(150), 300);
   // Si tarda muchísimo, no se pasa del máximo para poder seguir midiendo el pulso
   assert.equal(analysisInterval(600), ANALYSIS_MAX_INTERVAL_MS);
+});
+
+test('una zona del vídeo se pasa a la foto aunque la foto tenga otra proporción', () => {
+  const dni = { x: 540, y: 1200, width: 1080, height: 680 };
+  // Galaxy S24 Ultra: vídeo 2160x3840 y foto 3000x4000. El vídeo es la franja central de la foto
+  const s24 = videoRectInPhoto(dni, 2160, 3840, 3000, 4000);
+  const escala = 4000 / 3840;
+  assert.ok(Math.abs(s24.x - (540 * escala + (3000 - 2160 * escala) / 2)) < 0.01);
+  assert.ok(Math.abs(s24.y - 1200 * escala) < 0.01);
+  assert.ok(Math.abs(s24.width - 1080 * escala) < 0.01);
+  // Xiaomi Poco X3 NFC: vídeo 2160x3840 y foto 2307x4096, casi la misma proporción. Solo cambia la escala
+  const xiaomi = videoRectInPhoto(dni, 2160, 3840, 2307, 4096);
+  assert.ok(Math.abs(xiaomi.width - (1080 * 4096) / 3840) < 1);
+  assert.ok(Math.abs(xiaomi.x + xiaomi.width / 2 - 2307 / 2) < 2);
+});
+
+test('se sube la foto salvo que el fotograma del vídeo sea claramente más nítido', () => {
+  // Foto bien enfocada, como en el S24: aunque el vídeo tenga algo más de detalle o de ruido, se queda la foto
+  assert.equal(sharperCapture(120, 150), 'foto');
+  // Foto borrosa y vídeo nítido, como en el Xiaomi
+  assert.equal(sharperCapture(30, 400), 'video');
+  // Si una de las dos no se ha podido medir
+  assert.equal(sharperCapture(100, 0), 'foto');
+  assert.equal(sharperCapture(0, 100), 'video');
 });
 
 const caja = (label, x, y, width, height, confidence = 0.9) => ({ label, x, y, width, height, confidence });
