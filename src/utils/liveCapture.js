@@ -63,6 +63,22 @@ export const PLACEMENT = {
 export const FINAL_MIN_DETECTIONS = { anverso: 8, reverso: 3 };
 
 export const ANALYSIS_WIDTH = 400;
+
+// Ritmo del análisis de cada fotograma, que para la página mientras dura. Entre el comienzo de uno y el del siguiente
+// pasan al menos ANALYSIS_MIN_INTERVAL_MS y al menos el doble de lo que tarda, así el vídeo tiene la mitad del tiempo
+// para pintarse. En un Xiaomi Poco X3 NFC cada análisis tardaba unos 150 ms y se hacían seguidos, y el vídeo iba a
+// saltos. Nunca más de ANALYSIS_MAX_INTERVAL_MS, para poder seguir midiendo el pulso entre dos fotogramas
+export const ANALYSIS_MIN_INTERVAL_MS = 80;
+export const ANALYSIS_MAX_INTERVAL_MS = 450;
+
+/**
+ * Tiempo entre el comienzo de dos análisis seguidos
+ * @param {number|null} averageAnalysisMs - Lo que tarda de media cada análisis, o null si aún no se sabe
+ */
+export function analysisInterval(averageAnalysisMs) {
+  return Math.min(ANALYSIS_MAX_INTERVAL_MS, Math.max(ANALYSIS_MIN_INTERVAL_MS, 2 * (averageAnalysisMs || 0)));
+}
+
 // El modelo trabaja a 640 px, no sirve de nada pasarle más
 export const DETECTOR_MAX_SIDE = 640;
 // Margen alrededor del recuadro que ve el detector, para notar si el DNI se sale o está descentrado

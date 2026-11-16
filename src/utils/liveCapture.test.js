@@ -2,10 +2,13 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+  ANALYSIS_MAX_INTERVAL_MS,
+  ANALYSIS_MIN_INTERVAL_MS,
   FINAL_MIN_DETECTIONS,
   HINTS,
   PLACEMENT,
   QUALITY,
+  analysisInterval,
   captureArea,
   checkFinalPhoto,
   evaluatePlacement,
@@ -14,6 +17,16 @@ import {
   measureFrame,
   median,
 } from './liveCapture.js';
+
+test('el análisis deja libre al menos lo que tarda, sin bajar del mínimo ni pasar del máximo', () => {
+  assert.equal(analysisInterval(null), ANALYSIS_MIN_INTERVAL_MS);
+  // Un ordenador: 10 ms por análisis, sigue al ritmo de siempre
+  assert.equal(analysisInterval(10), ANALYSIS_MIN_INTERVAL_MS);
+  // El Xiaomi: 150 ms por análisis, uno cada 300 ms
+  assert.equal(analysisInterval(150), 300);
+  // Si tarda muchísimo, no se pasa del máximo para poder seguir midiendo el pulso
+  assert.equal(analysisInterval(600), ANALYSIS_MAX_INTERVAL_MS);
+});
 
 const caja = (label, x, y, width, height, confidence = 0.9) => ({ label, x, y, width, height, confidence });
 

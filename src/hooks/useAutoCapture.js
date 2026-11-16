@@ -9,6 +9,7 @@ import {
   QUALITY,
   SHARPNESS_SMOOTH,
   SHARPNESS_WINDOW_MS,
+  analysisInterval,
   evaluatePlacement,
   expandRect,
   guideRectInVideo,
@@ -17,10 +18,13 @@ import {
   median,
 } from '../utils/liveCapture';
 
-// Cada cuánto se mira un fotograma, unas 10 veces por segundo
-const ANALYSIS_INTERVAL_MS = 80;
 // Ancho de la copia del recuadro con la que se mide el movimiento
 const MOTION_WIDTH = 200;
+// El vídeo se lee con createImageBitmap y no dibujándolo en un lienzo. En un Xiaomi Poco X3 NFC dibujar el vídeo 4K en
+// un lienzo costaba unos 100 ms cada vez y se hacía dos veces por análisis, y el vídeo iba a saltos. Con bitmaps, unos
+// 40 ms en total. Se piden dos: la zona del detector a su tamaño, para el movimiento y el detector, y la zona donde se
+// mide la calidad ya a ANALYSIS_WIDTH px. Si esta se sacara de la primera, la nitidez saldría un 20-40 % más baja que
+// leyendo el vídeo directamente, y los umbrales de QUALITY dejarían de valer
 // Separación habitual entre dos fotogramas analizados. El movimiento se pasa a esta escala, para que valga
 // lo mismo en un móvil que analiza 10 fotogramas por segundo que en uno que solo llega a 5
 const MOTION_REFERENCE_MS = 100;
@@ -77,16 +81,23 @@ function createFrameReader() {
   const readable = document.createElement('canvas');
   const readableContext = readable.getContext('2d', { willReadFrequently: true });
 
-  /** Píxeles de la zona del vídeo reducida a width x height */
-  return (video, area, width, height) => {
+  /**
+   * Píxeles de la zona del vídeo o del bitmap reducida a width x height. Un bitmap ya leído del vídeo se dibuja
+   * directamente en el lienzo legible, que en el Xiaomi era tres veces más rápido que pasar por el lienzo normal
+   */
+  return (source, area, width, height) => {
     if (scaled.width !== width || scaled.height !== height) {
       scaled.width = width;
       scaled.height = height;
       readable.width = width;
       readable.height = height;
     }
-    scaledContext.drawImage(video, area.x, area.y, area.width, area.height, 0, 0, width, height);
-    readableContext.drawImage(scaled, 0, 0);
+    if (source instanceof HTMLVideoElement) {
+      scaledContext.drawImage(source, area.x, area.y, area.width, area.height, 0, 0, width, height);
+      readableContext.drawImage(scaled, 0, 0);
+    } else {
+      readableContext.drawImage(source, area.x, area.y, area.width, area.height, 0, 0, width, height);
+    }
     return readableContext.getImageData(0, 0, width, height);
   };
 }
@@ -95,7 +106,8 @@ function createFrameReader() {
  * Captura automática del DNI. Mira el vídeo de la cámara y llama a onReady una sola vez cuando el DNI
  * está dentro del recuadro, es la cara pedida, se leen sus campos, hay luz, está nítido y quieto.
  *
- * Hay dos ritmos. En cada fotograma se miden luz, nitidez, reflejos y movimiento, que tarda unos milisegundos.
+ * Hay dos ritmos. Varias veces por segundo se miden luz, nitidez, reflejos y movimiento, dejando entre una vez y
+ * otra al menos lo que tarda la medida (ver analysisInterval), para que el vídeo no vaya a saltos en un móvil lento.
  * Aparte, el detector de campos, el mismo que usa la censura, pasa sobre la zona del recuadro tan a menudo como
  * puede (de 2 a 5 veces por segundo en un ordenador y cada 1 o 2 segundos en un móvil lento).
  *
@@ -184,6 +196,75 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
     // Para el panel de depuración: cuánto tarda cada análisis y cada cuánto se hace
     let analysisMs = null;
     let analysisEveryMs = null;
+    // Lo que tarda de media cada análisis. Marca cada cuánto se hace el siguiente
+    let averageAnalysisMs = null;
+    let analyzing = false;
+    // Si el navegador no puede sacar un bitmap del vídeo, se lee el vídeo directamente como antes
+    let bitmapReading = typeof createImageBitmap === 'function';
+
+    // Lee una zona del vídeo de este fotograma reducida a width x height. Si el navegador no puede, devuelve el vídeo
+    // para leerlo directamente como antes. Las zonas se piden en píxeles del vídeo y frameArea las pasa a píxeles de lo
+    // leído. readMs es lo que la página ha estado parada
+    const grabArea = async (video, area, width, height) => {
+      if (bitmapReading) {
+        try {
+          const startedAt = performance.now();
+          const pending = createImageBitmap(video, area.x, area.y, area.width, area.height,
+            { resizeWidth: width, resizeHeight: height });
+          const readMs = performance.now() - startedAt;
+          const bitmap = await pending;
+          // Con el tamaño que haya salido, por si el navegador no hace caso de resizeWidth y resizeHeight
+          return {
+            source: bitmap,
+            region: area,
+            requested: area,
+            scaleX: bitmap.width / area.width,
+            scaleY: bitmap.height / area.height,
+            readMs,
+            close: () => bitmap.close(),
+          };
+        } catch (err) {
+          console.error('[useAutoCapture] No se puede leer el vídeo con createImageBitmap, se lee directamente:', err);
+          bitmapReading = false;
+        }
+      }
+      return {
+        source: video,
+        region: { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight },
+        requested: null,
+        scaleX: 1,
+        scaleY: 1,
+        readMs: 0,
+        close: () => {},
+      };
+    };
+
+    // Zona donde se miden luz, nitidez y reflejos: el DNI si el detector lo ha encontrado y no se ha movido desde
+    // entonces y, si no, la parte de dentro del recuadro. Así un fondo blanco alrededor del DNI no cuenta como reflejo.
+    // En píxeles enteros, para que la zona leída ya reducida coincida píxel a píxel con la que se mide
+    const qualityState = (now, guideRect, videoWidth, videoHeight) => {
+      const maxAge = Math.max(DETECTION_MAX_AGE_MS, 3 * (lastDetectionMs || 0));
+      const fresh = placement && now - placement.finishedAt < maxAge;
+      const placementValid = fresh && placement.found && placement.startedAt >= sceneChangedAt;
+      const cardArea = placementValid ? expandRect(placement.docRect, -0.04, videoWidth, videoHeight) : null;
+      const area = cardArea || expandRect(guideRect, -0.06, videoWidth, videoHeight);
+      const qualityArea = area && {
+        x: Math.round(area.x),
+        y: Math.round(area.y),
+        width: Math.round(area.width),
+        height: Math.round(area.height),
+      };
+      return { fresh, placementValid, cardArea, qualityArea };
+    };
+    const sameArea = (a, b) => Boolean(a && b)
+      && a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+    const qualityHeight = (area) => Math.max(8, Math.round((ANALYSIS_WIDTH * area.height) / area.width));
+    const frameArea = (frame, area) => ({
+      x: (area.x - frame.region.x) * frame.scaleX,
+      y: (area.y - frame.region.y) * frame.scaleY,
+      width: area.width * frame.scaleX,
+      height: area.height * frame.scaleY,
+    });
 
     if (detectorState === 'cargando') {
       // Si falla, por ejemplo porque se ha cortado la red mientras se descargaba el modelo, se vuelve a intentar.
@@ -257,7 +338,7 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       }
     };
 
-    const startDetection = (video, guideRect) => {
+    const startDetection = (video, guideRect, frame) => {
       const region = expandRect(guideRect, DETECTION_MARGIN, video.videoWidth, video.videoHeight);
       if (!region) return;
 
@@ -266,7 +347,8 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       const height = Math.max(1, Math.round(region.height * scale));
       detectionCanvas.width = width;
       detectionCanvas.height = height;
-      detectionContext.drawImage(video, region.x, region.y, region.width, region.height, 0, 0, width, height);
+      const source = frameArea(frame, region);
+      detectionContext.drawImage(frame.source, source.x, source.y, source.width, source.height, 0, 0, width, height);
 
       const view = { region, scale, canvasWidth: width, canvasHeight: height, guide: guideRect };
       const startedAt = performance.now();
@@ -295,14 +377,9 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
         });
     };
 
-    const analyze = (now) => {
-      const video = videoRef.current;
-      const guide = guideRef.current;
-      if (!video || !guide || video.readyState < 2) return;
-
-      const guideRect = guideRectInVideo(video, guide);
-      if (!guideRect) return;
-
+    // frames.region es la zona del detector y frames.quality la zona de calidad que se esperaba, ya a su tamaño
+    const analyze = (now, video, guideRect, frames) => {
+      const frame = frames.region;
       const videoWidth = video.videoWidth;
       const videoHeight = video.videoHeight;
 
@@ -310,7 +387,10 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       const guideArea = expandRect(guideRect, 0, videoWidth, videoHeight);
       if (!guideArea) return;
       const motionHeight = Math.max(8, Math.round((MOTION_WIDTH * guideArea.height) / guideArea.width));
-      const motionFrame = measureFrame(readMotion(video, guideArea, MOTION_WIDTH, motionHeight), previousSmall);
+      const motionFrame = measureFrame(
+        readMotion(frame.source, frameArea(frame, guideArea), MOTION_WIDTH, motionHeight),
+        previousSmall,
+      );
       const elapsed = previousAt === null ? null : now - previousAt;
       previousSmall = motionFrame.small;
       previousAt = now;
@@ -337,7 +417,7 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
         steadySamples.length = 0;
         wasSteady = false;
       }
-      while (steadySamples.length && now - steadySamples[0].at > HOLD_MS + ANALYSIS_INTERVAL_MS) {
+      while (steadySamples.length && now - steadySamples[0].at > HOLD_MS + analysisInterval(averageAnalysisMs)) {
         steadySamples.shift();
       }
       const steadySpan = steadySamples.length ? now - steadySamples[0].at : 0;
@@ -350,17 +430,14 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       wasSteady = steady;
       const movingNow = motion !== null && motion > QUALITY.maxMotion;
 
-      // 2. Luz, nitidez y reflejos, sobre el DNI si el detector lo ha encontrado y no se ha movido desde entonces.
-      // Si no, sobre la parte de dentro del recuadro. Así un fondo blanco alrededor del DNI no cuenta como reflejo
-      const maxAge = Math.max(DETECTION_MAX_AGE_MS, 3 * (lastDetectionMs || 0));
-      const fresh = placement && now - placement.finishedAt < maxAge;
-      const placementValid = fresh && placement.found && placement.startedAt >= sceneChangedAt;
-      const cardArea = placementValid ? expandRect(placement.docRect, -0.04, videoWidth, videoHeight) : null;
-      const qualityArea = cardArea || expandRect(guideRect, -0.06, videoWidth, videoHeight);
+      // 2. Luz, nitidez y reflejos (ver qualityState). Casi siempre la zona es la que se esperaba y ya está leída a su
+      // tamaño. Si el DNI se acaba de mover y la zona cambia, se saca de la del detector
+      const { fresh, placementValid, cardArea, qualityArea } = qualityState(now, guideRect, videoWidth, videoHeight);
       if (!qualityArea) return;
-      const height = Math.max(8, Math.round((ANALYSIS_WIDTH * qualityArea.height) / qualityArea.width));
+      const height = qualityHeight(qualityArea);
+      const qualityFrame = sameArea(frames.quality?.requested, qualityArea) ? frames.quality : frame;
       const metrics = {
-        ...measureFrame(readAnalysis(video, qualityArea, ANALYSIS_WIDTH, height)),
+        ...measureFrame(readAnalysis(qualityFrame.source, frameArea(qualityFrame, qualityArea), ANALYSIS_WIDTH, height)),
         motion,
       };
 
@@ -385,7 +462,7 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       // 3. El detector, cuando le toca y el DNI no se está moviendo
       if (detectorState === 'listo' && !detecting && now >= nextDetectionAt
         && (!movingNow || now - lastDetectionStartedAt >= MAX_WAIT_FOR_CALM_MS)) {
-        startDetection(video, guideRect);
+        startDetection(video, guideRect, frame);
       }
 
       // 4. Qué decirle a la persona y si ya se puede hacer la foto
@@ -448,18 +525,53 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       }
     };
 
+    const runAnalysis = async (now, video, guideRect) => {
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+      let frames = [];
+      try {
+        const found = expandRect(guideRect, DETECTION_MARGIN, videoWidth, videoHeight);
+        if (!found) return;
+        const region = {
+          x: Math.round(found.x),
+          y: Math.round(found.y),
+          width: Math.round(found.width),
+          height: Math.round(found.height),
+        };
+        const regionScale = Math.min(1, DETECTOR_MAX_SIDE / Math.max(region.width, region.height));
+        const expected = qualityState(now, guideRect, videoWidth, videoHeight).qualityArea;
+        frames = await Promise.all([
+          grabArea(video, region, Math.max(1, Math.round(region.width * regionScale)),
+            Math.max(1, Math.round(region.height * regionScale))),
+          expected ? grabArea(video, expected, ANALYSIS_WIDTH, qualityHeight(expected)) : null,
+        ]);
+        if (cancelled || fired) return;
+        const startedAt = performance.now();
+        analyze(now, video, guideRect, { region: frames[0], quality: frames[1] });
+        // Solo cuenta lo que la página ha estado parada, no la espera a los bitmaps
+        analysisMs = frames[0].readMs + (frames[1]?.readMs || 0) + performance.now() - startedAt;
+        averageAnalysisMs = averageAnalysisMs === null ? analysisMs : averageAnalysisMs * 0.7 + analysisMs * 0.3;
+      } catch (err) {
+        console.error('[useAutoCapture] Error al analizar el fotograma:', err);
+      } finally {
+        frames.forEach((frame) => frame?.close());
+        analyzing = false;
+      }
+    };
+
     const onFrame = () => {
       if (cancelled) return;
       const now = performance.now();
-      if (!fired && now - lastAnalysisAt >= ANALYSIS_INTERVAL_MS) {
-        if (lastAnalysisAt) analysisEveryMs = now - lastAnalysisAt;
-        lastAnalysisAt = now;
-        try {
-          analyze(now);
-        } catch (err) {
-          console.error('[useAutoCapture] Error al analizar el fotograma:', err);
+      if (!fired && !analyzing && now - lastAnalysisAt >= analysisInterval(averageAnalysisMs)) {
+        const video = videoRef.current;
+        const guide = guideRef.current;
+        const guideRect = video && guide && video.readyState >= 2 ? guideRectInVideo(video, guide) : null;
+        if (guideRect) {
+          if (lastAnalysisAt) analysisEveryMs = now - lastAnalysisAt;
+          lastAnalysisAt = now;
+          analyzing = true;
+          runAnalysis(now, video, guideRect);
         }
-        analysisMs = performance.now() - now;
       }
       scheduleNext();
     };
