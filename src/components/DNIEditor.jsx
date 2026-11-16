@@ -11,7 +11,6 @@ import WatermarkInput from './WatermarkInput';
 import { DEMO_MODE } from '../config/demoMode';
 import ManualCensorModal from './ManualCensorModal';
 import ManualCropModal from './ManualCropModal';
-import { validateDniConsistencyFlags } from '../utils/OCRhelpers'
 // Importamos la API
 import { dniApi } from '../services/dniApi';
 
@@ -334,7 +333,6 @@ export default function DNIEditor({
           { frontDetections, backDetections: [] }
         );
         result.frontImageUrl = frontResult.frontImageUrl; //imagen censurada
-        result.frontOcrData = frontResult.ocrData.front; //datos ocr
         console.log('✅ [ANVERSO] Censura automática completada');
       }
 
@@ -359,26 +357,9 @@ export default function DNIEditor({
             { frontDetections: [], backDetections }
           );
           result.backImageUrl = backResult.backImageUrl; //imagen censurada
-          result.backOcrData = backResult.ocrData.back;  //datos ocr
           console.log('✅ [REVERSO] Censura automática completada');
         }
       }
-
-      //validación de datos - en caso de censura automática
-      const ocrDataForValidation = {
-        front: result.frontOcrData || {},
-        back: result.backOcrData || {}
-      };
-
-      const validationFlags = validateDniConsistencyFlags(ocrDataForValidation);
-      result.validation = validationFlags;
-      const flagsArray = Object.values(validationFlags); // [true, false, true, true]
-      const total = flagsArray.length;
-      const correctCount = flagsArray.filter(flag => flag === true).length;
-      const accuracyPercentage = (correctCount / total) * 100;
-
-      console.log('Flags de validación DNI:', validationFlags);
-      console.log('Porcentaje de acierto:', accuracyPercentage.toFixed(2) + '%');
 
       //Validacion de elementos de seguridad
       const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
@@ -386,7 +367,7 @@ export default function DNIEditor({
 
       // --- GUARDAR EN BACKEND ---
       // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
-      // Nunca se envía el número de DNI ni ningún dato leído por OCR.
+      // Nunca se envía el número de DNI ni ningún dato leído del documento.
       // No se espera la respuesta. El resultado ya está listo y el guardado tarda entre
       // 0,7 s y 2 s, según el backend esté o no en frío. Si falla, solo se registra el error
       console.log("💾 Guardando métricas de uso...");
@@ -396,11 +377,9 @@ export default function DNIEditor({
           frontFields: selectedFrontFields,
           backFields: selectedBackFields
         },
-        validation: validationFlags,
         manualCensor: Object.keys(manualFiles).length > 0,
         manualDetection: manualDetection,
         hologramReadable: hologramDetected,
-        homogenityPassed: accuracyPercentage,
         watermarkText: watermarkText
       })
         .then(() => {

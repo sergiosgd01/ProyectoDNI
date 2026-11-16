@@ -1,6 +1,3 @@
-import * as OCRHelper from '../../utils/OCRhelpers';
-import { TESSERACT_CONFIG } from '../../config/tesseractConfig';
-
 // Helper para cargar imagen
 // const loadImageFromFile = (file) => new Promise((resolve, reject) => {
 //   const img = new Image();
@@ -58,64 +55,6 @@ export async function censorDniImage(imageFile, fieldsToRedact, side = 'front', 
   return url;
 }
 
-/**
- * OCR: Extrae texto usando recortes de YOLO
- */
-async function extractSideText(imageFile, fieldNames, dynamicBoxes) {
-  if (!imageFile || !dynamicBoxes?.length) return null;
-  
-  const img = await loadImageFromFile(imageFile);
-  const baseCanvas = document.createElement('canvas');
-  baseCanvas.width = img.width;
-  baseCanvas.height = img.height;
-  baseCanvas.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
-
-  const { createWorker } = await import('tesseract.js');
-  
-  // Inicialización OCR con tesseract
-  const worker = await createWorker('spa', 1, {
-    workerPath: TESSERACT_CONFIG.workerPath,
-    corePath: TESSERACT_CONFIG.corePath,
-    langPath: TESSERACT_CONFIG.langPath,
-  });
-
-  const results = {};
-  try {
-    for (const fieldName of fieldNames) {
-      const regions = dynamicBoxes.filter(box => box.label.toUpperCase() === fieldName.toUpperCase());
-      if (!regions.length) continue;
-
-      const texts = [];
-      for (const box of regions) {
-        const text = await runOcrOnField(worker, baseCanvas, box);
-        if (text) texts.push(text);
-      }
-      results[fieldName] = texts.join(' ').trim();
-    }
-    return results;
-  } catch (err) {
-    console.error("Error en extracción OCR:", err);
-    return null;
-  } finally {
-    await worker.terminate();
-  }
-}
-
-async function runOcrOnField(worker, baseCanvas, box) {
-  const x = Math.max(0, Math.floor(box.x));
-  const y = Math.max(0, Math.floor(box.y));
-  const w = Math.min(baseCanvas.width - x, Math.floor(box.width));
-  const h = Math.min(baseCanvas.height - y, Math.floor(box.height));
-
-  const fieldCanvas = document.createElement('canvas');
-  fieldCanvas.width = w;
-  fieldCanvas.height = h;
-  fieldCanvas.getContext('2d').drawImage(baseCanvas, x, y, w, h, 0, 0, w, h);
-
-  const { data: { text } } = await worker.recognize(fieldCanvas);
-  return text?.trim() || '';
-}
-
 export async function censorDniComplete(frontFile, backFile, fields, options = {}) {
   const { frontDetections = [], backDetections = [] } = options;
 
@@ -162,44 +101,9 @@ export async function censorDniComplete(frontFile, backFile, fields, options = {
     backFile ? censorDniImage(backFile, backToRedact, 'back', backDetections) : Promise.resolve(null)
   ]);
 
-  /**
-   * 2. OCR: Extracción selectiva
-   * Solo pasamos por Tesseract las clases que contienen texto legible
-   * para no desperdiciar recursos procesando imágenes (Firma/Foto).
-   */
-  const ocrLabels = [
-  // Anverso
-  'NOMBRE',
-  'APELLIDOS',
-  'NUM_DNI',
-  'NACIMIENTO',
-  'SEXO',
-  'NACIONALIDAD',
-  'EMISIÓN',
-  'VALIDEZ',
-  'NUM_SOPORTE',
-  'CAN',
-  // Reverso
-  'MRZ',
-  'DIRECCION',
-  'DOMICILIO',
-  'LUGAR_NACIMIENTO',
-  'EQUIPO',
-  'SOPORTE_MIN'
-  ];
-
-  const [frontRaw, backRaw] = await Promise.all([
-    extractSideText(frontFile, ocrLabels, frontDetections),
-    backFile ? extractSideText(backFile, ocrLabels, backDetections) : Promise.resolve(null)
-  ]);
-
   return {
     frontImageUrl,
     backImageUrl,
-    processedFields: { front: frontToRedact, back: backToRedact },
-    ocrData: {
-      front: frontRaw ? OCRHelper.normalizeDniData(frontRaw) : null,
-      back: backRaw ? OCRHelper.normalizeDniData(backRaw) : null
-    }
+    processedFields: { front: frontToRedact, back: backToRedact }
   };
 }
