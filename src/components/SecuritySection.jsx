@@ -30,10 +30,12 @@ const CAMPOS = [
 // dniProfiles.js, el mismo archivo que usa el editor, así la demo no se queda atrás si cambian.
 // Administrativo no sale porque en el anverso tapa lo mismo que Salud (solo cambia el reverso),
 // así que su botón no cambiaría nada en la tarjeta
+// La frase de cada uno es más corta que su descripción del editor para que quepa en una línea del móvil. Con la
+// del editor, la de Banca ocupaba dos y quedaba demasiado hueco bajo los perfiles
 const PERFILES = [
-  { id: 'viajes', nombre: 'Viajes' },
-  { id: 'salud', nombre: 'Salud' },
-  { id: 'financiero', nombre: 'Banca' },
+  { id: 'viajes', nombre: 'Viajes', frase: 'Para reservas, controles y visados.' },
+  { id: 'salud', nombre: 'Salud', frase: 'Para hospitales y clínicas.' },
+  { id: 'financiero', nombre: 'Banca', frase: 'Para bancos y verificaciones de identidad.' },
 ]
   .map((perfil) => ({ ...perfil, datos: DNI_PROFILES.getProfileById(perfil.id) }))
   .filter((perfil) => perfil.datos);
@@ -42,7 +44,7 @@ const PERFIL_INICIAL = PERFILES[0] ?? null;
 
 // La frase de debajo de los perfiles. La de id null es la de los datos elegidos a mano
 const FRASES_PERFIL = [
-  ...PERFILES.map((perfil) => ({ id: perfil.id, texto: `${perfil.datos.description}.` })),
+  ...PERFILES.map((perfil) => ({ id: perfil.id, texto: perfil.frase })),
   { id: null, texto: 'Personalizado. Has elegido los datos a mano.' },
 ];
 const MARCA_INICIAL = 'Solo para el alquiler';
@@ -280,7 +282,8 @@ function SecuritySection({ onStartProcess }) {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-7 p-5 sm:p-7 lg:p-9">
+          {/* En el móvil los bloques van más juntos, con 28 px quedaba demasiado hueco entre ellos */}
+          <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-5 sm:gap-7 p-5 sm:p-7 lg:p-9">
             <div className="flex flex-col gap-2.5">
               <span id="demo-perfil" className="text-[13px] font-semibold text-gray-900">Perfil</span>
               <div role="group" aria-labelledby="demo-perfil" className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1">
@@ -304,8 +307,8 @@ function SecuritySection({ onStartProcess }) {
                 })}
               </div>
               {/* Todas las frases van en la misma celda y solo se ve la del perfil elegido, así el hueco mide siempre
-                  lo que la más larga y nada se mueve al cambiar de perfil. La de Banca ocupa dos líneas en el móvil
-                  y las otras una, y la página daba un saltito */}
+                  lo que la más larga y nada se mueve al cambiar de perfil, ni en una pantalla tan estrecha que alguna
+                  ocupe dos líneas. Antes la página daba un saltito */}
               <div className="grid text-[13px] leading-snug text-gray-600">
                 {FRASES_PERFIL.map(({ id, texto }) => (
                   <p key={id ?? 'personalizado'} className={`col-start-1 row-start-1 ${id === perfil ? '' : 'invisible'}`}>
