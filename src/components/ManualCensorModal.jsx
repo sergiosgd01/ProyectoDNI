@@ -20,6 +20,11 @@ const MIN_RECT_SIZE = 10;
 // Cómo se nombra cada cara en los textos de la ventana
 const NOMBRE_CARA = { anverso: 'parte delantera', reverso: 'parte trasera' };
 
+// Móvil tumbado, con la misma consulta que la cámara (CameraCapture.jsx). La cabecera, las pestañas y los botones
+// se comían casi todo el alto y la foto se quedaba en una tira de unos 150 px, así que en ese caso pasan a una
+// columna a la derecha y la foto se queda con todo el alto de la pantalla
+const CONSULTA_TUMBADO = '(orientation: landscape) and (max-height: 500px)';
+
 const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
 // Caja del contenido del lienzo en pantalla, sin su borde (clase border-2)
@@ -103,6 +108,15 @@ function ManualCensorModal({
     closedRef.current = true;
     onCancel();
   };
+
+  // Si el móvil está tumbado (ver CONSULTA_TUMBADO). Cambia al girarlo con la ventana abierta
+  const [tumbado, setTumbado] = useState(() => window.matchMedia(CONSULTA_TUMBADO).matches);
+  useEffect(() => {
+    const consulta = window.matchMedia(CONSULTA_TUMBADO);
+    const alCambiar = (e) => setTumbado(e.matches);
+    consulta.addEventListener('change', alCambiar);
+    return () => consulta.removeEventListener('change', alCambiar);
+  }, []);
 
   // Detectar si es móvil y si ya ha tocado el canvas
   const [isMobile, setIsMobile] = useState(false);
@@ -613,12 +627,22 @@ function ManualCensorModal({
   const totalRectangles = frontRectangles.length + backRectangles.length;
 
   return (
-    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con el aviso
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header. Con el móvil tumbado (menos de 420 px de alto) la cabecera, las pestañas, el hueco de la foto y el pie
+    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con el aviso.
+    // Con el móvil tumbado es una rejilla de dos columnas. La foto ocupa toda la de la izquierda y la cabecera, las
+    // pestañas y el pie van apilados en la de la derecha, en el mismo orden. Solo cambian las clases, así que al girar
+    // el móvil el lienzo no se vuelve a crear
+    <div
+      className={`fixed inset-0 z-50 bg-black ${tumbado
+        ? 'grid grid-cols-[minmax(0,1fr)_15rem] grid-rows-[auto_auto_minmax(0,1fr)_auto]'
+        : 'flex flex-col'}`}
+    >
+      {/* Header. En pantallas bajas (menos de 420 px de alto) la cabecera, las pestañas, el hueco de la foto y el pie
           tienen menos relleno arriba y abajo, para que la foto no se quede en una tira */}
-      <div className="bg-gray-900 text-white p-3 md:p-4 [@media(max-height:420px)]:py-1.5 flex items-center justify-between border-b border-gray-700">
-        <div className="flex items-center space-x-3">
+      <div className={`bg-gray-900 text-white flex items-center justify-between border-b border-gray-700 ${tumbado
+        ? 'col-start-2 row-start-1 border-l px-2 py-1.5'
+        : 'p-3 md:p-4 [@media(max-height:420px)]:py-1.5'}`}
+      >
+        <div className={`flex items-center ${tumbado ? 'gap-2' : 'space-x-3'}`}>
           <button
             onClick={handleCancel}
             className="w-11 h-11 flex items-center justify-center hover:bg-gray-700 rounded-xl transition-colors"
@@ -627,13 +651,13 @@ function ManualCensorModal({
             <i className="bi bi-arrow-left text-xl"></i>
           </button>
           <div>
-            <h2 className="font-semibold text-base md:text-lg">Censura manual</h2>
-            <p className="text-gray-400 text-xs md:text-sm">Dibuja rectángulos para ocultar datos</p>
+            <h2 className={`font-semibold ${tumbado ? 'text-base' : 'text-base md:text-lg'}`}>Censura manual</h2>
+            <p className={tumbado ? 'sr-only' : 'text-gray-400 text-xs md:text-sm'}>Dibuja rectángulos para ocultar datos</p>
           </div>
         </div>
 
-        {/* Contador de censuras */}
-        <div className="flex items-center space-x-2 text-sm">
+        {/* Contador de censuras. Con el móvil tumbado no cabe en la columna y lo dice ya el pie */}
+        <div className={`items-center space-x-2 text-sm ${tumbado ? 'hidden' : 'flex'}`}>
           <span className="bg-gray-700 px-3 py-1 rounded-full">
             <i className="bi bi-square-fill mr-1.5 text-red-500"></i>
             {totalRectangles} {totalRectangles === 1 ? 'censura' : 'censuras'}
@@ -644,7 +668,7 @@ function ManualCensorModal({
       {/* Mensaje de advertencia cuando falla la detección automática. En pantallas bajas (un iPhone SE con las barras
           de Safari) solo queda el título, y con el móvil tumbado no sale, para dejar sitio a la foto. Lo que hay que
           hacer ya lo dicen la cabecera y el pie */}
-      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4 [@media(max-height:420px)]:hidden">
+      <div className={`bg-gray-800 border-b border-gray-700 p-3 md:p-4 [@media(max-height:420px)]:hidden ${tumbado ? 'hidden' : ''}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
@@ -664,20 +688,23 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Selector de cara - Solo mostrar opciones disponibles */}
-      <div className="bg-gray-800 border-b border-gray-700 p-2 md:p-3 [@media(max-height:420px)]:py-1">
-        <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
+      {/* Selector de cara - Solo mostrar opciones disponibles. Con el móvil tumbado, una pestaña debajo de otra */}
+      <div className={`bg-gray-800 border-b border-gray-700 ${tumbado
+        ? 'col-start-2 row-start-2 border-l p-2'
+        : 'p-2 md:p-3 [@media(max-height:420px)]:py-1'}`}
+      >
+        <div className={`max-w-4xl mx-auto flex gap-2 ${tumbado ? 'flex-col' : 'items-center justify-center'}`}>
           {frontFile && (
             <button
               onClick={() => {
                 handleSwitchSide('front');
                 setHighlightSide(null);
               }}
-              className={`btn btn-sm ${currentSide === 'front'
+              className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'front'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
                 } ${highlightSide === 'front'
-                  ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
+                  ? `ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse ${tumbado ? '' : 'scale-110'}`
                   : ''
                 }`}
             >
@@ -700,11 +727,11 @@ function ManualCensorModal({
                 handleSwitchSide('back');
                 setHighlightSide(null);
               }}
-              className={`btn btn-sm ${currentSide === 'back'
+              className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'back'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
                 } ${highlightSide === 'back'
-                  ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse scale-110'
+                  ? `ring-4 ring-yellow-400 ring-offset-2 ring-offset-gray-800 animate-pulse ${tumbado ? '' : 'scale-110'}`
                   : ''
                 }`}
             >
@@ -723,10 +750,15 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Canvas container */}
+      {/* Con el móvil tumbado rellena la columna de la derecha entre las pestañas y el pie */}
+      {tumbado && <div aria-hidden="true" className="col-start-2 row-start-3 bg-gray-900 border-l border-gray-700" />}
+
+      {/* Canvas container. Con el móvil tumbado ocupa la columna de la izquierda de arriba abajo */}
       <div
         ref={containerRef}
-        className="flex-1 flex items-center justify-center p-2 md:p-4 [@media(max-height:420px)]:p-1 overflow-auto"
+        className={`flex items-center justify-center overflow-auto ${tumbado
+          ? 'col-start-1 row-start-1 row-span-4 min-h-0 p-2'
+          : 'flex-1 p-2 md:p-4 [@media(max-height:420px)]:p-1'}`}
       >
         {!imageLoaded ? (
           <div className="text-white text-center">
@@ -760,11 +792,15 @@ function ManualCensorModal({
         )}
       </div>
 
-      {/* Footer con acciones unificadas */}
-      <div className="bg-gray-900 p-3 md:p-4 [@media(max-height:420px)]:py-1.5 border-t border-gray-700">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
+      {/* Footer con acciones unificadas. Con el móvil tumbado, al pie de la columna, con el aviso arriba,
+          Deshacer, Limpiar y Cancelar en una fila y Finalizar en otra */}
+      <div className={`bg-gray-900 border-t border-gray-700 ${tumbado
+        ? 'col-start-2 row-start-4 border-l p-2'
+        : 'p-3 md:p-4 [@media(max-height:420px)]:py-1.5'}`}
+      >
+        <div className={`flex flex-col max-w-4xl mx-auto ${tumbado ? 'gap-2' : 'gap-3 sm:flex-row items-center justify-between'}`}>
           {/* Info */}
-          <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
+          <div className={tumbado ? 'text-gray-400 text-xs' : 'text-gray-400 text-xs md:text-sm order-2 sm:order-1'}>
             {generationError ? (
               <span className="text-red-400 flex items-center" role="alert">
                 <i className="bi bi-exclamation-triangle mr-1.5"></i>
@@ -784,7 +820,10 @@ function ManualCensorModal({
           </div>
 
           {/* Botones unificados */}
-          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto order-1 sm:order-2">
+          <div className={tumbado
+            ? 'grid grid-cols-[3rem_3rem_minmax(0,1fr)] gap-2'
+            : 'flex items-center gap-2 md:gap-3 w-full sm:w-auto order-1 sm:order-2'}
+          >
             {/* Deshacer */}
             <button
               onClick={handleUndo}
@@ -808,7 +847,7 @@ function ManualCensorModal({
             {/* Cancelar */}
             <button
               onClick={handleCancel}
-              className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
+              className={`btn btn-oscuro text-sm ${tumbado ? 'px-2' : 'px-3 flex-1 sm:flex-initial md:px-6 md:text-base'}`}
             >
               Cancelar
             </button>
@@ -817,7 +856,7 @@ function ManualCensorModal({
             <button
               onClick={handleComplete}
               disabled={totalRectangles === 0 || isGenerating}
-              className="btn btn-principal flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
+              className={`btn btn-principal px-3 text-sm ${tumbado ? 'col-span-3' : 'flex-1 sm:flex-initial md:px-6 md:text-base'}`}
             >
               {isGenerating ? (
                 <span className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></span>
