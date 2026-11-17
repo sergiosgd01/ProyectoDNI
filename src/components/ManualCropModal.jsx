@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import Aviso from './Aviso';
 
+// Móvil tumbado, con la misma consulta que la cámara y la censura manual. La cabecera, las instrucciones y los
+// botones se comían casi todo el alto y la foto se quedaba en una tira en la que no se veía nada, así que en ese
+// caso pasan a una columna a la derecha y la foto se queda con todo el alto de la pantalla
+const CONSULTA_TUMBADO = '(orientation: landscape) and (max-height: 500px)';
+
 // Grosor del borde del lienzo (clase border-2), que no cuenta como sitio para la foto
 const BORDE_LIENZO = 2;
 
@@ -51,6 +56,15 @@ function ManualCropModal({
   const [draggingPoint, setDraggingPoint] = useState(null);
   // Escala con la que están los puntos. Si cambia el hueco (al girar el móvil) se pasan a la nueva
   const escalaPuntosRef = useRef(null);
+
+  // Si el móvil está tumbado (ver CONSULTA_TUMBADO). Cambia al girarlo con la ventana abierta
+  const [tumbado, setTumbado] = useState(() => window.matchMedia(CONSULTA_TUMBADO).matches);
+  useEffect(() => {
+    const consulta = window.matchMedia(CONSULTA_TUMBADO);
+    const alCambiar = (e) => setTumbado(e.matches);
+    consulta.addEventListener('change', alCambiar);
+    return () => consulta.removeEventListener('change', alCambiar);
+  }, []);
 
   // Aviso si no se puede recortar ({ tipo, texto }), en vez de alert()
   const [aviso, setAviso] = useState(null);
@@ -610,11 +624,21 @@ function ManualCropModal({
   };
 
   return (
-    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con las instrucciones
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con las instrucciones.
+    // Con el móvil tumbado es una rejilla de dos columnas, como la censura manual. La foto ocupa toda la de la
+    // izquierda y la cabecera, las instrucciones y los botones van apilados en la de la derecha, en el mismo orden.
+    // Solo cambian las clases, así que al girar el móvil el lienzo no se vuelve a crear
+    <div
+      className={`fixed inset-0 z-50 bg-black ${tumbado
+        ? 'grid grid-cols-[minmax(0,1fr)_15rem] grid-rows-[auto_auto_minmax(0,1fr)_auto]'
+        : 'flex flex-col'}`}
+    >
       {/* Header */}
-      <div className="bg-gray-900 text-white p-3 md:p-4 flex items-center justify-between border-b border-gray-700">
-        <div className="flex items-center space-x-3">
+      <div className={`bg-gray-900 text-white flex items-center justify-between border-b border-gray-700 ${tumbado
+        ? 'col-start-2 row-start-1 border-l px-2 py-1.5'
+        : 'p-3 md:p-4'}`}
+      >
+        <div className={`flex items-center ${tumbado ? 'gap-2' : 'space-x-3'}`}>
           <button
             onClick={onCancel}
             className="w-11 h-11 flex items-center justify-center hover:bg-gray-700 rounded-xl transition-colors"
@@ -623,24 +647,24 @@ function ManualCropModal({
             <i className="bi bi-arrow-left text-xl"></i>
           </button>
           <div>
-            <h2 className="font-semibold text-base md:text-lg">{titulo}</h2>
-            <p className="text-gray-400 text-xs md:text-sm">{subtitulo}</p>
+            <h2 className={`font-semibold ${tumbado ? 'text-base' : 'text-base md:text-lg'}`}>{titulo}</h2>
+            <p className={`text-gray-400 ${tumbado ? 'text-xs' : 'text-xs md:text-sm'}`}>{subtitulo}</p>
           </div>
         </div>
       </div>
 
-      {/* Instrucciones mejoradas */}
-      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4">
+      {/* Instrucciones mejoradas. Con el móvil tumbado solo la primera frase, en pequeño */}
+      <div className={`bg-gray-800 border-b border-gray-700 ${tumbado ? 'col-start-2 row-start-2 border-l p-2' : 'p-3 md:p-4'}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
-            <div className="flex-shrink-0 w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center mt-0.5">
+            <div className={`flex-shrink-0 w-8 h-8 bg-primary-500 rounded-full items-center justify-center mt-0.5 ${tumbado ? 'hidden' : 'flex'}`}>
               <i className="bi bi-info-lg text-gray-900 text-sm"></i>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-sm md:text-base font-medium mb-1">
+              <p className={`text-white font-medium ${tumbado ? 'text-xs' : 'text-sm md:text-base mb-1'}`}>
                 Ajusta las cuatro esquinas del DNI moviendo los puntos rojos
               </p>
-              <p className="text-gray-300 text-xs md:text-sm">
+              <p className={tumbado ? 'hidden' : 'text-gray-300 text-xs md:text-sm'}>
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva
               </p>
             </div>
@@ -648,10 +672,15 @@ function ManualCropModal({
         </div>
       </div>
 
-      {/* Canvas container - Responsive */}
-      <div 
+      {/* Con el móvil tumbado rellena la columna de la derecha entre las instrucciones y el pie */}
+      {tumbado && <div aria-hidden="true" className="col-start-2 row-start-3 bg-gray-900 border-l border-gray-700" />}
+
+      {/* Canvas container. Con el móvil tumbado ocupa la columna de la izquierda de arriba abajo */}
+      <div
         ref={containerRef}
-        className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-auto"
+        className={`flex items-center justify-center overflow-auto ${tumbado
+          ? 'col-start-1 row-start-1 row-span-4 min-h-0 p-2'
+          : 'flex-1 p-2 md:p-4'}`}
       >
         {!imageLoaded ? (
           <div className="text-white text-center">
@@ -673,16 +702,17 @@ function ManualCropModal({
         )}
       </div>
 
-      {/* Footer con acciones - Responsive */}
-      <div className="bg-gray-900 p-3 md:p-4 border-t border-gray-700">
+      {/* Footer con acciones. Con el móvil tumbado, al pie de la columna, con Reiniciar y Cancelar en una fila y
+          Recortar en otra */}
+      <div className={`bg-gray-900 border-t border-gray-700 ${tumbado ? 'col-start-2 row-start-4 border-l p-2' : 'p-3 md:p-4'}`}>
         {aviso && (
-          <Aviso tipo={aviso.tipo} oscuro onCerrar={() => setAviso(null)} className="max-w-4xl mx-auto mb-3">
+          <Aviso tipo={aviso.tipo} oscuro onCerrar={() => setAviso(null)} className={`max-w-4xl mx-auto ${tumbado ? 'mb-2' : 'mb-3'}`}>
             {aviso.texto}
           </Aviso>
         )}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
+        <div className={`flex flex-col max-w-4xl mx-auto ${tumbado ? 'gap-2' : 'gap-3 sm:flex-row items-center justify-between'}`}>
           {/* Info de selección */}
-          <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
+          <div className={tumbado ? 'text-gray-400 text-xs' : 'text-gray-400 text-xs md:text-sm order-2 sm:order-1'}>
             {points ? (
               <span className="text-success-400 flex items-center">
                 <i className="bi bi-check-circle mr-1.5"></i>
@@ -698,20 +728,23 @@ function ManualCropModal({
           </div>
 
           {/* Botones - Responsive */}
-          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto order-1 sm:order-2">
+          <div className={tumbado
+            ? 'grid grid-cols-2 gap-2'
+            : 'flex items-center gap-2 md:gap-3 w-full sm:w-auto order-1 sm:order-2'}
+          >
             {points && (
               <button
                 onClick={handleReset}
-                className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
+                className={`btn btn-oscuro text-sm ${tumbado ? 'px-2' : 'px-3 flex-1 sm:flex-initial md:px-6 md:text-base'}`}
               >
                 <i className="bi bi-arrow-counterclockwise"></i>
                 <span>Reiniciar</span>
               </button>
             )}
-            
+
             <button
               onClick={onCancel}
-              className="btn btn-oscuro flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
+              className={`btn btn-oscuro text-sm ${tumbado ? 'px-2' : 'px-3 flex-1 sm:flex-initial md:px-6 md:text-base'}`}
             >
               Cancelar
             </button>
@@ -719,7 +752,7 @@ function ManualCropModal({
             <button
               onClick={recortar}
               disabled={!points}
-              className="btn btn-principal flex-1 sm:flex-initial px-3 text-sm md:px-6 md:text-base"
+              className={`btn btn-principal text-sm ${tumbado ? 'col-span-2 px-3' : 'px-3 flex-1 sm:flex-initial md:px-6 md:text-base'}`}
             >
               <i className="bi bi-crop"></i>
               <span>Recortar</span>
