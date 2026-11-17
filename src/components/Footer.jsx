@@ -7,16 +7,16 @@ const ENLACE = 'text-gray-400 hover:text-white transition-colors';
 
 // Logos de la financiación. Son una sola imagen de 4678 x 410 px con los cuatro en fila: Unión Europea, Gobierno de
 // España, Plan de Recuperación e INCIBE. En el ordenador va entera. En el móvil, entera, cada logo medía unos 80 px
-// de ancho y no se leía, así que se reparte en tres filas recortando la misma imagen, con el mismo orden y la misma
-// escala para todos (UX-15). Las medidas son píxeles de la imagen, y el trozo del Gobierno, el más ancho, ocupa
-// todo el ancho del recuadro
+// de ancho y no se leía, así que se reparte en dos filas recortando la misma imagen, con el mismo orden y la misma
+// escala para todos. En tres filas (UX-15) el recuadro medía unos 220 px de alto y se veía desproporcionado. Las
+// medidas son píxeles de la imagen. El trozo de la Unión Europea llega hasta 1020 para dejar un hueco blanco antes
+// del Gobierno, y la primera fila, la más ancha, ocupa todo el ancho del recuadro
 const LOGOS = { src: '/footer_incibe.jpg', ancho: 4678, alto: 410, y0: 60, y1: 350 };
 const FILAS_LOGOS = [
-  [[60, 933]],
-  [[1396, 2966]],
+  [[60, 1020], [1396, 2966]],
   [[3036, 3682], [3746, 4624]],
 ];
-const ANCHO_MAYOR = 2966 - 1396;
+const ANCHO_MAYOR = (1020 - 60) + (2966 - 1396);
 const TEXTO_LOGOS = 'Financiado por la Unión Europea, NextGenerationEU. Gobierno de España, Ministerio para la Transformación '
   + 'Digital y de la Función Pública. Plan de Recuperación, Transformación y Resiliencia. INCIBE, Instituto Nacional de '
   + 'Ciberseguridad';
@@ -45,8 +45,9 @@ function TrozoLogos({ x0, x1 }) {
 function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-        <div className="flex flex-col gap-10 md:flex-row md:items-start md:justify-between md:gap-16">
+      {/* En el móvil, menos aire arriba, abajo y entre bloques que en el ordenador, que queda igual */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-16">
+        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between md:gap-16">
           <div className="max-w-sm">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-white p-1.5">
@@ -77,7 +78,7 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-gray-800 pt-6 text-xs md:flex-row md:items-center md:justify-between">
+        <div className="mt-8 md:mt-12 flex flex-col gap-4 border-t border-gray-800 pt-6 text-xs md:flex-row md:items-center md:justify-between">
           <p>© {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.</p>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Información legal">
             <EnlaceVista view={VIEWS.AVISO_LEGAL} href={LEGAL_PATHS.avisoLegal} className={ENLACE}>Aviso legal</EnlaceVista>
