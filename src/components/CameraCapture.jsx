@@ -720,7 +720,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
           </h3>
           <button
             onClick={handleClose}
-            className="ml-auto text-white text-2xl w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
+            aria-label="Cerrar la cámara"
+            className="ml-auto text-white text-2xl w-11 h-11 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
           >
             <i className="bi bi-x"></i>
           </button>
