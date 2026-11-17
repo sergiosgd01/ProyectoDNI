@@ -930,7 +930,7 @@ export default function DNIEditor({
                   <h4 className="font-medium text-gray-700 mb-1 text-sm sm:text-base">Campos individuales</h4>
                   <p className="text-xs text-gray-500">
                     <i className="bi bi-info-circle mr-1.5"></i>
-                    Marque los campos que desea <strong className="text-secondary-600">censurar (ocultar)</strong> del documento
+                    Marca los campos que deseas <strong className="text-secondary-600">censurar (ocultar)</strong> del documento
                   </p>
                 </div>
 
