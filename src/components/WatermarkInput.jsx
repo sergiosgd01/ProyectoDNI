@@ -16,6 +16,8 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
       </div>
 
       <div className="space-y-2">
+        {/* En pantallas táctiles la letra es de 16 px, porque con menos el iPhone amplía la página al tocar el campo
+            y no la devuelve después (UX-15). Solo cambia el tamaño de la letra, el campo mide lo mismo */}
         <input
           type="text"
           value={value}
@@ -26,7 +28,7 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
           }}
           maxLength={maxLength}
           placeholder="Por ejemplo, uso exclusivo para el hotel"
-          className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-100"
+          className="w-full px-3 py-2 text-sm [@media(pointer:coarse)]:text-[16px] bg-white border border-gray-300 rounded-lg transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-100"
         />
 
         <div className="flex items-start justify-between gap-3 text-xs text-gray-600">
