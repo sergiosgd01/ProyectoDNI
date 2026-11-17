@@ -141,12 +141,6 @@ const DNI_PROFILES = {
   getProfilesList() {
     return Object.values(DNI_PROFILES_DATA);
   },
-  // Cuenta los campos marcados para tapar
-  getFieldsCount(frontFields, backFields) {
-    const frontCount = frontFields ? Object.values(frontFields).filter(Boolean).length : 0;
-    const backCount = backFields ? Object.values(backFields).filter(Boolean).length : 0;
-    return frontCount + backCount;
-  },
 };
 
 export { DNI_PROFILES_DATA, DNI_PROFILES };

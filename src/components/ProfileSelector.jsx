@@ -14,39 +14,8 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
     });
   };
 
-  const renderFieldsIndicator = (profile) => {
-    const frontFields = profile.frontFields || {};
-    const backFields = profile.backFields || {};
-    
-    const totalFrontFields = Object.keys(frontFields).length;
-    const totalBackFields = Object.keys(backFields).length;
-    const totalFields = totalFrontFields + totalBackFields;
-    
-    const selectedCount = DNI_PROFILES.getFieldsCount(frontFields, backFields);
-    
-    return (
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-600">
-          {selectedCount} de {totalFields} campos
-        </span>
-        <div className="flex items-center">
-          <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full transition-all duration-300"
-              style={{ 
-                width: `${(selectedCount / totalFields) * 100}%`,
-                backgroundColor: colors.primary
-              }}
-            />
-          </div>
-          <span className="ml-2 text-xs font-medium text-gray-500">
-            {Math.round((selectedCount / totalFields) * 100)}%
-          </span>
-        </div>
-      </div>
-    );
-  };
-
+  // Las tarjetas no llevan contador. El editor tiene uno solo, junto a las casillas, que las cuenta todas y no solo
+  // las que trae el perfil (ver DNIEditor.jsx)
   return (
     <div className="mb-6">
       <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
@@ -82,11 +51,9 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
                 )}
               </div>
               
-              <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+              <p className="text-sm text-gray-600 leading-relaxed">
                 {profile.description}
               </p>
-              
-              {renderFieldsIndicator(profile)}
             </button>
           );
         })}

@@ -888,7 +888,6 @@ export default function DNIEditor({
                         : 'Personalizado'
                     }
                   </div>
-                  <div><strong>Campos seleccionados:</strong> {selectedCount} de {totalFields}</div>
                   <div>
                     <strong>Estado:</strong>
                     <span className={processedResult ? "text-success-700 font-medium" : ""}>
@@ -916,11 +915,12 @@ export default function DNIEditor({
                 />
               </div>
 
-              {/* Indicador de campos extraídos */}
+              {/* El único contador del editor. Cuenta las casillas marcadas de las dos caras, que son los datos que se tapan,
+                  y cambia con los perfiles, «Censurar todo», «Mostrar todo» y cada casilla */}
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4 flex-shrink-0">
-                <div className="flex items-center text-gray-700 text-xs sm:text-sm">
+                <div className="flex items-center text-gray-700 text-xs sm:text-sm" aria-live="polite">
                   <i className="bi bi-info-circle mr-2"></i>
-                  {totalFields} campos disponibles para configuración
+                  Tapas {selectedCount} de {totalFields} datos
                 </div>
               </div>
 
