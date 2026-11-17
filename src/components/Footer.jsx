@@ -27,7 +27,9 @@ function Footer() {
             <p className="mt-3 text-xs leading-relaxed">
               Iniciativa del Plan de Recuperación, Transformación y Resiliencia, financiada por la UE en el proyecto C108/23 «Detección de Falsificación de Documentos mediante IA».
             </p>
-            <img src="/footer_incibe.jpg" alt="Logo INCIBE" className="mt-4 inline-block h-14 w-auto rounded-lg bg-white p-2" />
+            {/* object-contain para que no se aplaste. Con h-14 y sin él, al no caber a lo ancho se estrechaba sin bajar
+                el alto, un 5 % en el ordenador y un 29 % en el móvil */}
+            <img src="/footer_incibe.jpg" alt="Logo INCIBE" className="mt-4 inline-block h-14 w-auto max-w-full object-contain rounded-lg bg-white p-2" />
           </div>
         </div>
 
