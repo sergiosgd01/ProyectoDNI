@@ -36,6 +36,28 @@ export function disponerEnA4(caras, hoja = A4) {
   return { paginas: pagina, caras: colocadas };
 }
 
+// Si el navegador puede abrir el menú del sistema para compartir el PDF (WhatsApp, correo...). Se pregunta con un PDF
+// de prueba, porque cada navegador acepta tipos de archivo distintos. Sin navigator.canShare (Firefox en el ordenador,
+// navegadores antiguos) no se puede, y entonces solo queda descargar
+export function puedeCompartirPdf(nav = globalThis.navigator) {
+  try {
+    if (typeof nav?.share !== 'function' || typeof nav?.canShare !== 'function') return false;
+    const prueba = new File([new Uint8Array([37, 80, 68, 70])], NOMBRES_COPIA.pdf, { type: 'application/pdf' });
+    return nav.canShare({ files: [prueba] }) === true;
+  } catch {
+    return false;
+  }
+}
+
+// Qué hacer cuando navigator.share falla. 'cancelado' si la persona cerró el menú sin elegir nada, 'repetir' si el
+// navegador no lo abrió porque pasó demasiado rato desde que se pulsó (Safari, si la copia aún se estaba preparando)
+// y 'fallo' en el resto de casos
+export function motivoErrorCompartir(error) {
+  if (error?.name === 'AbortError') return 'cancelado';
+  if (error?.name === 'NotAllowedError') return 'repetir';
+  return 'fallo';
+}
+
 // La frase que acompaña a la copia en la zona de descarga
 export function describirCopia({ hayTrasera, paginas = 1, marca = '' }) {
   const caras = hayTrasera ? 'Las dos caras' : 'La parte delantera';

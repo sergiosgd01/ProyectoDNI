@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { NOMBRES_COPIA, disponerEnA4 } from '../utils/copiaProtegida';
+import { NOMBRES_COPIA, disponerEnA4, motivoErrorCompartir, puedeCompartirPdf } from '../utils/copiaProtegida';
 import { caraConMarca, crearImagenDosCaras, crearPdf, descargarArchivo, miniaturaConMarca } from '../utils/crearCopia';
 
 // La copia protegida de la zona de descarga (ver ZonaDescarga). Se prepara sola en cuanto hay resultado (las caras
-// con la marca de agua, el PDF y su miniatura), así que descargar es inmediato y la zona puede enseñar cómo queda la
-// hoja, que en la vista previa no se ve porque allí no va la marca. delantera y trasera son las imágenes ya tapadas
-// (trasera puede faltar) y marca es el texto de la marca de agua. Si cambia alguna, la copia se vuelve a preparar
+// con la marca de agua, el PDF y su miniatura), así que descargar y compartir son inmediatos y la zona puede enseñar
+// cómo queda la hoja, que en la vista previa no se ve porque allí no va la marca. delantera y trasera son las
+// imágenes ya tapadas (trasera puede faltar) y marca es el texto de la marca de agua. Si cambia alguna, la copia se
+// vuelve a preparar
 
 async function preparar({ delantera, trasera, marca }) {
   const urls = trasera ? [delantera, trasera] : [delantera];
@@ -23,10 +24,13 @@ const esDe = (copia, { delantera, trasera, marca }) =>
   Boolean(copia) && copia.delantera === delantera && copia.trasera === trasera && copia.marca === marca;
 
 const AVISO_FALLO = 'No se ha podido preparar la copia. Vuelve a intentarlo.';
+const AVISO_REPETIR = 'Tu copia ya está lista. Pulsa otra vez «Compartir».';
+const AVISO_SIN_MENU = 'No se ha podido abrir el menú para compartir. Descarga el PDF y mándalo desde la aplicación que quieras.';
 
 export function useCopiaProtegida({ delantera, trasera, marca }) {
+  const [puedeCompartir] = useState(() => puedeCompartirPdf());
   const [copia, setCopia] = useState(null);
-  // Qué se está preparando a petición de la persona ('pdf', 'dosCaras', 'delantera' o 'trasera')
+  // Qué se está preparando a petición de la persona ('compartir', 'pdf', 'dosCaras', 'delantera' o 'trasera')
   const [ocupado, setOcupado] = useState(null);
   const [aviso, setAviso] = useState(null);
   const enCurso = useRef(null);
@@ -83,6 +87,36 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
   // La copia ya hecha o, si aún se está preparando, la que salga
   const copiaHecha = async () => lista ?? (await obtener());
 
+  // Abre el menú del sistema para mandar el PDF (WhatsApp, correo...) sin tener que descargarlo y buscarlo. Safari
+  // solo lo abre si se pide justo al pulsar, así que, con la copia ya hecha, se pide sin esperar a nada. Si aún se
+  // estaba preparando, se espera a que termine. Si para entonces el navegador ya no lo deja, se pide pulsar otra vez
+  const compartir = async () => {
+    setAviso(null);
+    let archivo = lista?.pdf;
+    if (!archivo) {
+      setOcupado('compartir');
+      try {
+        archivo = (await obtener()).pdf;
+      } catch (error) {
+        console.error('No se ha podido preparar la copia protegida:', error);
+        setAviso(AVISO_FALLO);
+        return;
+      } finally {
+        setOcupado(null);
+      }
+    }
+    try {
+      await navigator.share({ files: [archivo], title: 'DNI protegido' });
+    } catch (error) {
+      const motivo = motivoErrorCompartir(error);
+      if (motivo === 'repetir') setAviso(AVISO_REPETIR);
+      if (motivo === 'fallo') {
+        console.error('No se ha podido compartir la copia:', error);
+        setAviso(AVISO_SIN_MENU);
+      }
+    }
+  };
+
   const descargarPdf = () => ejecutar('pdf', async () => {
     descargarArchivo((await copiaHecha()).pdf, NOMBRES_COPIA.pdf);
   });
@@ -108,6 +142,8 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
     ocupado,
     aviso,
     cerrarAviso: () => setAviso(null),
+    puedeCompartir,
+    compartir,
     descargarPdf,
     descargarCara,
     descargarDosCaras

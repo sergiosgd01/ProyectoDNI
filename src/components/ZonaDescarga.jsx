@@ -4,27 +4,43 @@ import { A4, NOMBRES_COPIA, describirCopia } from '../utils/copiaProtegida';
 
 // Zona de descarga del editor, bajo el resultado. Sergio la eligió el 17/11/2026 entre tres propuestas del lienzo de
 // diseño («Compartir primero»). Lleva la ficha de la copia, con la hoja en pequeño y su marca de agua, «Descargar PDF»
-// y el resto de formatos en «Más formatos». copia sale de useCopiaProtegida
+// y «Compartir» y el resto de formatos en «Más formatos». copia sale de useCopiaProtegida
 
 // Rueda pequeña en un botón mientras se prepara su archivo
 function Girando() {
   return <span className="h-4 w-4 flex-none animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" />;
 }
 
-// Lo que se hace con la copia. En el ordenador va en esta zona y en el móvil y la tableta en la barra fija de abajo
-// (ver DNIEditor), para no tener que bajar a buscarlo
-export function AccionesCopia({ copia, className = '' }) {
+// Lo que se hace con la copia. En el ordenador va en esta zona, con «Descargar PDF» como principal. En el móvil y la
+// tableta va en la barra fija de abajo (ver DNIEditor) con compartirPrimero, porque allí lo normal es mandarla por
+// WhatsApp o por correo. «Compartir» solo sale si el navegador puede compartir el PDF, y si no, queda la descarga
+export function AccionesCopia({ copia, compartirPrimero = false, className = '' }) {
+  const ocupado = Boolean(copia.ocupado);
+  const descargar = (
+    <button
+      type="button"
+      onClick={copia.descargarPdf}
+      disabled={ocupado}
+      className={`btn ${copia.puedeCompartir && compartirPrimero ? 'btn-secundario' : 'btn-principal'} flex-1 px-3`}
+    >
+      {copia.ocupado === 'pdf' ? <Girando /> : <i className="bi bi-download text-lg" aria-hidden="true"></i>}
+      Descargar PDF
+    </button>
+  );
+  const compartir = copia.puedeCompartir && (
+    <button
+      type="button"
+      onClick={copia.compartir}
+      disabled={ocupado}
+      className={`btn ${compartirPrimero ? 'btn-principal' : 'btn-secundario'} flex-1 px-3`}
+    >
+      {copia.ocupado === 'compartir' ? <Girando /> : <i className="bi bi-share text-lg" aria-hidden="true"></i>}
+      Compartir
+    </button>
+  );
   return (
     <div className={`flex gap-3 ${className}`}>
-      <button
-        type="button"
-        onClick={copia.descargarPdf}
-        disabled={Boolean(copia.ocupado)}
-        className="btn btn-principal flex-1 px-4"
-      >
-        {copia.ocupado === 'pdf' ? <Girando /> : <i className="bi bi-download text-lg" aria-hidden="true"></i>}
-        Descargar PDF
-      </button>
+      {compartirPrimero ? <>{compartir}{descargar}</> : <>{descargar}{compartir}</>}
     </div>
   );
 }

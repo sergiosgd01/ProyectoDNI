@@ -1,7 +1,7 @@
 // Pruebas de las cuentas de la copia protegida. No necesitan navegador: npm test
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { A4, describirCopia, disponerEnA4 } from './copiaProtegida.js';
+import { A4, describirCopia, disponerEnA4, motivoErrorCompartir, puedeCompartirPdf } from './copiaProtegida.js';
 
 // Tamaño de un DNI recortado por el servidor (85,6 x 54 mm a unos 12 píxeles por milímetro)
 const DNI = { ancho: 1000, alto: 631 };
@@ -41,4 +41,27 @@ test('la frase dice qué caras van, en cuántas hojas y con qué marca de agua',
   assert.equal(describirCopia({ hayTrasera: true, paginas: 2, marca: 'Alquiler' }),
     'Las dos caras en dos hojas, con la marca de agua «Alquiler».');
   assert.equal(describirCopia({ hayTrasera: true, marca: '   ' }), 'Las dos caras en una hoja, sin marca de agua.');
+});
+
+test('se ofrece «Compartir» solo si el navegador dice que puede compartir el PDF', () => {
+  const compartir = () => {};
+  assert.equal(puedeCompartirPdf(undefined), false);
+  assert.equal(puedeCompartirPdf({}), false);
+  // Con share pero sin canShare no se sabe si acepta archivos
+  assert.equal(puedeCompartirPdf({ share: compartir }), false);
+  assert.equal(puedeCompartirPdf({ canShare: () => true }), false);
+  assert.equal(puedeCompartirPdf({ share: compartir, canShare: () => false }), false);
+  assert.equal(puedeCompartirPdf({ share: compartir, canShare: () => { throw new TypeError('sin archivos'); } }), false);
+  let preguntado;
+  const nav = { share: compartir, canShare: (datos) => { preguntado = datos.files[0]; return true; } };
+  assert.equal(puedeCompartirPdf(nav), true);
+  assert.equal(preguntado.type, 'application/pdf');
+  assert.equal(preguntado.name, 'dni-protegido.pdf');
+});
+
+test('al fallar el menú de compartir se distingue cancelar, pulsar otra vez y el resto', () => {
+  assert.equal(motivoErrorCompartir(new DOMException('cerrado', 'AbortError')), 'cancelado');
+  assert.equal(motivoErrorCompartir(new DOMException('sin gesto', 'NotAllowedError')), 'repetir');
+  assert.equal(motivoErrorCompartir(new TypeError('tipo no admitido')), 'fallo');
+  assert.equal(motivoErrorCompartir(undefined), 'fallo');
 });

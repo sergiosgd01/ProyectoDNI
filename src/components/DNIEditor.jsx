@@ -1123,7 +1123,7 @@ export default function DNIEditor({
       </div>
 
       {/* Barra fija en móvil y tablet con la acción principal, para no tener que bajar hasta el final.
-          Primero «Procesar DNI» y, con el resultado, «Descargar PDF», que descarga sin bajar a la zona de descarga */}
+          Primero «Procesar DNI» y, con el resultado, «Compartir» y «Descargar PDF» (ver ZonaDescarga) */}
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         {processedResult && !manualCensorList ? (
           <div className="max-w-xl mx-auto">
@@ -1132,7 +1132,7 @@ export default function DNIEditor({
                 {copia.aviso}
               </Aviso>
             )}
-            <AccionesCopia copia={copia} />
+            <AccionesCopia copia={copia} compartirPrimero />
           </div>
         ) : (
           <button
