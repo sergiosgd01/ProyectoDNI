@@ -41,6 +41,11 @@ function apuntarDetecciones(foto, detecciones, cara) {
 // Clases del modelo que corresponden a elementos de seguridad del anverso
 const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
 
+// Explicación corta que va bajo el nombre de las casillas que no se entienden solas
+const AYUDA_CAMPOS = {
+  cli: 'Es la imagen pequeña de la parte delantera que cambia al inclinar el DNI y repite la fecha de expedición.'
+};
+
 // Etiqueta de cada cara en la vista previa. Si se puede, lleva al lado el botón para corregir su recorte
 // y el de girar la foto. girando dice si se está girando esta cara y ocupado si se está girando alguna
 function EtiquetaCara({ texto, colores, nombreCara, onAjustar, onGirar, girando = false, ocupado = false }) {
@@ -628,6 +633,7 @@ export default function DNIEditor({
       can: 'CAN',
       firma: 'Firma',
       fotografia: 'Fotografía',
+      cli: 'Imagen láser (CLI)',
       mrz: 'MRZ',
       domicilio: 'Domicilio',
       municipio: 'Municipio',
@@ -981,6 +987,11 @@ export default function DNIEditor({
                             <div className="font-medium text-gray-800 text-xs sm:text-sm">
                               {formatFieldName(fieldName)}
                             </div>
+                            {AYUDA_CAMPOS[fieldName] && (
+                              <div className="mt-0.5 text-xs leading-snug text-gray-500">
+                                {AYUDA_CAMPOS[fieldName]}
+                              </div>
+                            )}
                           </div>
                         </label>
                       </div>
@@ -1030,6 +1041,11 @@ export default function DNIEditor({
                             <div className="font-medium text-gray-800 text-xs sm:text-sm">
                               {formatFieldName(fieldName)}
                             </div>
+                            {AYUDA_CAMPOS[fieldName] && (
+                              <div className="mt-0.5 text-xs leading-snug text-gray-500">
+                                {AYUDA_CAMPOS[fieldName]}
+                              </div>
+                            )}
                           </div>
                         </label>
                       </div>
