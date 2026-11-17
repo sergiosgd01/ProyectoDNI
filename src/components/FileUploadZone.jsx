@@ -297,11 +297,13 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
         onDrop={conRaton ? handleDrop : undefined}
         onClick={conRaton && !isProcessing && !conError ? () => document.getElementById(fileInputId).click() : undefined}
       >
+        {/* En ordenador se nombran también las HEIC, para que el selector las enseñe aunque el sistema no las
+            cuente como imagen. En el móvil se deja image/*, con el que el iPhone las pasa a JPEG él solo */}
         <input
           type="file"
           id={fileInputId}
           className="hidden"
-          accept="image/*"
+          accept={conRaton ? 'image/*,.heic,.heif' : 'image/*'}
           onChange={handleFileChange}
           disabled={isProcessing}
         />
