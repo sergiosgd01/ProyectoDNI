@@ -7,6 +7,9 @@ import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 // agua que se escribe aquí no sale del navegador ni cuenta en las métricas.
 // Dentro de la tarjeta las medidas van en cqw (centésimas del ancho de la tarjeta), así todo escala junto
 // y se ve igual en el móvil que en el ordenador.
+// En el móvil la tarjeta va encima de los controles y se queda pegada bajo la cabecera mientras se bajan, para
+// ver a la vez lo que se pulsa y cómo queda. Mientras se escribe la marca de agua se encoge a la mitad, para
+// caber encima del teclado (UX-15, las reglas están en .demo-tarjeta-fija de index.css).
 
 // Datos del anverso que se pueden tapar en la demo, con la misma clave que usan los perfiles.
 // El CAN no sale porque la tarjeta de ejemplo no lo dibuja y todos los perfiles lo tapan
@@ -225,6 +228,7 @@ function SecuritySection({ onStartProcess }) {
   const [perfil, setPerfil] = useState(PERFIL_INICIAL?.id ?? null);
   const [tapados, setTapados] = useState(() => (PERFIL_INICIAL ? tapadosDelPerfil(PERFIL_INICIAL) : {}));
   const [marca, setMarca] = useState(MARCA_INICIAL);
+  const [escribiendo, setEscribiendo] = useState(false);
 
   const elegirPerfil = (p) => {
     setPerfil(p.id);
@@ -253,13 +257,20 @@ function SecuritySection({ onStartProcess }) {
           Pruébalo con este DNI de ejemplo. Elige un perfil o pulsa cada dato para taparlo, y escribe para qué es la copia.
         </p>
 
-        <div className="mt-8 lg:mt-11 flex flex-wrap overflow-hidden rounded-3xl border border-gray-200 bg-white">
-          <div className="flex min-w-0 flex-[1_1_540px] items-center justify-center bg-[#eceef1] p-5 sm:p-8 lg:p-12">
-            <div className="flex w-full max-w-[500px] flex-col gap-4">
-              <span className="self-start rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+        {/* demo-marco recorta las esquinas sin impedir que la tarjeta se quede pegada (ver index.css) */}
+        <div className="demo-marco mt-8 lg:mt-11 flex flex-wrap rounded-3xl border border-gray-200 bg-white">
+          <div
+            className="demo-tarjeta-fija flex min-w-0 flex-[1_1_540px] items-center justify-center bg-[#eceef1] px-4 py-3 sm:p-8 lg:p-12"
+            data-escribiendo={escribiendo}
+          >
+            <div className="flex w-full max-w-[500px] flex-col gap-2 sm:gap-4">
+              {/* En el móvil no sale, para que la tarjeta pegada ocupe menos. El texto de arriba ya dice que es de ejemplo */}
+              <span className="self-start rounded-full border border-gray-300 bg-white px-3 py-1 text-xs font-semibold text-gray-700 max-sm:hidden">
                 DNI de ejemplo
               </span>
-              <TarjetaEjemplo tapados={tapados} marca={marca} />
+              <div className="demo-tarjeta-tam w-full self-center">
+                <TarjetaEjemplo tapados={tapados} marca={marca} />
+              </div>
               <p className="self-center text-sm text-gray-600" aria-live="polite">{cuenta}</p>
             </div>
           </div>
@@ -326,6 +337,8 @@ function SecuritySection({ onStartProcess }) {
                 maxLength={MARCA_MAXIMO}
                 autoComplete="off"
                 onChange={(e) => setMarca(e.target.value.slice(0, MARCA_MAXIMO))}
+                onFocus={() => setEscribiendo(true)}
+                onBlur={() => setEscribiendo(false)}
                 placeholder="Escribe para qué es la copia"
                 className="min-h-[3rem] w-full rounded-xl border border-gray-300 bg-white px-3.5 text-base text-gray-900 placeholder:text-gray-400 transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-100"
               />

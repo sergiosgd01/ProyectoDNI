@@ -62,6 +62,62 @@
   .btn-oscuro:hover:not(:disabled) {
     @apply bg-gray-600;
   }
+
+  /* Demo de la portada («Tú eliges qué se ve», SecuritySection.jsx). En el móvil y en la tableta en vertical,
+     con la tarjeta encima de los controles, la tarjeta se queda pegada bajo la cabecera mientras se bajan el
+     perfil, los datos y la marca de agua, para ver a la vez lo que se pulsa y cómo queda (UX-15).
+     - El marco recorta sus esquinas con overflow: clip, que a diferencia de hidden deja funcionar position: sticky.
+       Donde no existe (Safari anterior a 16) se queda en hidden y la tarjeta no se pega, como antes.
+     - Solo se pega cuando el marco pone la tarjeta encima de los controles (menos de 900 px de ancho, los 540 de
+       la tarjeta y los 360 de los controles) y la pantalla está en vertical. Con el móvil tumbado la tarjeta
+       llenaría la pantalla y no dejaría ver los controles.
+     - Mientras se escribe la marca de agua la tarjeta se encoge a la mitad, para que el campo quepa encima del
+       teclado.
+     - Se pega justo debajo de la cabecera fija de Header.jsx, que mide 69 px, o 67 en una ventana de menos de
+       640 px manejada con ratón (medido el 17/11/2026). Si cambia la cabecera hay que cambiar estos dos valores. */
+  .demo-marco {
+    overflow: hidden;
+    container: demo / inline-size;
+  }
+
+  @supports (overflow: clip) {
+    .demo-marco {
+      overflow: clip;
+    }
+  }
+
+  .demo-tarjeta-tam {
+    transition: width 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .demo-tarjeta-tam {
+      transition: none;
+    }
+  }
+
+  @media (orientation: portrait) {
+    @container demo (max-width: 899.98px) {
+      .demo-tarjeta-fija {
+        position: sticky;
+        top: 69px;
+        z-index: 10;
+        border-bottom: 1px solid theme('colors.gray.200');
+      }
+
+      .demo-tarjeta-fija[data-escribiendo='true'] .demo-tarjeta-tam {
+        width: 50%;
+      }
+    }
+  }
+
+  @media (orientation: portrait) and (max-width: 639.98px) and (pointer: fine) {
+    @container demo (max-width: 899.98px) {
+      .demo-tarjeta-fija {
+        top: 67px;
+      }
+    }
+  }
 }
 
 /* Custom Utilities for Animations if needed */
