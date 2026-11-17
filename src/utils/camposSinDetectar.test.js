@@ -12,6 +12,7 @@ const MAPA = {
   numeroSoporte: ['SOPORTE', 'SOPORTE_MIN'],
   can: 'CAN',
   firma: 'FIRMA',
+  fotografia: 'FOTOGRAFIA',
   cli: 'CLI',
   domicilio: 'DIRECCION',
   municipio: 'DOMICILIO',
@@ -42,6 +43,19 @@ test('los campos que se dejan a la vista no cuentan aunque no se hayan visto', (
 test('un campo con dos clases vale con una de ellas', () => {
   const detecciones = vistas('DOC_DNI', 'NUM_DNI', 'SOPORTE');
   assert.deepEqual(camposSinDetectar({ dni: true, numeroSoporte: true }, detecciones, 'anverso', MAPA), []);
+});
+
+test('con «Fotografía» marcada falta la foto si el detector no la ha encontrado', () => {
+  const detecciones = vistas('DOC_DNI', 'SEXO', 'EMISIÓN', 'SOPORTE', 'CAN', 'FIRMA');
+  assert.deepEqual(camposSinDetectar({ ...VIAJES, fotografia: true }, detecciones, 'anverso', MAPA), ['fotografia']);
+  // Encontrada, ya no falta nada
+  const conFoto = vistas('DOC_DNI', 'SEXO', 'EMISIÓN', 'SOPORTE', 'CAN', 'FIRMA', 'FOTOGRAFIA');
+  assert.deepEqual(camposSinDetectar({ ...VIAJES, fotografia: true }, conFoto, 'anverso', MAPA), []);
+});
+
+test('la foto a la vista, como en todos los perfiles, no se pide aunque no se haya encontrado', () => {
+  const detecciones = vistas('DOC_DNI', 'SEXO', 'EMISIÓN', 'SOPORTE', 'CAN', 'FIRMA');
+  assert.deepEqual(camposSinDetectar({ ...VIAJES, fotografia: false }, detecciones, 'anverso', MAPA), []);
 });
 
 test('no se piden campos que el detector no saca nunca o que no son del modelo', () => {

@@ -74,6 +74,7 @@ export const mapUiToYolo = {
   numeroSoporte: ['SOPORTE', 'SOPORTE_MIN'],
   can: 'CAN',
   firma: 'FIRMA',
+  fotografia: 'FOTOGRAFIA',
   cli: 'CLI',
   // REVERSO
   mrz: 'MRZ',

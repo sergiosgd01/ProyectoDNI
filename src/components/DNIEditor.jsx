@@ -132,6 +132,7 @@ export default function DNIEditor({
     'numeroSoporte',
     'can',
     'firma',
+    'fotografia',
     'cli'
   ];
 
@@ -431,7 +432,7 @@ export default function DNIEditor({
   // Los datos nuevos se añaden aquí
   const armarMetricas = (caras, modelo) => ({
     profileUsed: selectedProfile || 'personalizado',
-    // Siempre los 12 campos del anverso y los 8 del reverso, a true los que se tapan
+    // Siempre los 13 campos del anverso y los 8 del reverso, a true los que se tapan
     hiddenFields: {
       frontFields: completarCampos(frontfields, selectedFrontFields),
       backFields: completarCampos(backfields, selectedBackFields)
@@ -625,6 +626,7 @@ export default function DNIEditor({
       numeroSoporte: 'Número de Soporte',
       can: 'CAN',
       firma: 'Firma',
+      fotografia: 'Fotografía',
       mrz: 'MRZ',
       domicilio: 'Domicilio',
       municipio: 'Municipio',

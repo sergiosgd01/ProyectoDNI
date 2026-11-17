@@ -8,11 +8,12 @@
  */
 
 // Clases que el detector encuentra en cada cara del DNI 4.0 (las que da con los especímenes del banco de pruebas).
-// CLI no sale en ninguna cara, y DIRECCION y PROVINCIA no son clases del modelo, así que esos campos no se comprueban
+// CLI no sale en ninguna cara, y DIRECCION y PROVINCIA no son clases del modelo, así que esos campos no se comprueban.
+// FOTOGRAFIA se comprueba para que una foto marcada para tapar que el detector no encuentre no se quede a la vista
 export const CLASES_POR_CARA = {
   anverso: [
-    'APELLIDOS', 'CAN', 'EMISIÓN', 'FIRMA', 'NACIMIENTO', 'NACIONALIDAD', 'NOMBRE', 'NUM_DNI', 'NUM_DNI_MIN', 'SEXO',
-    'SOPORTE', 'SOPORTE_MIN', 'VALIDEZ',
+    'APELLIDOS', 'CAN', 'EMISIÓN', 'FIRMA', 'FOTOGRAFIA', 'NACIMIENTO', 'NACIONALIDAD', 'NOMBRE', 'NUM_DNI',
+    'NUM_DNI_MIN', 'SEXO', 'SOPORTE', 'SOPORTE_MIN', 'VALIDEZ',
   ],
   reverso: ['DOMICILIO', 'EQUIPO', 'HIJO_DE', 'LUGAR_NACIMIENTO', 'MRZ', 'SOPORTE_MIN'],
 };

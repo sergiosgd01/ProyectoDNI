@@ -3,6 +3,8 @@
 // las casillas del editor («marcada = censurar»), censorDniComplete y hiddenFields en las métricas.
 // CLI, lugar de nacimiento y ventana del soporte no aparecen en ningún perfil, así que ningún perfil los tapa.
 // Falta decidir qué debe hacer cada perfil con ellos.
+// La fotografía va a false en todos los perfiles, porque muchos sitios necesitan ver la cara para comprobar que el DNI
+// es de quien lo enseña. Solo se tapa marcando su casilla o con «Censurar todo».
 const DNI_PROFILES_DATA = {
   VIAJES: {
     id: 'viajes',
@@ -28,6 +30,7 @@ const DNI_PROFILES_DATA = {
       numeroSoporte: true,
       can: true,
       firma: true,
+      fotografia: false,
     },
     backFields: {
       mrz: true,
@@ -57,6 +60,7 @@ const DNI_PROFILES_DATA = {
       numeroSoporte: true,
       can: true,
       firma: true,
+      fotografia: false,
     },
     backFields: {
       mrz: true,
@@ -86,6 +90,7 @@ const DNI_PROFILES_DATA = {
       numeroSoporte: true,
       can: true,
       firma: true,
+      fotografia: false,
     },
     backFields: {
       mrz: true,
@@ -115,6 +120,7 @@ const DNI_PROFILES_DATA = {
       numeroSoporte: true,
       can: true,
       firma: true,
+      fotografia: false,
     },
     backFields: {
       mrz: true,
