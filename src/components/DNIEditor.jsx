@@ -1061,7 +1061,8 @@ export default function DNIEditor({
                   maxLength={50}
                 />
 
-                {/* En móvil y tablet estos botones van en la barra fija de abajo */}
+                {/* En móvil y tablet «Procesar DNI» va en la barra fija de abajo. «Procesar de nuevo» se ve aquí en todas
+                    las pantallas y es secundario, porque con el resultado lo principal es la copia (ver ZonaDescarga) */}
                 {!processedResult ? (
                   <button
                     onClick={handleProcessDNI}
@@ -1084,7 +1085,7 @@ export default function DNIEditor({
                   <button
                     onClick={handleReprocess}
                     disabled={procesarBloqueado}
-                    className="btn btn-principal w-full hidden lg:flex"
+                    className="btn btn-secundario w-full"
                   >
                     {isProcessing ? (
                       <>
@@ -1131,17 +1132,7 @@ export default function DNIEditor({
                 {copia.aviso}
               </Aviso>
             )}
-            <div className="flex gap-3">
-              <button
-                onClick={handleReprocess}
-                disabled={procesarBloqueado}
-                className="btn btn-secundario flex-auto px-3"
-              >
-                <i className="bi bi-arrow-repeat text-lg"></i>
-                Procesar de nuevo
-              </button>
-              <AccionesCopia copia={copia} className="flex-auto" />
-            </div>
+            <AccionesCopia copia={copia} />
           </div>
         ) : (
           <button
