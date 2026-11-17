@@ -39,6 +39,12 @@ const PERFILES = [
   .filter((perfil) => perfil.datos);
 
 const PERFIL_INICIAL = PERFILES[0] ?? null;
+
+// La frase de debajo de los perfiles. La de id null es la de los datos elegidos a mano
+const FRASES_PERFIL = [
+  ...PERFILES.map((perfil) => ({ id: perfil.id, texto: `${perfil.datos.description}.` })),
+  { id: null, texto: 'Personalizado. Has elegido los datos a mano.' },
+];
 const MARCA_INICIAL = 'Solo para el alquiler';
 const MARCA_MAXIMO = 40; // El mismo límite que WatermarkInput
 
@@ -241,7 +247,6 @@ function SecuritySection({ onStartProcess }) {
     setPerfil(perfilQueCoincide(nuevos));
   };
 
-  const perfilActivo = PERFILES.find((p) => p.id === perfil);
   const totalTapados = CAMPOS.filter(({ clave }) => tapados[clave]).length;
   const cuenta = totalTapados === 1
     ? `1 dato tapado de ${CAMPOS.length}`
@@ -298,9 +303,16 @@ function SecuritySection({ onStartProcess }) {
                   );
                 })}
               </div>
-              <p className="text-[13px] leading-snug text-gray-600">
-                {perfilActivo ? `${perfilActivo.datos.description}.` : 'Personalizado. Has elegido los datos a mano.'}
-              </p>
+              {/* Todas las frases van en la misma celda y solo se ve la del perfil elegido, así el hueco mide siempre
+                  lo que la más larga y nada se mueve al cambiar de perfil. La de Banca ocupa dos líneas en el móvil
+                  y las otras una, y la página daba un saltito */}
+              <div className="grid text-[13px] leading-snug text-gray-600">
+                {FRASES_PERFIL.map(({ id, texto }) => (
+                  <p key={id ?? 'personalizado'} className={`col-start-1 row-start-1 ${id === perfil ? '' : 'invisible'}`}>
+                    {texto}
+                  </p>
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-col gap-2.5">
