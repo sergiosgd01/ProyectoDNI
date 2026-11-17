@@ -250,7 +250,7 @@ function SecuritySection({ onStartProcess }) {
           Tú eliges qué se ve
         </h2>
         <p className="mt-4 max-w-xl text-lg leading-relaxed text-gray-600 text-pretty">
-          Pruébalo con este DNI de ejemplo. Elige un perfil o toca cada dato para taparlo, y escribe para qué es la copia.
+          Pruébalo con este DNI de ejemplo. Elige un perfil o pulsa cada dato para taparlo, y escribe para qué es la copia.
         </p>
 
         <div className="mt-8 lg:mt-11 flex flex-wrap overflow-hidden rounded-3xl border border-gray-200 bg-white">
