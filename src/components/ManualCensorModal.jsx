@@ -622,7 +622,7 @@ function ManualCensorModal({
         <div className="flex items-center space-x-2 text-sm">
           <span className="bg-gray-700 px-3 py-1 rounded-full">
             <i className="bi bi-square-fill mr-1.5 text-red-500"></i>
-            {totalRectangles} censuras
+            {totalRectangles} {totalRectangles === 1 ? 'censura' : 'censuras'}
           </span>
         </div>
       </div>
@@ -757,7 +757,7 @@ function ManualCensorModal({
             ) : totalRectangles > 0 ? (
               <span className="text-green-400 flex items-center">
                 <i className="bi bi-check-circle mr-1.5"></i>
-                {totalRectangles} área(s) censurada(s)
+                {totalRectangles} {totalRectangles === 1 ? 'área censurada' : 'áreas censuradas'}
               </span>
             ) : (
               <span className="flex items-center">

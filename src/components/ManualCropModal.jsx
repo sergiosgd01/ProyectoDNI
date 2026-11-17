@@ -595,7 +595,7 @@ function ManualCropModal({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm md:text-base font-medium mb-1">
-                Ajusta las 4 esquinas del DNI moviendo los puntos rojos
+                Ajusta las cuatro esquinas del DNI moviendo los puntos rojos
               </p>
               <p className="text-gray-300 text-xs md:text-sm">
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva

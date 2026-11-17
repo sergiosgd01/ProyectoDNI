@@ -90,7 +90,7 @@ export const CARD_CROP_MARGIN = 0.15;
 
 export const HINTS = {
   loading: 'Preparando la detección del DNI',
-  manual: 'Coloca el DNI dentro del recuadro y pulsa Capturar',
+  manual: 'Coloca el DNI dentro del recuadro y pulsa «Capturar foto»',
   place: 'Coloca el DNI dentro del recuadro',
   closer: 'Acerca el DNI a la cámara',
   farther: 'Aleja un poco el DNI',

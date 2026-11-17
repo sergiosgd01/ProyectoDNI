@@ -13,7 +13,7 @@ import { DNI_PROFILES } from '../../shared/constants/dniProfiles';
 const CAMPOS = [
   { clave: 'nombre', nombre: 'Nombre' },
   { clave: 'apellidos', nombre: 'Apellidos' },
-  { clave: 'dni', nombre: 'Nº de DNI' },
+  { clave: 'dni', nombre: 'N.º de DNI' },
   { clave: 'sexo', nombre: 'Sexo' },
   { clave: 'nacionalidad', nombre: 'Nacionalidad' },
   { clave: 'fechaNacimiento', nombre: 'Nacimiento' },

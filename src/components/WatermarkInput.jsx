@@ -25,7 +25,7 @@ export default function WatermarkInput({ value, onChange, maxLength = 40 }) {
             }
           }}
           maxLength={maxLength}
-          placeholder="Ej: Uso exclusivo para Hotel"
+          placeholder="Por ejemplo, uso exclusivo para el hotel"
           className="w-full px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg transition-colors focus:outline-none focus:border-secondary-500 focus:ring-2 focus:ring-secondary-100"
         />
 
