@@ -28,6 +28,43 @@ function esquinasDePartida(corners, image) {
   }));
 }
 
+// Rectángulo de partida cuando no llegan esquinas, centrado y con la proporción del DNI, en píxeles de la foto
+function rectanguloDePartida(image) {
+  const proporcion = 85.6 / 53.98;
+  const ancho = Math.min(image.width * 0.7, image.height * proporcion * 0.7);
+  const alto = ancho / proporcion;
+  const cx = image.width / 2;
+  const cy = image.height / 2;
+  return [
+    { x: cx - ancho / 2, y: cy - alto / 2 },
+    { x: cx + ancho / 2, y: cy - alto / 2 },
+    { x: cx + ancho / 2, y: cy + alto / 2 },
+    { x: cx - ancho / 2, y: cy + alto / 2 },
+  ];
+}
+
+// Al encuadrar el DNI se deja alrededor de las esquinas este margen, en fracción de su ancho y de su alto, para poder
+// abrirlas si el recorte se quedó corto
+const MARGEN_ENCUADRE = 0.3;
+
+const fotoEntera = (image) => ({ x: 0, y: 0, w: image.width, h: image.height });
+
+// Parte de la foto que se ve al encuadrar unas esquinas, en píxeles de la foto, con margen y sin salirse de ella.
+// Si casi no se acerca (deja más del 60 % de la foto), no merece la pena y devuelve null
+function encuadreDe(puntos, image) {
+  const xs = puntos.map((p) => p.x);
+  const ys = puntos.map((p) => p.y);
+  const ancho = Math.max(...xs) - Math.min(...xs);
+  const alto = Math.max(...ys) - Math.min(...ys);
+  if (ancho <= 0 || alto <= 0) return null;
+  const x0 = Math.max(0, Math.min(...xs) - ancho * MARGEN_ENCUADRE);
+  const y0 = Math.max(0, Math.min(...ys) - alto * MARGEN_ENCUADRE);
+  const x1 = Math.min(image.width, Math.max(...xs) + ancho * MARGEN_ENCUADRE);
+  const y1 = Math.min(image.height, Math.max(...ys) + alto * MARGEN_ENCUADRE);
+  if ((x1 - x0) * (y1 - y0) > 0.6 * image.width * image.height) return null;
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
 /**
  * Modal para recorte manual de imagen cuando YOLO falla o para corregir su recorte
  * Sistema de 4 puntos ajustables para recortar DNI en perspectiva
@@ -47,15 +84,21 @@ function ManualCropModal({
   const canvasRef = useRef(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [originalImage, setOriginalImage] = useState(null);
-  // Escala de la foto en el lienzo. null hasta medir el hueco que queda para ella
+  // Escala de la parte de la foto que se ve en el lienzo. null hasta medir el hueco que queda para ella
   const [scale, setScale] = useState(null);
   const objectUrlRef = useRef(null);
 
-  // Estado de los 4 puntos del polígono (esquinas del DNI), en píxeles del lienzo
+  // Estado de los 4 puntos del polígono (esquinas del DNI), en píxeles de la foto. Así siguen en el mismo sitio al
+  // girar el móvil y al acercar o alejar la vista
   const [points, setPoints] = useState(null);
   const [draggingPoint, setDraggingPoint] = useState(null);
-  // Escala con la que están los puntos. Si cambia el hueco (al girar el móvil) se pasan a la nueva
-  const escalaPuntosRef = useRef(null);
+
+  // Parte de la foto que se ve en el lienzo, en píxeles de la foto ({ x, y, w, h }). Con las esquinas del servidor se
+  // empieza con el DNI encuadrado, porque en una foto hecha de lejos el DNI salía pequeño y costaba afinar las
+  // esquinas, sobre todo con el móvil tumbado. encuadrado es true con el DNI encuadrado, false con la foto entera
+  // después de alejarse y null si no hay encuadre
+  const [vista, setVista] = useState(null);
+  const [encuadrado, setEncuadrado] = useState(null);
 
   // Si el móvil está tumbado (ver CONSULTA_TUMBADO). Cambia al girarlo con la ventana abierta
   const [tumbado, setTumbado] = useState(() => window.matchMedia(CONSULTA_TUMBADO).matches);
@@ -112,7 +155,7 @@ function ManualCropModal({
   // de la ventana, sin mirar el hueco. Con el móvil tumbado el lienzo salía mucho más alto que su hueco, solo se veía
   // una tira, y como arrastrar sobre el lienzo mueve las esquinas, tampoco se podía bajar para ver el resto
   useLayoutEffect(() => {
-    if (!imageLoaded || !originalImage) return;
+    if (!imageLoaded || !originalImage || !vista) return;
 
     const ajustar = () => {
       const container = containerRef.current;
@@ -122,7 +165,7 @@ function ManualCropModal({
       const ancho = container.clientWidth - px(estilo.paddingLeft) - px(estilo.paddingRight) - 2 * BORDE_LIENZO;
       const alto = container.clientHeight - px(estilo.paddingTop) - px(estilo.paddingBottom) - 2 * BORDE_LIENZO;
       if (ancho <= 0 || alto <= 0) return;
-      const nueva = Math.min(ancho / originalImage.width, alto / originalImage.height, 1);
+      const nueva = Math.min(ancho / vista.w, alto / vista.h, 1);
       setScale((anterior) => (anterior !== null && Math.abs(anterior - nueva) < 1e-4 ? anterior : nueva));
     };
 
@@ -137,84 +180,64 @@ function ManualCropModal({
     }
     window.addEventListener('resize', ajustar);
     return () => window.removeEventListener('resize', ajustar);
-  }, [imageLoaded, originalImage]);
+  }, [imageLoaded, originalImage, vista]);
 
-  // Dibujar canvas cuando la imagen está lista
+  // Esquinas y vista de partida, al cargar la foto y al pulsar «Reiniciar». Si llegan esquinas de esta misma foto se
+  // empieza en ellas y con el DNI encuadrado. Si no, en un rectángulo centrado y con la foto entera
   useEffect(() => {
-    if (!imageLoaded || !originalImage || !canvasRef.current || scale === null) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    const newScale = scale;
-    const ancho = Math.max(1, Math.floor(originalImage.width * newScale));
-    const alto = Math.max(1, Math.floor(originalImage.height * newScale));
-
-    if (canvas.width !== ancho || canvas.height !== alto) {
-      canvas.width = ancho;
-      canvas.height = alto;
-      ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
-    }
-
-    // Si ha cambiado la escala (el móvil se ha girado), las esquinas siguen en el mismo sitio de la foto
-    if (points && escalaPuntosRef.current !== null && escalaPuntosRef.current !== newScale) {
-      const factor = newScale / escalaPuntosRef.current;
-      escalaPuntosRef.current = newScale;
-      setPoints(points.map((p) => ({ x: p.x * factor, y: p.y * factor })));
-      return;
-    }
-    if (points) return;
-    escalaPuntosRef.current = newScale;
-
-    // Si llegan esquinas de esta misma foto se empieza en ellas. Si no, en un rectángulo centrado
+    if (!imageLoaded || !originalImage || points) return;
     const esquinas = esquinasDePartida(initialCorners, originalImage);
-    if (esquinas) {
-      setPoints(esquinas.map((p) => ({ x: p.x * newScale, y: p.y * newScale })));
-    } else {
-      const dniAspectRatio = 85.6 / 53.98;
-      const estimatedWidth = Math.min(canvas.width * 0.7, canvas.height * dniAspectRatio * 0.7);
-      const estimatedHeight = estimatedWidth / dniAspectRatio;
-      
-      const centerX = canvas.width / 2;
-      const centerY = canvas.height / 2;
-      
-      setPoints([
-        { x: centerX - estimatedWidth / 2, y: centerY - estimatedHeight / 2 },
-        { x: centerX + estimatedWidth / 2, y: centerY - estimatedHeight / 2 },
-        { x: centerX + estimatedWidth / 2, y: centerY + estimatedHeight / 2 },
-        { x: centerX - estimatedWidth / 2, y: centerY + estimatedHeight / 2 },
-      ]);
-    }
-  }, [imageLoaded, originalImage, scale, points, initialCorners]);
+    const encuadre = esquinas ? encuadreDe(esquinas, originalImage) : null;
+    setPoints(esquinas || rectanguloDePartida(originalImage));
+    setVista(encuadre || fotoEntera(originalImage));
+    setEncuadrado(encuadre ? true : null);
+  }, [imageLoaded, originalImage, points, initialCorners]);
+
+  // De píxeles de la foto a píxeles del lienzo y al revés, según la parte de la foto que se ve
+  const aLienzo = useCallback((p) => ({ x: (p.x - vista.x) * scale, y: (p.y - vista.y) * scale }), [vista, scale]);
+  const aFoto = useCallback((p) => ({ x: vista.x + p.x / scale, y: vista.y + p.y / scale }), [vista, scale]);
 
   // Redibujar canvas con polígono
   const redrawCanvas = useCallback(() => {
-    if (!canvasRef.current || !originalImage || !points) return;
+    if (!canvasRef.current || !originalImage || !points || !vista || scale === null) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
+    // El lienzo mide lo que mide en pantalla la parte de la foto que se ve
+    const ancho = Math.max(1, Math.floor(vista.w * scale));
+    const alto = Math.max(1, Math.floor(vista.h * scale));
+    if (canvas.width !== ancho || canvas.height !== alto) {
+      canvas.width = ancho;
+      canvas.height = alto;
+    }
+    const dibujarFoto = () => ctx.drawImage(
+      originalImage, vista.x, vista.y, vista.w, vista.h, 0, 0, vista.w * scale, vista.h * scale
+    );
+    const enLienzo = points.map(aLienzo);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+    dibujarFoto();
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    points.forEach(point => ctx.lineTo(point.x, point.y));
+    ctx.moveTo(enLienzo[0].x, enLienzo[0].y);
+    enLienzo.forEach(point => ctx.lineTo(point.x, point.y));
     ctx.closePath();
     ctx.clip();
 
-    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+    dibujarFoto();
     ctx.restore();
 
     ctx.strokeStyle = '#dd9ea0ff';
     ctx.lineWidth = 3;
     ctx.setLineDash([]);
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    points.forEach(point => ctx.lineTo(point.x, point.y));
+    ctx.moveTo(enLienzo[0].x, enLienzo[0].y);
+    enLienzo.forEach(point => ctx.lineTo(point.x, point.y));
     ctx.closePath();
     ctx.stroke();
 
@@ -222,13 +245,13 @@ function ManualCropModal({
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    points.forEach(point => ctx.lineTo(point.x, point.y));
+    ctx.moveTo(enLienzo[0].x, enLienzo[0].y);
+    enLienzo.forEach(point => ctx.lineTo(point.x, point.y));
     ctx.closePath();
     ctx.stroke();
 
     ctx.setLineDash([]);
-    points.forEach((point, index) => {
+    enLienzo.forEach((point, index) => {
       ctx.fillStyle = '#E53338';
       ctx.beginPath();
       ctx.arc(point.x, point.y, 12, 0, 2 * Math.PI);
@@ -245,7 +268,7 @@ function ManualCropModal({
       ctx.textBaseline = 'middle';
       ctx.fillText((index + 1).toString(), point.x, point.y);
     });
-  }, [originalImage, points]);
+  }, [originalImage, points, vista, scale, aLienzo]);
 
   useEffect(() => {
     redrawCanvas();
@@ -276,37 +299,35 @@ function ManualCropModal({
 
   // Iniciar arrastre de punto
   const handleMouseDown = useCallback((event) => {
-    if (!points) return;
-    
+    if (!points || !vista || scale === null) return;
+
     const pos = getCanvasPosition(event);
     if (!pos) return;
 
-    const pointIndex = points.findIndex(point => isNearPoint(pos, point));
-    
+    const pointIndex = points.map(aLienzo).findIndex(point => isNearPoint(pos, point));
+
     if (pointIndex !== -1) {
       setDraggingPoint(pointIndex);
       event.preventDefault();
     }
-  }, [points]);
+  }, [points, vista, scale, aLienzo]);
 
-  // Durante el arrastre
+  // Durante el arrastre. La esquina no sale de la parte de la foto que se ve, y se guarda en píxeles de la foto
   const handleMouseMove = useCallback((event) => {
-    if (draggingPoint === null || !points) return;
-    
+    if (draggingPoint === null || !points || !vista || scale === null) return;
+
     event.preventDefault();
 
     const pos = getCanvasPosition(event);
     if (!pos) return;
 
-    const canvas = canvasRef.current;
-    
-    const clampedX = Math.max(0, Math.min(canvas.width, pos.x));
-    const clampedY = Math.max(0, Math.min(canvas.height, pos.y));
+    const clampedX = Math.max(0, Math.min(vista.w * scale, pos.x));
+    const clampedY = Math.max(0, Math.min(vista.h * scale, pos.y));
 
     const newPoints = [...points];
-    newPoints[draggingPoint] = { x: clampedX, y: clampedY };
+    newPoints[draggingPoint] = aFoto({ x: clampedX, y: clampedY });
     setPoints(newPoints);
-  }, [draggingPoint, points]);
+  }, [draggingPoint, points, vista, scale, aFoto]);
 
   // Finalizar arrastre
   const handleMouseUp = useCallback(() => {
@@ -497,11 +518,8 @@ function ManualCropModal({
       return;
     }
 
-    // Convertir puntos a escala original
-    const originalPoints = points.map(p => ({
-      x: p.x / scale,
-      y: p.y / scale
-    }));
+    // Los puntos ya están en píxeles de la foto
+    const originalPoints = points.map(p => ({ x: p.x, y: p.y }));
 
     // Calcular dimensiones del rectángulo de salida
     const topWidth = Math.sqrt(
@@ -617,11 +635,39 @@ function ManualCropModal({
     });
   };
 
-  // Reset puntos
+  // Reset puntos. Vuelven las esquinas y la vista de partida
   const handleReset = () => {
     setPoints(null);
     setAviso(null);
   };
+
+  // Ver la foto entera o volver a encuadrar las esquinas como estén en ese momento
+  const verFotoEntera = () => {
+    setVista(fotoEntera(originalImage));
+    setEncuadrado(false);
+  };
+  const encuadreDisponible = encuadrado !== true && points && originalImage ? encuadreDe(points, originalImage) : null;
+  const acercar = () => {
+    if (!encuadreDisponible) return;
+    setVista(encuadreDisponible);
+    setEncuadrado(true);
+  };
+  const botonVista = encuadrado === true
+    ? { texto: 'Foto entera', icono: 'bi-arrows-angle-expand', alPulsar: verFotoEntera, nombre: 'Ver la foto entera' }
+    : encuadreDisponible
+      ? { texto: 'Acercar', icono: 'bi-zoom-in', alPulsar: acercar, nombre: 'Acercar a las esquinas' }
+      : null;
+  const renderBotonVista = () => botonVista && (
+    <button
+      type="button"
+      onClick={botonVista.alPulsar}
+      aria-label={botonVista.nombre}
+      className={`btn btn-sm btn-oscuro ${tumbado ? 'w-full mt-2' : 'flex-none px-3'}`}
+    >
+      <i className={`bi ${botonVista.icono}`}></i>
+      <span>{botonVista.texto}</span>
+    </button>
+  );
 
   return (
     // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con las instrucciones.
@@ -651,6 +697,9 @@ function ManualCropModal({
             <p className={`text-gray-400 ${tumbado ? 'text-xs' : 'text-xs md:text-sm'}`}>{subtitulo}</p>
           </div>
         </div>
+
+        {/* Acercar a las esquinas o ver la foto entera. Con el móvil tumbado va bajo las instrucciones */}
+        {!tumbado && renderBotonVista()}
       </div>
 
       {/* Instrucciones mejoradas. Con el móvil tumbado solo la primera frase, en pequeño */}
@@ -667,6 +716,7 @@ function ManualCropModal({
               <p className={tumbado ? 'hidden' : 'text-gray-300 text-xs md:text-sm'}>
                 La imagen se corregirá automáticamente aunque esté inclinada o en perspectiva
               </p>
+              {tumbado && renderBotonVista()}
             </div>
           </div>
         </div>
