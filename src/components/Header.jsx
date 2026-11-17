@@ -5,7 +5,7 @@ import 'flag-icons/css/flag-icons.min.css';
 const ENLACES = [
   { id: 'upload-section', texto: 'Cómo funciona' },
   { id: 'security-section', texto: 'Pruébalo' },
-  { id: 'faq-section', texto: 'FAQ' },
+  { id: 'faq-section', texto: 'Preguntas frecuentes' },
 ];
 
 // onStartProcess abre la subida. El botón se llama «Subir mi DNI», como el resto de la portada, y el banco de

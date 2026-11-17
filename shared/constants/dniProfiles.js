@@ -104,7 +104,7 @@ const DNI_PROFILES_DATA = {
   FINANCIERO: {
     id: 'financiero',
     name: 'Financiero / banca',
-    description: 'Para verificaciones bancarias y KYC',
+    description: 'Para verificaciones bancarias y de identidad de clientes',
     icon: '🏦',
     color: 'green',
     // Deja a la vista nombre, apellidos, número de DNI, nacimiento y nacionalidad

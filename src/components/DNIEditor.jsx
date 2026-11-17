@@ -590,7 +590,8 @@ export default function DNIEditor({
     } catch (error) {
       if (!vigente()) return;
       console.error('Error procesando DNI:', error);
-      setProcessingError(error.message || 'Error inesperado');
+      // Los fallos del modelo y de OpenCV traen mensajes en inglés o solo un número. El detalle queda en la consola
+      setProcessingError('No se ha podido procesar el DNI. Vuelve a intentarlo.');
     } finally {
       if (enCursoRef.current === ejecucion) {
         enCursoRef.current = null;

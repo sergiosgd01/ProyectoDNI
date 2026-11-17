@@ -274,7 +274,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
           setError('No se puede usar esa cámara específica. Intenta con otra.');
           setSelectedDeviceId(null);
         } else {
-          setError(`Error al acceder a la cámara: ${err.message}`);
+          // El mensaje del navegador va en inglés. Se queda en la consola, arriba
+          setError('Error al acceder a la cámara.');
         }
       } finally {
         isInitializing.current = false;
