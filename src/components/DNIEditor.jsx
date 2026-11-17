@@ -5,8 +5,8 @@ import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { detectDniFromCanvas } from './dni_scripts/dni_detector';
 import { detectWithFlatLight } from '../utils/flatLight';
-import jsPDF from 'jspdf';
-import { downloadImageWithWatermark, combineImagesWithWatermark, imageToCanvasWithWatermark } from '../utils/watermark';
+import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
+import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
 import { censorDniComplete, mapUiToYolo } from './dni_scripts/dni_censor'
 import { camposSinDetectar } from '../utils/camposSinDetectar';
 import WatermarkInput from './WatermarkInput';
@@ -604,146 +604,13 @@ export default function DNIEditor({
     await handleProcessDNI();
   };
 
-  // En móvil, «Descargar» de la barra fija lleva a los botones de descarga, que están bajo las fotos
-  const descargasRef = useRef(null);
-  const irADescargas = () => {
-    descargasRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  };
-
-  // Función para combinar ambas imágenes en JPG con marca de agua
-  const handleDownloadCombined = async () => {
-    if (!processedResult) return;
-
-    try {
-      const imageUrls = [processedResult.frontImageUrl];
-      if (processedResult.backImageUrl) {
-        imageUrls.push(processedResult.backImageUrl);
-      }
-
-      const canvas = await combineImagesWithWatermark(imageUrls, 20, {
-        text: watermarkText
-      });
-
-      // Descargar
-      canvas.toBlob((blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'dni-completo-procesado.jpg';
-        link.click();
-        URL.revokeObjectURL(url);
-      }, 'image/jpeg', 0.95);
-
-    } catch (error) {
-      console.error('Error al combinar imágenes:', error);
-    }
-  };
-
-  // Función para combinar ambas imágenes en PDF con marca de agua
-  const handleDownloadCombinedPDF = async () => {
-    if (!processedResult) return;
-
-    try {
-      // Crear imágenes con marca de agua
-      const frontImageWithWatermark = await imageToCanvasWithWatermark(
-        processedResult.frontImageUrl,
-        {
-          text: watermarkText
-        }
-      );
-
-      // Crear PDF
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const maxWidth = pageWidth - (margin * 2);
-
-      // Cargar imagen frontal para obtener dimensiones
-      const frontImg = new Image();
-      frontImg.src = processedResult.frontImageUrl;
-      await new Promise((resolve) => {
-        frontImg.onload = resolve;
-      });
-
-      // Calcular dimensiones proporcionales para la imagen frontal
-      const frontRatio = frontImg.height / frontImg.width;
-      let frontWidth = maxWidth;
-      let frontHeight = frontWidth * frontRatio;
-
-      // Añadir imagen frontal con marca de agua
-      pdf.addImage(
-        frontImageWithWatermark,
-        'JPEG',
-        margin,
-        margin,
-        frontWidth,
-        frontHeight,
-        undefined,
-        'FAST'
-      );
-
-      // Si hay imagen trasera, procesarla también
-      if (processedResult.backImageUrl) {
-        const backImageWithWatermark = await imageToCanvasWithWatermark(
-          processedResult.backImageUrl,
-          {
-            text: watermarkText
-          }
-        );
-
-        const backImg = new Image();
-        backImg.src = processedResult.backImageUrl;
-        await new Promise((resolve) => {
-          backImg.onload = resolve;
-        });
-
-        const backRatio = backImg.height / backImg.width;
-        let backWidth = maxWidth;
-        let backHeight = backWidth * backRatio;
-
-        const yPosition = margin + frontHeight + 10;
-
-        // Si no cabe en la misma página, añadir nueva página
-        if (yPosition + backHeight > pageHeight - margin) {
-          pdf.addPage();
-          pdf.addImage(
-            backImageWithWatermark,
-            'JPEG',
-            margin,
-            margin,
-            backWidth,
-            backHeight,
-            undefined,
-            'FAST'
-          );
-        } else {
-          // Añadir en la misma página
-          pdf.addImage(
-            backImageWithWatermark,
-            'JPEG',
-            margin,
-            yPosition,
-            backWidth,
-            backHeight,
-            undefined,
-            'FAST'
-          );
-        }
-      }
-
-      // Descargar el PDF
-      pdf.save('dni-completo-procesado.pdf');
-
-    } catch (error) {
-      console.error('Error al generar PDF:', error);
-    }
-  };
+  // La copia protegida que se descarga, con la marca de agua (ver useCopiaProtegida y ZonaDescarga). Mientras falta
+  // tapar a mano alguna cara no hay copia que preparar
+  const copia = useCopiaProtegida({
+    delantera: manualCensorList ? null : processedResult?.frontImageUrl ?? null,
+    trasera: manualCensorList ? null : processedResult?.backImageUrl ?? null,
+    marca: watermarkText
+  });
 
   const formatFieldName = (fieldName) => {
     const fieldNames = {
@@ -947,58 +814,8 @@ export default function DNIEditor({
                     </div>
                   )}
 
-                  {/* Botones de descarga */}
-                  <div ref={descargasRef} className="flex flex-col gap-3 mt-2">
-                    {/* Fila 1: Anverso y Reverso */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <button
-                        onClick={() => downloadImageWithWatermark(
-                          processedResult.frontImageUrl,
-                          'dni-front-processed.jpg',
-                          { text: watermarkText }
-                        )}
-                        className="btn btn-secundario flex-1 px-4"
-                      >
-                        <i className="bi bi-cloud-arrow-down-fill" />
-                        <span>Descargar Anverso</span>
-                      </button>
-
-                      {processedResult.backImageUrl && (
-                        <button
-                          onClick={() => downloadImageWithWatermark(
-                            processedResult.backImageUrl,
-                            'dni-back-processed.jpg',
-                            { text: watermarkText }
-                          )}
-                          className="btn btn-secundario flex-1 px-4"
-                        >
-                          <i className="bi bi-cloud-arrow-down-fill" />
-                          <span>Descargar Reverso</span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Fila 2: Completo JPG y PDF (solo si hay reverso) */}
-                    {processedResult.backImageUrl && (
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <button
-                          onClick={handleDownloadCombined}
-                          className="btn btn-secundario flex-1 px-4"
-                        >
-                          <i className="bi bi-file-earmark-image-fill" />
-                          <span>Completo JPG</span>
-                        </button>
-
-                        <button
-                          onClick={handleDownloadCombinedPDF}
-                          className="btn btn-secundario flex-1 px-4"
-                        >
-                          <i className="bi bi-file-earmark-pdf-fill" />
-                          <span>Completo PDF</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                  {/* Descarga de la copia protegida. Mientras falta tapar a mano alguna cara no hay copia */}
+                  {!manualCensorList && <ZonaDescarga copia={copia} marca={watermarkText} />}
 
                 </div>
               ) : (
@@ -1305,25 +1122,26 @@ export default function DNIEditor({
       </div>
 
       {/* Barra fija en móvil y tablet con la acción principal, para no tener que bajar hasta el final.
-          Primero «Procesar DNI» y, con el resultado, «Descargar» */}
+          Primero «Procesar DNI» y, con el resultado, «Descargar PDF», que descarga sin bajar a la zona de descarga */}
       <div className="lg:hidden fixed inset-x-0 bottom-0 z-40 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        {processedResult ? (
-          <div className="flex gap-3 max-w-xl mx-auto">
-            <button
-              onClick={handleReprocess}
-              disabled={procesarBloqueado}
-              className="btn btn-secundario flex-auto px-3"
-            >
-              <i className="bi bi-arrow-repeat text-lg"></i>
-              Procesar de nuevo
-            </button>
-            <button
-              onClick={irADescargas}
-              className="btn btn-principal flex-auto px-4"
-            >
-              <i className="bi bi-cloud-arrow-down-fill text-lg"></i>
-              Descargar
-            </button>
+        {processedResult && !manualCensorList ? (
+          <div className="max-w-xl mx-auto">
+            {copia.aviso && (
+              <Aviso tipo="copia" onCerrar={copia.cerrarAviso} className="mb-3">
+                {copia.aviso}
+              </Aviso>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleReprocess}
+                disabled={procesarBloqueado}
+                className="btn btn-secundario flex-auto px-3"
+              >
+                <i className="bi bi-arrow-repeat text-lg"></i>
+                Procesar de nuevo
+              </button>
+              <AccionesCopia copia={copia} className="flex-auto" />
+            </div>
           </div>
         ) : (
           <button
