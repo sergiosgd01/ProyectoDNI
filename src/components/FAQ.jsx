@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     question: '¿Qué formatos de imagen acepta la aplicación?',
-    answer: 'La aplicación admite los formatos de foto más habituales: JPG, PNG y WEBP (con un tamaño máximo de 30 MB por foto).'
+    answer: 'La aplicación admite los formatos de foto más habituales: JPG, PNG, WEBP y HEIC, el de las fotos del iPhone (con un tamaño máximo de 30 MB por foto).'
   },
   {
     question: '¿Tiene algún coste utilizar esta herramienta?',
