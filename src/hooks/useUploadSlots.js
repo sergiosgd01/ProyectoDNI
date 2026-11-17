@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { esHeicPorNombre } from '../utils/heic';
 
 // Recuadros de subida de la cara delantera y de la trasera.
 // Cada FileUploadZone se apunta mientras su cara no tiene foto. Así la página de subida puede
@@ -67,8 +68,9 @@ export function useUploadSlots() {
 
   const distribute = useCallback((files, droppedOn) => {
     // Si entre lo soltado hay algo que no es una imagen, se descarta. Si no hay ninguna imagen,
-    // se manda el primer archivo para que el recuadro explique qué formatos admite
-    const imagenes = files.filter((file) => file.type.startsWith('image/'));
+    // se manda el primer archivo para que el recuadro explique qué formatos admite.
+    // Las HEIC se miran también por la extensión, porque algunos navegadores las dan sin tipo
+    const imagenes = files.filter((file) => file.type.startsWith('image/') || esHeicPorNombre(file));
     const fotos = imagenes.length ? imagenes : files.slice(0, 1);
 
     // Una cara está libre si su recuadro está a la vista, es decir, sin foto, y no está procesando otra
