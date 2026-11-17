@@ -250,11 +250,13 @@ function ManualCropModal({
     ctx.closePath();
     ctx.stroke();
 
+    // Los puntos se dibujan algo más pequeños que antes (10 px de radio en vez de 12) para tapar menos el borde del
+    // DNI. Se pueden seguir cogiendo a 20 px de distancia (isNearPoint)
     ctx.setLineDash([]);
     enLienzo.forEach((point, index) => {
       ctx.fillStyle = '#E53338';
       ctx.beginPath();
-      ctx.arc(point.x, point.y, 12, 0, 2 * Math.PI);
+      ctx.arc(point.x, point.y, 10, 0, 2 * Math.PI);
       ctx.fill();
 
       ctx.fillStyle = '#FFFFFF';
@@ -263,7 +265,7 @@ function ManualCropModal({
       ctx.fill();
 
       ctx.fillStyle = '#E53338';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText((index + 1).toString(), point.x, point.y);
