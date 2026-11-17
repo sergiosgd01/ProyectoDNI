@@ -1,5 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import Aviso from './Aviso';
+
+// Grosor del borde del lienzo (clase border-2), que no cuenta como sitio para la foto
+const BORDE_LIENZO = 2;
 
 // Lado mínimo del recorte. En la pantalla, dos esquinas a menos de 20 píxeles se tocan, y en la foto el servidor
 // tampoco recorta nada de menos de 50 píxeles
@@ -39,12 +42,15 @@ function ManualCropModal({
   const canvasRef = useRef(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [originalImage, setOriginalImage] = useState(null);
-  const [scale, setScale] = useState(1);
+  // Escala de la foto en el lienzo. null hasta medir el hueco que queda para ella
+  const [scale, setScale] = useState(null);
   const objectUrlRef = useRef(null);
-  
-  // Estado de los 4 puntos del polígono (esquinas del DNI)
+
+  // Estado de los 4 puntos del polígono (esquinas del DNI), en píxeles del lienzo
   const [points, setPoints] = useState(null);
   const [draggingPoint, setDraggingPoint] = useState(null);
+  // Escala con la que están los puntos. Si cambia el hueco (al girar el móvil) se pasan a la nueva
+  const escalaPuntosRef = useRef(null);
 
   // Aviso si no se puede recortar ({ tipo, texto }), en vez de alert()
   const [aviso, setAviso] = useState(null);
@@ -87,33 +93,69 @@ function ManualCropModal({
     };
   }, []);
 
+  // Escala de la foto según el hueco libre entre la cabecera y los botones, al cargarla y cada vez que cambia ese
+  // hueco, por ejemplo al girar el móvil o cuando el navegador enseña o esconde sus barras. Antes el alto era el 65 %
+  // de la ventana, sin mirar el hueco. Con el móvil tumbado el lienzo salía mucho más alto que su hueco, solo se veía
+  // una tira, y como arrastrar sobre el lienzo mueve las esquinas, tampoco se podía bajar para ver el resto
+  useLayoutEffect(() => {
+    if (!imageLoaded || !originalImage) return;
+
+    const ajustar = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const px = (value) => parseFloat(value) || 0;
+      const estilo = window.getComputedStyle(container);
+      const ancho = container.clientWidth - px(estilo.paddingLeft) - px(estilo.paddingRight) - 2 * BORDE_LIENZO;
+      const alto = container.clientHeight - px(estilo.paddingTop) - px(estilo.paddingBottom) - 2 * BORDE_LIENZO;
+      if (ancho <= 0 || alto <= 0) return;
+      const nueva = Math.min(ancho / originalImage.width, alto / originalImage.height, 1);
+      setScale((anterior) => (anterior !== null && Math.abs(anterior - nueva) < 1e-4 ? anterior : nueva));
+    };
+
+    ajustar();
+    // El hueco cambia también sin cambiar la ventana (el aviso de abajo puede aparecer), así que se mira el propio
+    // contenedor. Cambiar el lienzo no lo cambia a él, porque tiene overflow-auto
+    const container = containerRef.current;
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      const observer = new ResizeObserver(() => ajustar());
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
+    window.addEventListener('resize', ajustar);
+    return () => window.removeEventListener('resize', ajustar);
+  }, [imageLoaded, originalImage]);
+
   // Dibujar canvas cuando la imagen está lista
   useEffect(() => {
-    if (!imageLoaded || !originalImage || !canvasRef.current || !containerRef.current) return;
+    if (!imageLoaded || !originalImage || !canvasRef.current || scale === null) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    const container = containerRef.current;
+    const newScale = scale;
+    const ancho = Math.max(1, Math.floor(originalImage.width * newScale));
+    const alto = Math.max(1, Math.floor(originalImage.height * newScale));
 
-    const containerWidth = container.clientWidth - 32;
-    const containerHeight = window.innerHeight * 0.65;
+    if (canvas.width !== ancho || canvas.height !== alto) {
+      canvas.width = ancho;
+      canvas.height = alto;
+      ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+    }
 
-    const scaleX = containerWidth / originalImage.width;
-    const scaleY = containerHeight / originalImage.height;
-    const newScale = Math.min(scaleX, scaleY, 1);
-
-    setScale(newScale);
-
-    canvas.width = originalImage.width * newScale;
-    canvas.height = originalImage.height * newScale;
-
-    ctx.drawImage(originalImage, 0, 0, canvas.width, canvas.height);
+    // Si ha cambiado la escala (el móvil se ha girado), las esquinas siguen en el mismo sitio de la foto
+    if (points && escalaPuntosRef.current !== null && escalaPuntosRef.current !== newScale) {
+      const factor = newScale / escalaPuntosRef.current;
+      escalaPuntosRef.current = newScale;
+      setPoints(points.map((p) => ({ x: p.x * factor, y: p.y * factor })));
+      return;
+    }
+    if (points) return;
+    escalaPuntosRef.current = newScale;
 
     // Si llegan esquinas de esta misma foto se empieza en ellas. Si no, en un rectángulo centrado
-    const esquinas = !points && esquinasDePartida(initialCorners, originalImage);
+    const esquinas = esquinasDePartida(initialCorners, originalImage);
     if (esquinas) {
       setPoints(esquinas.map((p) => ({ x: p.x * newScale, y: p.y * newScale })));
-    } else if (!points) {
+    } else {
       const dniAspectRatio = 85.6 / 53.98;
       const estimatedWidth = Math.min(canvas.width * 0.7, canvas.height * dniAspectRatio * 0.7);
       const estimatedHeight = estimatedWidth / dniAspectRatio;
@@ -128,7 +170,7 @@ function ManualCropModal({
         { x: centerX - estimatedWidth / 2, y: centerY + estimatedHeight / 2 },
       ]);
     }
-  }, [imageLoaded, originalImage, points, initialCorners]);
+  }, [imageLoaded, originalImage, scale, points, initialCorners]);
 
   // Redibujar canvas con polígono
   const redrawCanvas = useCallback(() => {
@@ -204,9 +246,10 @@ function ManualCropModal({
     const clientX = event.touches ? event.touches[0].clientX : event.clientX;
     const clientY = event.touches ? event.touches[0].clientY : event.clientY;
 
+    // Sin el borde del lienzo, que si no desplaza 2 px cada esquina
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top
+      x: clientX - rect.left - canvas.clientLeft,
+      y: clientY - rect.top - canvas.clientTop
     };
   };
 
