@@ -239,6 +239,21 @@ export default function DNIEditor({
   const selectedBackCount = Object.values(selectedBackFields).filter(Boolean).length;
   const selectedCount = selectedFrontCount + selectedBackCount;
 
+  // Si cambia lo que se tapa después de procesar, el resultado deja de corresponder a la selección y se quita, como al
+  // girar o ajustar el recorte. Si no, se descargaba la copia tapada con la selección de antes y con la marca de agua
+  // del perfil nuevo, que se pone al descargar. Va en useLayoutEffect para que no llegue a verse el resultado viejo
+  const claveSeleccion = [
+    frontfields.map((campo) => (selectedFrontFields[campo] ? 1 : 0)).join(''),
+    backfields.map((campo) => (selectedBackFields[campo] ? 1 : 0)).join('')
+  ].join('|');
+  const seleccionAnterior = useRef(claveSeleccion);
+  useLayoutEffect(() => {
+    if (seleccionAnterior.current === claveSeleccion) return;
+    seleccionAnterior.current = claveSeleccion;
+    setProcessedResult(null);
+    setProcessingError(null);
+  }, [claveSeleccion]);
+
   const [watermarkText, setWatermarkText] = useState('Uso exclusivo para Viajes');
 
   useEffect(() => {
