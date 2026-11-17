@@ -211,8 +211,10 @@ function ManualCensorModal({
     };
   }, []);
 
-  // Ajustar el lienzo al espacio libre al cargar la cara y cada vez que cambia el tamaño de la ventana,
-  // por ejemplo al girar el móvil
+  // Ajustar el lienzo al hueco libre entre la cabecera y los botones al cargar la cara y cada vez que cambia ese
+  // hueco, por ejemplo al girar el móvil o cuando el navegador enseña o esconde sus barras. Antes el alto era el
+  // 55 % de la ventana, sin mirar el hueco, y en un iPhone SE quedaba oculto el 21 % de abajo de la foto, donde va
+  // la firma. Arrastrar sobre el lienzo dibuja, así que esa parte no se podía ni ver ni tapar (UX-7 y UX-15)
   useLayoutEffect(() => {
     if (!originalImage) return;
 
@@ -221,14 +223,17 @@ function ManualCensorModal({
       const container = containerRef.current;
       if (!canvas || !container) return;
 
-      // Ancho libre del contenedor sin su relleno ni el borde del lienzo, para que max-w-full no tenga que encogerlo
+      // Hueco libre del contenedor sin su relleno ni el borde del lienzo, para que max-w-full no tenga que encogerlo.
+      // El contenedor es flex-1 con overflow-auto, así que mide lo que dejan la cabecera, el aviso y los botones
       const px = (value) => parseFloat(value) || 0;
       const containerStyle = window.getComputedStyle(container);
       const canvasStyle = window.getComputedStyle(canvas);
       const containerWidth = container.clientWidth
         - px(containerStyle.paddingLeft) - px(containerStyle.paddingRight)
         - px(canvasStyle.borderLeftWidth) - px(canvasStyle.borderRightWidth);
-      const containerHeight = window.innerHeight * 0.55;
+      const containerHeight = container.clientHeight
+        - px(containerStyle.paddingTop) - px(containerStyle.paddingBottom)
+        - px(canvasStyle.borderTopWidth) - px(canvasStyle.borderBottomWidth);
 
       const scaleX = containerWidth / originalImage.width;
       const scaleY = containerHeight / originalImage.height;
@@ -244,6 +249,14 @@ function ManualCensorModal({
     };
 
     fitCanvas();
+    // El hueco cambia también sin cambiar la ventana (el aviso de arriba o los botones de abajo pueden crecer),
+    // así que se mira el propio contenedor. Cambiar el lienzo no cambia el contenedor, que tiene overflow-auto
+    const container = containerRef.current;
+    if (typeof ResizeObserver !== 'undefined' && container) {
+      const observer = new ResizeObserver(() => fitCanvas());
+      observer.observe(container);
+      return () => observer.disconnect();
+    }
     window.addEventListener('resize', fitCanvas);
     return () => window.removeEventListener('resize', fitCanvas);
   }, [originalImage]);
@@ -602,8 +615,9 @@ function ManualCensorModal({
   return (
     // Fondo opaco. Con bg-black/95 se veía la página de detrás y su texto se mezclaba con el aviso
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      {/* Header */}
-      <div className="bg-gray-900 text-white p-3 md:p-4 flex items-center justify-between border-b border-gray-700">
+      {/* Header. Con el móvil tumbado (menos de 420 px de alto) la cabecera, las pestañas, el hueco de la foto y el pie
+          tienen menos relleno arriba y abajo, para que la foto no se quede en una tira */}
+      <div className="bg-gray-900 text-white p-3 md:p-4 [@media(max-height:420px)]:py-1.5 flex items-center justify-between border-b border-gray-700">
         <div className="flex items-center space-x-3">
           <button
             onClick={handleCancel}
@@ -627,8 +641,10 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Mensaje de advertencia cuando falla la detección automática */}
-      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4">
+      {/* Mensaje de advertencia cuando falla la detección automática. En pantallas bajas (un iPhone SE con las barras
+          de Safari) solo queda el título, y con el móvil tumbado no sale, para dejar sitio a la foto. Lo que hay que
+          hacer ya lo dicen la cabecera y el pie */}
+      <div className="bg-gray-800 border-b border-gray-700 p-3 md:p-4 [@media(max-height:420px)]:hidden">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
@@ -638,7 +654,7 @@ function ManualCensorModal({
               <p className="text-white text-sm md:text-base font-medium mb-1">
                 Detección automática no disponible
               </p>
-              <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
+              <p className="text-gray-300 text-xs md:text-sm leading-relaxed [@media(max-height:600px)]:hidden">
                 {singleSideName
                   ? `No hemos podido detectar automáticamente los campos de la ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
                   : 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'}
@@ -649,7 +665,7 @@ function ManualCensorModal({
       </div>
 
       {/* Selector de cara - Solo mostrar opciones disponibles */}
-      <div className="bg-gray-800 border-b border-gray-700 p-2 md:p-3">
+      <div className="bg-gray-800 border-b border-gray-700 p-2 md:p-3 [@media(max-height:420px)]:py-1">
         <div className="max-w-4xl mx-auto flex items-center justify-center gap-2">
           {frontFile && (
             <button
@@ -710,7 +726,7 @@ function ManualCensorModal({
       {/* Canvas container */}
       <div
         ref={containerRef}
-        className="flex-1 flex items-center justify-center p-2 md:p-4 overflow-auto"
+        className="flex-1 flex items-center justify-center p-2 md:p-4 [@media(max-height:420px)]:p-1 overflow-auto"
       >
         {!imageLoaded ? (
           <div className="text-white text-center">
@@ -745,7 +761,7 @@ function ManualCensorModal({
       </div>
 
       {/* Footer con acciones unificadas */}
-      <div className="bg-gray-900 p-3 md:p-4 border-t border-gray-700">
+      <div className="bg-gray-900 p-3 md:p-4 [@media(max-height:420px)]:py-1.5 border-t border-gray-700">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 max-w-4xl mx-auto">
           {/* Info */}
           <div className="text-gray-400 text-xs md:text-sm order-2 sm:order-1">
