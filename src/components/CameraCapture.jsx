@@ -47,6 +47,13 @@ const PROBLEM_TEXTS = {
   document: 'En la foto no se reconoce el DNI.',
 };
 
+// Móvil tumbado. La pantalla es más ancha que alta y baja, así que el recuadro se mide por el alto y el botón de la
+// foto va en una columna a la derecha, como en la cámara del móvil. Antes el botón, a lo ancho abajo, tapaba la
+// mitad de abajo del recuadro, y el recuadro se salía por arriba y por abajo (UX-15)
+const CONSULTA_TUMBADO = '(orientation: landscape) and (max-height: 500px)';
+// Ancho de la columna del botón con el móvil tumbado, en px
+const COLUMNA_BOTON = 132;
+
 // Colores del recuadro según lo que ve la captura automática
 const GUIDE_TONES = {
   neutral: { border: 'border-white', corner: 'border-white' },
@@ -66,21 +73,23 @@ const HINT_BACKGROUNDS = {
  * render, que con la captura automática son varios por segundo.
  * Solo se oscurece lo de fuera, para que el DNI se vea con su luz real.
  */
-function DNIGuide({ guideRef, isMobile, tone, progress }) {
+function DNIGuide({ guideRef, isMobile, tumbado = false, tone, progress }) {
   const colors = GUIDE_TONES[tone] || GUIDE_TONES.neutral;
+  // Con el móvil tumbado el recuadro deja libres la fila de arriba (aviso y cerrar) y la columna del botón, y se
+  // mide por el alto que queda, sin pasar del ancho libre. La captura lee el recuadro por su posición en pantalla
+  // (guideRectInVideo), así que no hay que tocarla
+  const hueco = tumbado ? { top: 64, right: COLUMNA_BOTON, bottom: 12, left: 0 } : undefined;
+  const medida = tumbado
+    ? { height: `min(100%, calc((100vw - ${COLUMNA_BOTON + 32}px) / 1.586))`, aspectRatio: '1.586' }
+    : { width: isMobile ? '80%' : '60%', aspectRatio: '1.586', maxWidth: '600px', maxHeight: '70vh' };
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={hueco}>
       <div
         ref={guideRef}
         data-guia-dni
         className={`relative border-2 ${colors.border} rounded-xl shadow-2xl bg-transparent transition-colors duration-200`}
-        style={{
-          width: isMobile ? '80%' : '60%',
-          aspectRatio: '1.586',
-          maxWidth: '600px',
-          maxHeight: '70vh',
-        }}
+        style={medida}
       >
         {/* Sombra exterior */}
         <div className="absolute inset-0 rounded-xl" style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' }}></div>
@@ -117,12 +126,14 @@ function DNIGuide({ guideRef, isMobile, tone, progress }) {
  * seguir con ella, porque en el editor los datos también se pueden tapar a mano.
  */
 function CaptureProblem({ problem, onRepeat, onUse, onCancel }) {
+  // Con el móvil tumbado no cabe entero, así que se puede bajar. safe center lo centra solo si cabe, para que no
+  // se corte por arriba
   return (
     <div
       data-captura-problema
       role="alertdialog"
       aria-label="La foto no ha salido bien"
-      className="absolute inset-0 flex flex-col items-center justify-center p-6 space-y-5 bg-gradient-to-b from-black to-gray-900 z-20"
+      className="absolute inset-0 overflow-y-auto flex flex-col items-center [justify-content:safe_center] p-6 space-y-5 bg-gradient-to-b from-black to-gray-900 z-20"
     >
       <div className="w-16 h-16 rounded-full flex items-center justify-center bg-yellow-500/20">
         <i className="bi bi-exclamation-triangle text-4xl text-yellow-400"></i>
@@ -185,6 +196,15 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
+
+  // Si el móvil está tumbado (ver CONSULTA_TUMBADO). Cambia al girarlo con la cámara abierta
+  const [tumbado, setTumbado] = useState(() => window.matchMedia(CONSULTA_TUMBADO).matches);
+  useEffect(() => {
+    const consulta = window.matchMedia(CONSULTA_TUMBADO);
+    const alCambiar = (e) => setTumbado(e.matches);
+    consulta.addEventListener('change', alCambiar);
+    return () => consulta.removeEventListener('change', alCambiar);
+  }, []);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -692,14 +712,15 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   if (isMobile) {
     return (
       <div className="fixed inset-0 bg-black z-50 flex flex-col">
-        <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
-          <h3 className="text-white font-semibold text-lg flex items-center">
+        {/* Con el móvil tumbado el título solo lo leen los lectores de pantalla, para dejar la fila de arriba al aviso */}
+        <div className={`absolute top-0 left-0 right-0 z-20 ${tumbado ? 'p-3' : 'p-4'} flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent`}>
+          <h3 className={tumbado ? 'sr-only' : 'text-white font-semibold text-lg flex items-center'}>
             <i className="bi bi-camera mr-2"></i>
             Capturar DNI
           </h3>
           <button
             onClick={handleClose}
-            className="text-white text-2xl w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
+            className="ml-auto text-white text-2xl w-10 h-10 flex items-center justify-center hover:bg-white/20 rounded-full transition-colors"
           >
             <i className="bi bi-x"></i>
           </button>
@@ -724,7 +745,9 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
           </div>
         ) : (
           <>
-            <div className="flex-1 relative">
+            {/* min-h-0 para que el vídeo no estire la zona más allá de la pantalla. Con el móvil tumbado el vídeo
+                (16:9 a lo ancho) medía más que la pantalla y el recuadro quedaba centrado por debajo */}
+            <div className="flex-1 relative min-h-0">
               {isLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
                   <div className="text-center text-white">
@@ -744,7 +767,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               />
 
               {!isLoading && !hasBlockingOverlay && (
-                <DNIGuide guideRef={guideRef} isMobile={isMobile} tone={guideTone} progress={guideProgress} />
+                <DNIGuide guideRef={guideRef} isMobile={isMobile} tumbado={tumbado} tone={guideTone} progress={guideProgress} />
               )}
 
               {renderDebugPanel('left-2 top-36')}
@@ -762,7 +785,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
 
               {/* Overlay de error */}
               {detectionError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 space-y-6 bg-gradient-to-b from-black to-gray-900 z-20">
+                <div className="absolute inset-0 overflow-y-auto flex flex-col items-center [justify-content:safe_center] p-6 space-y-6 bg-gradient-to-b from-black to-gray-900 z-20">
                   <div className="w-20 h-20 rounded-full flex items-center justify-center bg-yellow-500/20 animate-pulse">
                     <i className={`bi ${getErrorIcon(detectionError.type)} text-5xl text-yellow-400`}></i>
                   </div>
@@ -815,13 +838,39 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                 </div>
               )}
 
-              <div className="absolute top-20 left-0 right-0 text-center px-4 pointer-events-none z-10">
+              <div
+                className={`absolute ${tumbado ? 'top-3' : 'top-20'} left-0 right-0 text-center px-4 pointer-events-none z-10`}
+                style={tumbado ? { right: COLUMNA_BOTON } : undefined}
+              >
                 {hintPill}
               </div>
             </div>
 
+            {/* Con el móvil tumbado el botón va en una columna a la derecha, redondo como el de la cámara del móvil */}
+            {!hasBlockingOverlay && tumbado && (
+              <div
+                className="absolute top-0 bottom-0 right-0 z-20 flex flex-col items-center justify-center gap-2 px-3 bg-gradient-to-l from-black/80 to-transparent"
+                style={{ width: COLUMNA_BOTON }}
+              >
+                <button
+                  onClick={() => capturePhoto(false)}
+                  disabled={isLoading || isProcessing}
+                  aria-label="Capturar foto"
+                  className="btn-primary w-[76px] h-[76px] rounded-full shadow-2xl flex items-center justify-center disabled:opacity-50"
+                >
+                  <i className="bi bi-camera-fill text-3xl" aria-hidden="true"></i>
+                </button>
+                <span className="text-white text-sm font-semibold" aria-hidden="true">Capturar foto</span>
+                {isAutoAvailable && (
+                  <p className="text-white/80 text-[11px] leading-snug text-center">
+                    También se hace sola cuando el DNI se ve bien
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Con un aviso encima no se enseña, porque en pantallas pequeñas tapaba sus botones */}
-            {!hasBlockingOverlay && (
+            {!hasBlockingOverlay && !tumbado && (
               <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
                 <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
                   <i className="bi bi-camera-fill text-2xl"></i>
