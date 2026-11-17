@@ -38,6 +38,9 @@ function sharpnessOf(source, rect) {
   return measureFrame(context.getImageData(0, 0, width, height)).sharpness;
 }
 
+// Una fracción de 0 a 1 escrita como porcentaje en español, con coma decimal y espacio antes de %
+const porcentaje = (fraccion, decimales) => `${(fraccion * 100).toFixed(decimales).replace('.', ',')} %`;
+
 // Qué se le dice a la persona cuando la foto no sirve, según lo que falle
 const PROBLEM_TEXTS = {
   fields: 'No se leen bien todos los datos del DNI. La foto puede estar borrosa, movida o con reflejos.',
@@ -767,8 +770,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                     <p className="text-white/90 text-sm px-4">{detectionError.message}</p>
                     {detectionError.confidence !== undefined && detectionError.confidence !== null && (
                       <p className="text-yellow-400 text-xs">
-                        Confianza: {(detectionError.confidence * 100).toFixed(1)}%
-                        {detectionError.minRequired && ` (mínimo requerido: ${(detectionError.minRequired * 100).toFixed(0)}%)`}
+                        Confianza: {porcentaje(detectionError.confidence, 1)}
+                        {detectionError.minRequired && ` (mínimo requerido: ${porcentaje(detectionError.minRequired, 0)})`}
                       </p>
                     )}
                   </div>
@@ -962,8 +965,8 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                       <p className="text-base max-w-md" style={{ color: 'var(--color-text-secondary)' }}>{detectionError.message}</p>
                       {detectionError.confidence !== undefined && detectionError.confidence !== null && (
                         <p className="text-sm" style={{ color: 'var(--color-warning)' }}>
-                          Confianza: {(detectionError.confidence * 100).toFixed(1)}%
-                          {detectionError.minRequired && ` (mínimo: ${(detectionError.minRequired * 100).toFixed(0)}%)`}
+                          Confianza: {porcentaje(detectionError.confidence, 1)}
+                          {detectionError.minRequired && ` (mínimo: ${porcentaje(detectionError.minRequired, 0)})`}
                         </p>
                       )}
                     </div>

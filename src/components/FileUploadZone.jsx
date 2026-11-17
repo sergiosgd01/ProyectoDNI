@@ -420,7 +420,7 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
           </div>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>
-            Máximo 30MB
+            Máximo 30 MB
           </div>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-secondary-500 rounded-full mr-2"></span>
