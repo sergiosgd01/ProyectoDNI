@@ -945,13 +945,14 @@ export default function DNIEditor({
                   </p>
                 </div>
 
-                {/* Campos Front */}
+                {/* Campos Front. En cada casilla la etiqueta es la caja entera, con su borde y su relleno, así se marca
+                    pulsando en cualquier parte de la caja y no solo en la línea del texto, de 16 px en el móvil (UX-15) */}
                 <div className="mb-4">
                   <h5 className="text-xs font-semibold text-gray-600 mb-2">Parte delantera</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {frontfields.map((fieldName) => (
-                      <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
-                        <label className="flex items-center cursor-pointer">
+                      <div key={fieldName} className="h-fit">
+                        <label className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors">
                           <div className="relative flex items-center justify-center">
                             <input
                               type="checkbox"
@@ -1004,8 +1005,8 @@ export default function DNIEditor({
                   <h5 className="text-xs font-semibold text-gray-600 mb-2">Parte trasera</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {backfields.map((fieldName) => (
-                      <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
-                        <label className="flex items-center cursor-pointer">
+                      <div key={fieldName} className="h-fit">
+                        <label className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors">
                           <div className="relative flex items-center justify-center">
                             <input
                               type="checkbox"
