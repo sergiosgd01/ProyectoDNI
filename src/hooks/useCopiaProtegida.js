@@ -8,12 +8,23 @@ import { caraConMarca, crearImagenDosCaras, crearPdf, descargarArchivo, miniatur
 // imágenes ya tapadas (trasera puede faltar) y marca es el texto de la marca de agua. Si cambia alguna, la copia se
 // vuelve a preparar
 
-async function preparar({ delantera, trasera, marca }) {
+// Una copia que se deja a medias porque ya no hace falta (otro resultado u otra marca de agua). No es un fallo
+class PreparacionCancelada extends Error {}
+
+// sigue dice si la copia aún hace falta. Se mira después de cada paso, para no gastar el móvil en una que se va a tirar
+async function preparar({ delantera, trasera, marca }, sigue) {
+  const comprobar = () => {
+    if (!sigue()) throw new PreparacionCancelada();
+  };
   const urls = trasera ? [delantera, trasera] : [delantera];
   const caras = [];
   // Una detrás de otra, para no juntar en el móvil dos imágenes grandes a la vez
-  for (const url of urls) caras.push(await caraConMarca(url, marca));
+  for (const url of urls) {
+    caras.push(await caraConMarca(url, marca));
+    comprobar();
+  }
   const pdf = new File([await crearPdf(caras)], NOMBRES_COPIA.pdf, { type: 'application/pdf' });
+  comprobar();
   const miniaturas = [];
   for (const url of urls) miniaturas.push(await miniaturaConMarca(url, marca));
   return { delantera, trasera, marca, caras, pdf, miniaturas, disposicion: disponerEnA4(caras) };
@@ -34,12 +45,14 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
   const [ocupado, setOcupado] = useState(null);
   const [aviso, setAviso] = useState(null);
   const enCurso = useRef(null);
+  // Los datos de ahora, para dejar a medias la copia de otros que se estuviera preparando
+  const actuales = useRef(null);
 
   // La copia de los datos de ahora. Si ya se está preparando, devuelve esa misma promesa en vez de empezar otra
   const obtener = useCallback(() => {
     const datos = { delantera, trasera, marca };
     if (esDe(enCurso.current, datos)) return enCurso.current.promesa;
-    const promesa = preparar(datos);
+    const promesa = preparar(datos, () => esDe(actuales.current, datos));
     enCurso.current = { ...datos, promesa };
     promesa.catch(() => {
       if (enCurso.current?.promesa === promesa) enCurso.current = null;
@@ -48,6 +61,7 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
   }, [delantera, trasera, marca]);
 
   useEffect(() => {
+    actuales.current = { delantera, trasera, marca };
     setAviso(null);
     if (!delantera) {
       setCopia(null);
@@ -60,13 +74,15 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
         .then((lista) => {
           if (vigente) setCopia(lista);
         })
-        .catch((error) => console.error('No se ha podido preparar la copia protegida:', error));
+        .catch((error) => {
+          if (!(error instanceof PreparacionCancelada)) console.error('No se ha podido preparar la copia protegida:', error);
+        });
     }, 300);
     return () => {
       vigente = false;
       clearTimeout(espera);
     };
-  }, [delantera, obtener]);
+  }, [delantera, trasera, marca, obtener]);
 
   const lista = esDe(copia, { delantera, trasera, marca }) ? copia : null;
 
@@ -77,6 +93,7 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
     try {
       await tarea();
     } catch (error) {
+      if (error instanceof PreparacionCancelada) return;
       console.error('No se ha podido preparar la copia protegida:', error);
       setAviso(AVISO_FALLO);
     } finally {
@@ -98,8 +115,10 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
       try {
         archivo = (await obtener()).pdf;
       } catch (error) {
-        console.error('No se ha podido preparar la copia protegida:', error);
-        setAviso(AVISO_FALLO);
+        if (!(error instanceof PreparacionCancelada)) {
+          console.error('No se ha podido preparar la copia protegida:', error);
+          setAviso(AVISO_FALLO);
+        }
         return;
       } finally {
         setOcupado(null);
