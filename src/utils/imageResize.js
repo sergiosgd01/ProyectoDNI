@@ -14,7 +14,7 @@
 export const MAX_UPLOAD_SIDE = 4096;
 
 // Calidad del JPEG que se sube
-const UPLOAD_JPEG_QUALITY = 0.85;
+export const UPLOAD_JPEG_QUALITY = 0.85;
 
 // Una foto que no supera el lado máximo solo se vuelve a codificar si pesa más que esto.
 // Es el caso de un PNG grande o de un JPEG guardado con calidad máxima

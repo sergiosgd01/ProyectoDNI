@@ -5,21 +5,21 @@ import Aviso from './Aviso';
 import { processWithYolo } from '../services/processWithYolo';
 import { validateFileComplete, sanitizeFileName, MAX_UPLOAD_SIZE } from '../utils/fileValidation';
 import { prepareImageForUpload } from '../utils/imageResize';
+import { esHeic } from '../utils/heic';
 import { fileUploadLimiter } from '../utils/rateLimiter';
 import logger from '../utils/logger';
 import { useUploadSlotRegistration } from '../hooks/useUploadSlots';
 import { useCloseOnBack } from '../hooks/useNavigation';
 
-// Por qué no se puede usar un archivo, según el motivo que da fileValidation.js
+// Por qué no se puede usar un archivo, según el motivo que dan fileValidation.js y convertirHeic.js
 const TEXTO_RECHAZO = {
-  formato: 'Solo se admiten fotos JPG, PNG o WEBP.',
-  heic: 'Las fotos HEIC todavía no se admiten. Guárdala como JPG o elige otra foto.',
+  formato: 'Solo se admiten fotos JPG, PNG, WEBP o HEIC.',
+  heic: 'No se ha podido convertir esta foto HEIC. Guárdala como JPG o elige otra foto.',
+  'heic-carga': 'No se ha podido cargar el conversor de fotos HEIC. Comprueba la conexión y vuelve a probar, o guarda la foto como JPG.',
   peso: 'La foto pesa más de 30 MB. Elige otra más ligera.',
   dimensiones: 'La foto es demasiado grande. Elige otra más pequeña.',
   contenido: 'No se ha podido abrir la foto. Prueba con otra.'
 };
-
-const esHeic = (file) => /hei[cf]/i.test(file?.type || '') || /\.hei[cf]$/i.test(file?.name || '');
 
 // Ordenador con ratón o trackpad. Ahí se puede arrastrar o pegar la foto y no se ofrece la webcam,
 // que saca el DNI poco nítido. En móvil y tablet se ofrece primero la cámara del dispositivo
@@ -40,6 +40,8 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
   const [originalFileForCrop, setOriginalFileForCrop] = useState(null);
   const [conRaton, setConRaton] = useState(() => window.matchMedia(CONSULTA_RATON).matches);
   const [isProcessing, setIsProcessing] = useState(false);
+  // Mientras una foto HEIC se pasa a JPEG, antes de subirla
+  const [convirtiendo, setConvirtiendo] = useState(false);
   const [processingError, setProcessingError] = useState(null);
   // Archivo rechazado antes de enviarlo ({ tipo, titulo, texto }). Se enseña encima del recuadro
   const [aviso, setAviso] = useState(null);
@@ -83,15 +85,43 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
       return;
     }
 
+    // Las fotos HEIC (las del iPhone) se pasan a JPEG aquí, en el navegador, y siguen como las demás.
+    // El conversor solo se descarga cuando llega una
+    let foto = file;
+    if (await esHeic(file)) {
+      setIsProcessing(true);
+      setConvirtiendo(true);
+      try {
+        const { convertirHeicAJpeg } = await import('../utils/convertirHeic').catch((error) => {
+          throw Object.assign(error, { motivo: 'heic-carga' });
+        });
+        foto = await convertirHeicAJpeg(file);
+      } catch (error) {
+        logger.error('❌ [FileUploadZone] No se pudo convertir la foto HEIC:', error);
+        setIsProcessing(false);
+        const motivo = TEXTO_RECHAZO[error.motivo] ? error.motivo : 'heic';
+        const deConversion = motivo === 'heic' || motivo === 'heic-carga';
+        setAviso({
+          tipo: deConversion ? 'heic-no-convertida' : 'archivo-no-valido',
+          titulo: deConversion ? 'No se ha podido convertir la foto' : 'No se puede usar este archivo',
+          texto: TEXTO_RECHAZO[motivo]
+        });
+        return;
+      } finally {
+        setConvirtiendo(false);
+      }
+    }
+
     // 🔒 VALIDACIÓN COMPLETA DEL ARCHIVO
     try {
-      await validateFileComplete(file);
+      await validateFileComplete(foto);
     } catch (error) {
       logger.error('❌ [FileUploadZone] Validación fallida:', error.message);
+      setIsProcessing(false);
       setAviso({
         tipo: 'archivo-no-valido',
         titulo: 'No se puede usar este archivo',
-        texto: error.motivo === 'formato' && esHeic(file) ? TEXTO_RECHAZO.heic : TEXTO_RECHAZO[error.motivo] || TEXTO_RECHAZO.contenido
+        texto: TEXTO_RECHAZO[error.motivo] || TEXTO_RECHAZO.contenido
       });
       return;
     }
@@ -101,9 +131,9 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
 
     try {
       // Reducir la foto antes de subirla. Si falla, se sigue con la original
-      let uploadFile = file;
+      let uploadFile = foto;
       try {
-        uploadFile = await prepareImageForUpload(file);
+        uploadFile = await prepareImageForUpload(foto);
       } catch (resizeError) {
         logger.error('❌ [FileUploadZone] No se pudo reducir la imagen:', resizeError);
       }
@@ -281,7 +311,7 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
           <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-20 rounded-2xl">
             <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-secondary-600 mb-4"></div>
             <p className="text-lg font-semibold text-gray-800 mb-1">Procesando imagen...</p>
-            <p className="text-sm text-gray-600">Detectando y corrigiendo DNI...</p>
+            <p className="text-sm text-gray-600">{convirtiendo ? 'Convirtiendo la foto HEIC a JPG...' : 'Detectando y corrigiendo DNI...'}</p>
           </div>
         )}
 
@@ -384,7 +414,7 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
         <div className={`${conError ? 'hidden' : 'flex'} flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm text-gray-500`}>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            Formatos: JPG, PNG, WEBP
+            Formatos: JPG, PNG, WEBP, HEIC
           </div>
           <div className="flex items-center">
             <span className="w-2 h-2 bg-primary-500 rounded-full mr-2"></span>

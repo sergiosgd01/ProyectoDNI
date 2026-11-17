@@ -6,11 +6,12 @@
 // Configuración de validación
 // Peso máximo de la foto que elige el usuario. Antes de subirla se reduce en el navegador
 // (ver imageResize.js), por eso puede superar el límite del servidor
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+export const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
 // Peso máximo que acepta el servidor de recorte
 export const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB
+// Las HEIC no están porque se convierten a JPEG antes de validarlas (ver convertirHeic.js)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGE_DIMENSION = 10000; // 10000x10000 píxeles máximo
+export const MAX_IMAGE_DIMENSION = 10000; // 10000x10000 píxeles máximo
 
 // Error con el motivo del rechazo ('formato', 'peso', 'dimensiones' o 'contenido'), para explicárselo a la persona con un texto propio
 const errorDeValidacion = (mensaje, motivo) => Object.assign(new Error(mensaje), { motivo });

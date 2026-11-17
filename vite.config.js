@@ -47,6 +47,11 @@ export default defineConfig(({ command }) => ({
       output: { assetFileNames }
     }
   },
+  // libheif solo se importa desde el worker de las fotos HEIC (src/workers/heic.worker.js), que Vite no mira al
+  // arrancar en local. Sin esto, con la primera HEIC prepara la librería y recarga la página a mitad de la subida
+  optimizeDeps: {
+    include: ['libheif-js/libheif-wasm/libheif.js']
+  },
   server: {
     host: true,  // Permite acceso desde la red local o ngrok
     port: 5173,

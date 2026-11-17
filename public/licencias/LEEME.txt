@@ -50,4 +50,18 @@ Datos del idioma español de Tesseract 4.0.0
   Licencia           Apache 2.0, tessdata-4.0.0-LICENSE.txt, la del repositorio naptha/tessdata del que salen los datos
                      El paquete npm se declara MIT en su package.json y no trae ningún texto de licencia
 
+libheif 1.23.5 con libde265 1.0.15, motor en WebAssembly que abre las fotos HEIC
+  Ruta en la web     /assets/libheif-<huella>.wasm
+  Copia de           paquete npm libheif-js@1.23.5, libheif-wasm/libheif.wasm
+                     Es libheif (https://github.com/strukturag/libheif) con el descodificador HEVC libde265
+                     (https://github.com/strukturag/libde265), compilados con Emscripten por libheif-js
+                     (https://github.com/catdad-experiments/libheif-js). El código fuente de las tres está ahí
+  SHA-256            184d3d20f8323877f13e9f5254f9c6a0ce272c9a3a2f823b0b2bcd2ee9f73f80
+  Licencia           LGPL-3.0. libheif-1.23.5-LICENSE.txt es la de libheif, con el texto de la LGPL-3.0 y el de
+                     la GPL-3.0 a la que remite. libheif-js-1.23.5-LICENSE.txt es la de libheif-js. libde265 tiene
+                     la misma LGPL-3.0
+  Solo se descarga cuando llega una foto HEIC que el navegador no sabe abrir (ver src/utils/convertirHeic.js).
+  Su cargador (libheif-wasm/libheif.js del mismo paquete) no es una copia aparte. Va dentro del worker
+  /assets/heic.worker-<huella>.js, como el código de las demás librerías de npm.
+
 Al cambiar la versión de alguna de estas librerías hay que actualizar este archivo y su licencia.
