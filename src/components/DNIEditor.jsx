@@ -87,7 +87,7 @@ const CLASES_BOTON_CARA = 'btn btn-sm btn-secundario';
 function BotonIntercambiar({ onClick }) {
   return (
     <div className="flex justify-center -mt-2 mb-2">
-      <button type="button" onClick={onClick} title="Cambiar el anverso por el reverso" className={CLASES_BOTON_CARA}>
+      <button type="button" onClick={onClick} title="Cambiar la parte delantera por la trasera" className={CLASES_BOTON_CARA}>
         <i className="bi bi-arrow-down-up"></i>
         Intercambiar caras
       </button>
@@ -780,7 +780,7 @@ export default function DNIEditor({
                   {/* Mostrar imágenes procesadas */}
                   <div className="mb-4">
                     <EtiquetaCara
-                      texto="ANVERSO - PROCESADO"
+                      texto="Parte delantera procesada"
                       colores="bg-primary-100 text-primary-800"
                       nombreCara="delantera"
                       onAjustar={ajustarCara('front')}
@@ -791,7 +791,7 @@ export default function DNIEditor({
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={processedResult.frontImageUrl}
-                        alt="DNI anverso procesado"
+                        alt="Parte delantera del DNI procesada"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
                     </div>
@@ -802,7 +802,7 @@ export default function DNIEditor({
                   {processedResult.backImageUrl && (
                     <div className="mb-4">
                       <EtiquetaCara
-                        texto="REVERSO - PROCESADO"
+                        texto="Parte trasera procesada"
                         colores="bg-secondary-100 text-secondary-800"
                         nombreCara="trasera"
                         onAjustar={ajustarCara('back')}
@@ -813,7 +813,7 @@ export default function DNIEditor({
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
                           src={processedResult.backImageUrl}
-                          alt="DNI reverso procesado"
+                          alt="Parte trasera del DNI procesada"
                           className="w-full h-auto rounded-lg shadow-md"
                         />
                       </div>
@@ -829,7 +829,7 @@ export default function DNIEditor({
                   {/* Mostrar imágenes originales */}
                   <div className="mb-4 flex-shrink-0">
                     <EtiquetaCara
-                      texto="ANVERSO"
+                      texto="Parte delantera"
                       colores="bg-primary-100 text-primary-800"
                       nombreCara="delantera"
                       onAjustar={ajustarCara('front')}
@@ -840,7 +840,7 @@ export default function DNIEditor({
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
                         src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
-                        alt="DNI anverso"
+                        alt="Parte delantera del DNI"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
                     </div>
@@ -851,7 +851,7 @@ export default function DNIEditor({
                   {backFile && (
                     <div className="mb-4 flex-shrink-0">
                       <EtiquetaCara
-                        texto="REVERSO"
+                        texto="Parte trasera"
                         colores="bg-secondary-100 text-secondary-800"
                         nombreCara="trasera"
                         onAjustar={ajustarCara('back')}
@@ -862,7 +862,7 @@ export default function DNIEditor({
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
                           src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : URL.createObjectURL(backFile)}
-                          alt="DNI reverso"
+                          alt="Parte trasera del DNI"
                           className="w-full h-auto rounded-lg shadow-md"
                         />
                       </div>
@@ -940,7 +940,7 @@ export default function DNIEditor({
 
                 {/* Campos Front */}
                 <div className="mb-4">
-                  <h5 className="text-xs font-semibold text-gray-600 mb-2">ANVERSO (DELANTE)</h5>
+                  <h5 className="text-xs font-semibold text-gray-600 mb-2">Parte delantera</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {frontfields.map((fieldName) => (
                       <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">
@@ -989,7 +989,7 @@ export default function DNIEditor({
 
                 {/* Campos Back */}
                 <div>
-                  <h5 className="text-xs font-semibold text-gray-600 mb-2">REVERSO (DETRÁS)</h5>
+                  <h5 className="text-xs font-semibold text-gray-600 mb-2">Parte trasera</h5>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {backfields.map((fieldName) => (
                       <div key={fieldName} className="border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors h-fit">

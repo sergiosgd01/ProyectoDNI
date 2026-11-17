@@ -53,7 +53,7 @@ export default function UploadPage({
   const carasLibres = [!frontFile && 'delantera', !backFile && 'trasera'].filter(Boolean);
   let textoArrastre = 'Suelta la foto en el recuadro de su cara';
   if (carasLibres.length === 0) textoArrastre = 'Ya hay una foto en cada cara. Quita la que quieras cambiar';
-  else if (carasLibres.length === 1) textoArrastre = `Suelta la foto de la cara ${carasLibres[0]}`;
+  else if (carasLibres.length === 1) textoArrastre = `Suelta la foto de la parte ${carasLibres[0]}`;
   else if (arrastre.count >= 2) textoArrastre = 'Suelta las dos fotos en cualquier parte';
 
   const isMobileView = () => {
@@ -218,7 +218,7 @@ export default function UploadPage({
                   Parte delantera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
-                  Sube una foto de la <strong>parte frontal</strong> de tu DNI
+                  Sube una foto de la <strong>parte delantera</strong> de tu DNI
                 </p>
               </div>
 
@@ -247,7 +247,7 @@ export default function UploadPage({
                   Parte trasera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
-                  Sube una foto de la <strong>parte posterior</strong> de tu DNI
+                  Sube una foto de la <strong>parte trasera</strong> de tu DNI
                 </p>
               </div>
 

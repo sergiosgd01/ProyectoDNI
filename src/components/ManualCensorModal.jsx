@@ -17,6 +17,9 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
 const MIN_PREVIEW_SIZE = 5;
 const MIN_RECT_SIZE = 10;
 
+// Cómo se nombra cada cara en los textos de la ventana
+const NOMBRE_CARA = { anverso: 'parte delantera', reverso: 'parte trasera' };
+
 const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
 // Caja del contenido del lienzo en pantalla, sin su borde (clase border-2)
@@ -592,7 +595,7 @@ function ManualCensorModal({
   };
 
   // Nombre de la única cara que hay que censurar a mano, o null si son las dos
-  const singleSideName = frontFile && backFile ? null : (frontFile ? 'anverso' : 'reverso');
+  const singleSideName = frontFile && backFile ? null : (frontFile ? 'parte delantera' : 'parte trasera');
 
   const totalRectangles = frontRectangles.length + backRectangles.length;
 
@@ -637,7 +640,7 @@ function ManualCensorModal({
               </p>
               <p className="text-gray-300 text-xs md:text-sm leading-relaxed">
                 {singleSideName
-                  ? `No hemos podido detectar automáticamente los campos del ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
+                  ? `No hemos podido detectar automáticamente los campos de la ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
                   : 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'}
               </p>
             </div>
@@ -663,7 +666,7 @@ function ManualCensorModal({
                 }`}
             >
               <i className="bi bi-credit-card-front"></i>
-              <span>Anverso</span>
+              <span>Parte delantera</span>
               {frontRectangles.length > 0 && (
                 <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
                   {frontRectangles.length}
@@ -690,7 +693,7 @@ function ManualCensorModal({
                 }`}
             >
               <i className="bi bi-credit-card-back"></i>
-              <span>Reverso</span>
+              <span>Parte trasera</span>
               {highlightSide === 'back' && (
                 <i className="bi bi-arrow-left-circle-fill text-yellow-400 ml-1 animate-bounce"></i>
               )}
@@ -823,7 +826,7 @@ function ManualCensorModal({
             </div>
 
             <p className="text-gray-300 mb-4">
-              No has censurado ningún campo en el <strong className="text-yellow-400">{missingSides.join(' ni en el ')}</strong>.
+              No has censurado ningún campo en la <strong className="text-yellow-400">{missingSides.map((cara) => NOMBRE_CARA[cara]).join(' ni en la ')}</strong>.
             </p>
 
             <p className="text-gray-400 text-sm mb-5">

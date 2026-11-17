@@ -95,7 +95,7 @@ export const HINTS = {
   closer: 'Acerca el DNI a la cámara',
   farther: 'Aleja un poco el DNI',
   center: 'Centra el DNI en el recuadro',
-  flipToFront: 'Esa es la parte de atrás. Dale la vuelta al DNI',
+  flipToFront: 'Esa es la parte trasera. Dale la vuelta al DNI',
   flipToBack: 'Esa es la parte delantera. Dale la vuelta al DNI',
   unreadable: 'No se leen bien los datos. Pon el DNI recto, sin reflejos y sin tapar nada',
   dark: 'Hay poca luz. Busca un sitio más iluminado',
