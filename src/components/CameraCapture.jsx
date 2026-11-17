@@ -821,7 +821,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
                 <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
                   <i className="bi bi-camera-fill text-2xl"></i>
-                  Capturar Foto
+                  Capturar foto
                 </button>
                 {isAutoAvailable && (
                   <p className="text-white/80 text-xs text-center mt-2">
@@ -1010,7 +1010,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
 
               <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing || hasBlockingOverlay} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
                 <i className="bi bi-camera text-xl"></i>
-                Capturar Foto
+                Capturar foto
               </button>
 
               {!isMobile && devices.length > 1 && (

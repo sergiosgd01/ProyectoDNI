@@ -618,12 +618,12 @@ export default function DNIEditor({
       nombre: 'Nombre',
       apellidos: 'Apellidos',
       dni: 'DNI',
-      fechaNacimiento: 'Fecha de Nacimiento',
+      fechaNacimiento: 'Fecha de nacimiento',
       sexo: 'Sexo',
       nacionalidad: 'Nacionalidad',
-      fechaExpedicion: 'Fecha de Expedición',
-      fechaCaducidad: 'Fecha de Caducidad',
-      numeroSoporte: 'Número de Soporte',
+      fechaExpedicion: 'Fecha de expedición',
+      fechaCaducidad: 'Fecha de caducidad',
+      numeroSoporte: 'Número de soporte',
       can: 'CAN',
       firma: 'Firma',
       fotografia: 'Fotografía',
@@ -631,11 +631,15 @@ export default function DNIEditor({
       domicilio: 'Domicilio',
       municipio: 'Municipio',
       provincia: 'Provincia',
-      equipoExpedidor: 'Equipo Expedidor'
+      lugarNacimiento: 'Lugar de nacimiento',
+      equipoExpedidor: 'Equipo expedidor',
+      ventanaSoporte: 'Ventana del soporte'
     };
 
+    // Un campo sin nombre propio sale de su clave, con mayúscula solo en la primera palabra
     return fieldNames[fieldName] || fieldName
       .replace(/([A-Z])/g, ' $1')
+      .toLowerCase()
       .replace(/^./, str => str.toUpperCase());
   };
 

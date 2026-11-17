@@ -73,7 +73,7 @@ const DNI_PROFILES_DATA = {
   },
   ADMINISTRATIVO: {
     id: 'administrativo',
-    name: 'Administrativo / Legal',
+    name: 'Administrativo / legal',
     description: 'Para trámites oficiales que requieren domicilio',
     icon: '📋',
     color: 'purple',
@@ -103,7 +103,7 @@ const DNI_PROFILES_DATA = {
   },
   FINANCIERO: {
     id: 'financiero',
-    name: 'Financiero / Banca',
+    name: 'Financiero / banca',
     description: 'Para verificaciones bancarias y KYC',
     icon: '🏦',
     color: 'green',

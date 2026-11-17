@@ -215,7 +215,7 @@ export default function UploadPage({
                   <span className="text-lg sm:text-xl font-bold text-primary-800">1</span>
                 </div>
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight sm:mb-2">
-                  Parte Delantera
+                  Parte delantera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
                   Sube una foto de la <strong>parte frontal</strong> de tu DNI
@@ -244,7 +244,7 @@ export default function UploadPage({
                   <span className="text-lg sm:text-xl font-bold text-secondary-600">2</span>
                 </div>
                 <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 leading-tight sm:mb-2">
-                  Parte Trasera
+                  Parte trasera
                 </h3>
                 <p className="text-sm md:text-base text-gray-600">
                   Sube una foto de la <strong>parte posterior</strong> de tu DNI

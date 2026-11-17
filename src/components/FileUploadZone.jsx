@@ -386,7 +386,7 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
                 className="btn btn-principal"
               >
                 <i className="bi bi-folder text-lg"></i>
-                <span>Seleccionar Archivo</span>
+                <span>Seleccionar archivo</span>
               </button>
             </div>
           </>
