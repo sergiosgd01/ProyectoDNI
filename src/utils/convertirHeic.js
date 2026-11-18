@@ -12,7 +12,7 @@
  * Al pasar por el lienzo se pierden los metadatos, entre ellos la ubicación.
  */
 import { MAX_UPLOAD_SIDE, UPLOAD_JPEG_QUALITY } from './imageResize';
-import { MAX_FILE_SIZE, MAX_IMAGE_DIMENSION } from './fileValidation';
+import { MAX_FILE_SIZE, MAX_HEIC_DIMENSION } from './fileValidation';
 
 // Si la conversión no termina en este tiempo se da por fallida. Una foto de 24 MP en un móvil lento tarda
 // bastante menos
@@ -26,7 +26,7 @@ const nombreJpg = (nombre) => `${(nombre || 'foto').replace(/\.[^.]*$/, '')}.jpg
 
 /** Dibuja la imagen en un lienzo, reducida si hace falta, y la devuelve en JPEG */
 async function aJpeg(imagen, ancho, alto, original) {
-  if (ancho > MAX_IMAGE_DIMENSION || alto > MAX_IMAGE_DIMENSION) {
+  if (ancho > MAX_HEIC_DIMENSION || alto > MAX_HEIC_DIMENSION) {
     throw fallo(`Imagen demasiado grande (${ancho}x${alto})`, 'dimensiones');
   }
   const escala = Math.min(1, MAX_UPLOAD_SIDE / Math.max(ancho, alto));
@@ -119,7 +119,7 @@ async function descodificarConLibheif(file) {
     try {
       if (!worker) worker = crearWorker();
       // El archivo se entrega al worker sin copiarlo
-      worker.postMessage({ id, datos, maxLado: MAX_IMAGE_DIMENSION }, [datos]);
+      worker.postMessage({ id, datos, maxLado: MAX_HEIC_DIMENSION }, [datos]);
     } catch (error) {
       pendientes.delete(id);
       terminar(reject)(fallo(error?.message || String(error), 'heic-carga'));
