@@ -53,6 +53,8 @@ const PROBLEM_TEXTS = {
 const CONSULTA_TUMBADO = '(orientation: landscape) and (max-height: 500px)';
 // Ancho de la columna del botón con el móvil tumbado, en px
 const COLUMNA_BOTON = 132;
+// Alto de la fila de arriba con el móvil tumbado, donde van el aviso y la X para cerrar, en px
+const FILA_ARRIBA = 64;
 
 // Tiempo que se deja a la captura automática antes de ofrecer el botón para hacer la foto a mano. Con el botón a la
 // vista desde el principio, quien no se fía de la tecnología lo pulsa nada más abrir la cámara y la foto sale peor que
@@ -93,7 +95,7 @@ function DNIGuide({ guideRef, isMobile, tumbado = false, tone, progress }) {
   // Con el móvil tumbado el recuadro deja libres la fila de arriba (aviso y cerrar) y la columna del botón, y se
   // mide por el alto que queda, sin pasar del ancho libre. La captura lee el recuadro por su posición en pantalla
   // (guideRectInVideo), así que no hay que tocarla
-  const hueco = tumbado ? { top: 64, right: COLUMNA_BOTON, bottom: 12, left: 0 } : undefined;
+  const hueco = tumbado ? { top: FILA_ARRIBA, right: COLUMNA_BOTON, bottom: 12, left: 0 } : undefined;
   const medida = tumbado
     ? { height: `min(100%, calc((100vw - ${COLUMNA_BOTON + 32}px) / 1.586))`, aspectRatio: '1.586' }
     : { width: isMobile ? '80%' : '60%', aspectRatio: '1.586', maxWidth: '600px', maxHeight: '70vh' };
@@ -875,12 +877,13 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
             </div>
 
             {/* Con el móvil tumbado el botón va en una columna a la derecha, redondo como el de la cámara del móvil.
-                Hasta que sale (ver MANUAL_BUTTON_DELAY_MS), en su sitio se dice que la foto se hace sola */}
+                Hasta que sale (ver MANUAL_BUTTON_DELAY_MS), en su sitio se dice que la foto se hace sola. Empieza bajo
+                la fila de arriba porque, desde arriba del todo, tapaba la X, que se veía gris y no se podía pulsar */}
             {!hasBlockingOverlay && tumbado && (
               <div
                 aria-live="polite"
-                className="absolute top-0 bottom-0 right-0 z-20 flex flex-col items-center justify-center gap-2 px-3 bg-gradient-to-l from-black/80 to-transparent"
-                style={{ width: COLUMNA_BOTON }}
+                className="absolute bottom-0 right-0 z-20 flex flex-col items-center justify-center gap-2 px-3 bg-gradient-to-l from-black/80 to-transparent"
+                style={{ width: COLUMNA_BOTON, top: FILA_ARRIBA }}
               >
                 {showManualButton ? (
                   <>
