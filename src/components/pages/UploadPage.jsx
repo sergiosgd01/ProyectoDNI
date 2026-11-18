@@ -9,6 +9,7 @@ import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { usePreloadDetector } from '../../hooks/usePreloadDetector';
 import { UploadSlotProvider, useUploadSlots } from '../../hooks/useUploadSlots';
 import { usePageFileDrop } from '../../hooks/usePageFileDrop';
+import { ATAJO_PEGAR } from '../../utils/atajos';
 
 export default function UploadPage({
   frontFile,
@@ -189,8 +190,19 @@ export default function UploadPage({
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 sm:mb-4">
               Subir ambas partes del DNI
             </h2>
+            {/* Con ratón o trackpad (la misma consulta que FileUploadZone) se pueden soltar o pegar las dos fotos a la
+                vez y cada una va a su recuadro, pero nada lo decía. La frase de debajo del título lo dice, con lo
+                importante en negrita, porque sin ella pasaba desapercibida y en una franja aparte se veía demasiado.
+                Con el dedo sigue la frase de antes. Debajo había dos puntitos con «Parte delantera» y «Parte trasera»,
+                que repetían esa frase y los títulos de los recuadros (punto 11 de UX-14) */}
             <p className="hidden sm:block text-base md:text-lg text-gray-600">
-              Sube las fotos de la parte delantera y trasera de tu DNI
+              <span className="[@media(hover:hover)_and_(pointer:fine)]:hidden">
+                Sube las fotos de la parte delantera y trasera de tu DNI
+              </span>
+              <span className="hidden [@media(hover:hover)_and_(pointer:fine)]:inline">
+                <strong className="font-semibold text-gray-800">Arrastra las dos fotos a la vez</strong> y cada una
+                irá a su recuadro, o pégalas con {ATAJO_PEGAR}
+              </span>
             </p>
           </div>
 

@@ -10,6 +10,7 @@ import { fileUploadLimiter } from '../utils/rateLimiter';
 import logger from '../utils/logger';
 import { useUploadSlotRegistration } from '../hooks/useUploadSlots';
 import { useCloseOnBack } from '../hooks/useNavigation';
+import { ATAJO_PEGAR } from '../utils/atajos';
 
 // Por qué no se puede usar un archivo, según el motivo que dan fileValidation.js y convertirHeic.js
 const TEXTO_RECHAZO = {
@@ -30,7 +31,6 @@ const CONSULTA_RATON = '(hover: hover) and (pointer: fine)';
 const ERRORES_SIN_DNI = ['no_detection', 'no_mask', 'low_confidence', 'extraction_failed'];
 const MENSAJE_SIN_DNI = 'No hemos encontrado el DNI en la foto.';
 const SUGERENCIA_SIN_DNI = 'Prueba con otra foto en la que se vea el DNI entero, con buena luz y sin reflejos, o recórtalo tú a mano.';
-const ATAJO_PEGAR = /mac|iphone|ipad/i.test(navigator.userAgentData?.platform || navigator.platform || '') ? '⌘V' : 'Ctrl+V';
 
 // expectedSide es la cara que pide esta zona ('anverso' o 'reverso'). La cámara avisa si se le enseña la otra
 function FileUploadZone({ onFileSelect, expectedSide = null }) {
