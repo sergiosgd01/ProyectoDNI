@@ -54,6 +54,21 @@ const CONSULTA_TUMBADO = '(orientation: landscape) and (max-height: 500px)';
 // Ancho de la columna del botón con el móvil tumbado, en px
 const COLUMNA_BOTON = 132;
 
+// Tiempo que se deja a la captura automática antes de ofrecer el botón para hacer la foto a mano. Con el botón a la
+// vista desde el principio, quien no se fía de la tecnología lo pulsa nada más abrir la cámara y la foto sale peor que
+// la que se hace sola. Cuenta desde que la cámara empieza a preparar la detección y vuelve a empezar cuando ya busca el
+// DNI, así que con una red lenta el botón también sale aunque el detector no haya terminado de cargar
+const MANUAL_BUTTON_DELAY_MS = 8000;
+// Fase de la captura automática según su estado, para el plazo del botón. Mientras se hace o se analiza una foto no
+// cuenta, y al volver a la cámara empieza de cero
+const AUTO_PHASES = {
+  manual: 'manual',
+  cargando: 'cargando',
+  buscando: 'mirando',
+  ajustando: 'mirando',
+  listo: 'mirando',
+};
+
 // Colores del recuadro según lo que ve la captura automática
 const GUIDE_TONES = {
   neutral: { border: 'border-white', corner: 'border-white' },
@@ -186,6 +201,9 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   const failedChecksRef = useRef(0);
   const bestAttemptRef = useRef(null);
   const [showFlash, setShowFlash] = useState(false);
+  // Si ya se ofrece el botón para hacer la foto a mano (ver MANUAL_BUTTON_DELAY_MS). Una vez sale, se queda. Con el
+  // ahorro de datos no hay captura automática (ver useAutoCapture), así que sale desde el principio
+  const [manualButtonShown, setManualButtonShown] = useState(() => Boolean(navigator.connection?.saveData));
   const isCapturingRef = useRef(false);
   const isInitializing = useRef(false);
   const hasInitialized = useRef(false);
@@ -667,6 +685,15 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     ? HINT_BACKGROUNDS.listo
     : retryNotice ? HINT_BACKGROUNDS.ajustando : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
   const isAutoAvailable = autoCapture.status !== 'manual';
+  // El botón para hacer la foto a mano sale cuando la captura automática lleva MANUAL_BUTTON_DELAY_MS sin hacerla, y
+  // enseguida si no hay captura automática (no carga el detector o está activado el ahorro de datos)
+  const autoPhase = AUTO_PHASES[autoCapture.status] || null;
+  useEffect(() => {
+    if (manualButtonShown || !autoPhase) return undefined;
+    const timer = setTimeout(() => setManualButtonShown(true), autoPhase === 'manual' ? 0 : MANUAL_BUTTON_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoPhase, manualButtonShown]);
+  const showManualButton = manualButtonShown || !isAutoAvailable;
   // Con un aviso que tapa la cámara y trae sus propios botones no se ofrece hacer otra foto
   const hasBlockingOverlay = Boolean(detectionError || captureProblem);
 
@@ -847,40 +874,61 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               </div>
             </div>
 
-            {/* Con el móvil tumbado el botón va en una columna a la derecha, redondo como el de la cámara del móvil */}
+            {/* Con el móvil tumbado el botón va en una columna a la derecha, redondo como el de la cámara del móvil.
+                Hasta que sale (ver MANUAL_BUTTON_DELAY_MS), en su sitio se dice que la foto se hace sola */}
             {!hasBlockingOverlay && tumbado && (
               <div
+                aria-live="polite"
                 className="absolute top-0 bottom-0 right-0 z-20 flex flex-col items-center justify-center gap-2 px-3 bg-gradient-to-l from-black/80 to-transparent"
                 style={{ width: COLUMNA_BOTON }}
               >
-                <button
-                  onClick={() => capturePhoto(false)}
-                  disabled={isLoading || isProcessing}
-                  aria-label="Capturar foto"
-                  className="btn-primary w-[76px] h-[76px] rounded-full shadow-2xl flex items-center justify-center disabled:opacity-50"
-                >
-                  <i className="bi bi-camera-fill text-3xl" aria-hidden="true"></i>
-                </button>
-                <span className="text-white text-sm font-semibold" aria-hidden="true">Capturar foto</span>
-                {isAutoAvailable && (
-                  <p className="text-white/80 text-[11px] leading-snug text-center">
-                    También se hace sola cuando el DNI se ve bien
-                  </p>
+                {showManualButton ? (
+                  <>
+                    {isAutoAvailable && (
+                      <p className="text-white/80 text-[11px] leading-snug text-center">
+                        ¿No se hace sola? Hazla tú
+                      </p>
+                    )}
+                    <button
+                      onClick={() => capturePhoto(false)}
+                      disabled={isLoading || isProcessing}
+                      aria-label="Capturar foto"
+                      className="btn-primary w-[76px] h-[76px] rounded-full shadow-2xl flex items-center justify-center disabled:opacity-50"
+                    >
+                      <i className="bi bi-camera-fill text-3xl" aria-hidden="true"></i>
+                    </button>
+                    <span className="text-white text-sm font-semibold" aria-hidden="true">Capturar foto</span>
+                  </>
+                ) : (
+                  <div data-captura-sola className="text-center text-white">
+                    <p className="text-base font-bold leading-snug">La foto se hace sola</p>
+                    <p className="text-white/80 text-xs leading-snug mt-1">No hace falta pulsar nada</p>
+                  </div>
                 )}
               </div>
             )}
 
-            {/* Con un aviso encima no se enseña, porque en pantallas pequeñas tapaba sus botones */}
+            {/* Con un aviso encima no se enseña, porque en pantallas pequeñas tapaba sus botones. Hasta que sale el botón
+                (ver MANUAL_BUTTON_DELAY_MS), en su sitio se dice que la foto se hace sola */}
             {!hasBlockingOverlay && !tumbado && (
-              <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
-                <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
-                  <i className="bi bi-camera-fill text-2xl"></i>
-                  Capturar foto
-                </button>
-                {isAutoAvailable && (
-                  <p className="text-white/80 text-xs text-center mt-2">
-                    También se hace sola cuando el DNI se ve bien
-                  </p>
+              <div aria-live="polite" className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
+                {showManualButton ? (
+                  <>
+                    {isAutoAvailable && (
+                      <p className="text-white/90 text-sm text-center mb-3">
+                        ¿No se hace sola? Puedes hacerla tú
+                      </p>
+                    )}
+                    <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="w-full btn-primary py-5 rounded-2xl font-bold text-lg shadow-2xl flex items-center justify-center gap-3 disabled:opacity-50">
+                      <i className="bi bi-camera-fill text-2xl"></i>
+                      Capturar foto
+                    </button>
+                  </>
+                ) : (
+                  <div data-captura-sola className="text-center text-white py-2">
+                    <p className="text-xl font-bold">La foto se hace sola</p>
+                    <p className="text-white/80 text-sm mt-1">No hace falta pulsar nada</p>
+                  </div>
                 )}
               </div>
             )}
@@ -1062,10 +1110,30 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
                 )}
               </div>
 
-              <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing || hasBlockingOverlay} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
-                <i className="bi bi-camera text-xl"></i>
-                Capturar foto
-              </button>
+              {/* Hasta que sale el botón (ver MANUAL_BUTTON_DELAY_MS), en su sitio se dice que la foto se hace sola. Con
+                  un aviso encima no se enseña ninguno de los dos, porque el aviso trae sus propios botones */}
+              {!hasBlockingOverlay && (
+                <div aria-live="polite">
+                  {showManualButton ? (
+                    <div className="space-y-2">
+                      {isAutoAvailable && (
+                        <p className="text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+                          ¿No se hace sola? Puedes hacerla tú
+                        </p>
+                      )}
+                      <button onClick={() => capturePhoto(false)} disabled={isLoading || isProcessing} className="btn-primary w-full py-4 px-8 text-base sm:text-lg font-bold rounded-xl shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2">
+                        <i className="bi bi-camera text-xl"></i>
+                        Capturar foto
+                      </button>
+                    </div>
+                  ) : (
+                    <div data-captura-sola className="text-center py-2">
+                      <p className="text-lg font-bold" style={{ color: 'var(--color-text-primary)' }}>La foto se hace sola</p>
+                      <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>No hace falta pulsar nada</p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {!isMobile && devices.length > 1 && (
                 <div className="flex justify-center">
