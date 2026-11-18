@@ -34,6 +34,12 @@ async function preparar({ delantera, trasera, marca }, sigue) {
 const esDe = (copia, { delantera, trasera, marca }) =>
   Boolean(copia) && copia.delantera === delantera && copia.trasera === trasera && copia.marca === marca;
 
+// En el iPhone y el iPad el título llega al menú de compartir como un texto aparte. «Guardar en Archivos» guardaba un
+// texto.txt con «DNI protegido» junto al PDF (visto el 18/11/2026 en el simulador de iOS 26.4). Ahí se comparte solo
+// el PDF. El iPad se presenta como un Mac, pero con pantalla táctil
+const ES_IOS = typeof navigator !== 'undefined'
+  && (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+
 const AVISO_FALLO = 'No se ha podido preparar la copia. Vuelve a intentarlo.';
 const AVISO_REPETIR = 'Tu copia ya está lista. Pulsa otra vez «Compartir».';
 const AVISO_SIN_MENU = 'No se ha podido abrir el menú para compartir. Descarga el PDF y mándalo desde la aplicación que quieras.';
@@ -125,7 +131,7 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
       }
     }
     try {
-      await navigator.share({ files: [archivo], title: 'DNI protegido' });
+      await navigator.share(ES_IOS ? { files: [archivo] } : { files: [archivo], title: 'DNI protegido' });
     } catch (error) {
       const motivo = motivoErrorCompartir(error);
       if (motivo === 'repetir') setAviso(AVISO_REPETIR);
