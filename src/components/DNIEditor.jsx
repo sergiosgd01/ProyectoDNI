@@ -8,7 +8,7 @@ import { detectWithFlatLight } from '../utils/flatLight';
 import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
 import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
 import { censorDniComplete, mapUiToYolo } from './dni_scripts/dni_censor'
-import { camposSinDetectar } from '../utils/camposSinDetectar';
+import { modoDeCensura } from '../utils/camposSinDetectar';
 import WatermarkInput from './WatermarkInput';
 import Aviso from './Aviso';
 import { useCloseOnBack } from '../hooks/useNavigation';
@@ -36,6 +36,17 @@ function apuntarDetecciones(foto, detecciones, cara) {
   const guardadas = deteccionesPorFoto.get(foto);
   if (guardadas) guardadas.caras.add(cara);
   else deteccionesPorFoto.set(foto, { detecciones, caras: new Set([cara]) });
+}
+
+// La imagen tapada que devuelve censorDniComplete (una URL data: en JPEG) como archivo, para abrirla en la censura
+// manual. Se pasa a bytes aquí y no con fetch, que la política de contenido de la web podría no dejar
+function dataUrlAArchivo(dataUrl, nombre) {
+  const [cabecera, datos] = dataUrl.split(',');
+  const tipo = cabecera.match(/^data:([^;,]+)/)?.[1] || 'image/jpeg';
+  const binario = atob(datos);
+  const bytes = new Uint8Array(binario.length);
+  for (let i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+  return new File([bytes], nombre, { type: tipo });
 }
 
 // Clases del modelo que corresponden a elementos de seguridad del anverso
@@ -487,7 +498,6 @@ export default function DNIEditor({
         }
       }
 
-      const manualFiles = {};
       const result = {
         success: true,
         manualCensor: false
@@ -500,22 +510,10 @@ export default function DNIEditor({
       const frontDetections = frontGuardadas?.detecciones
         || await detectWithFlatLight(frontFileToProcess, detectDniFromCanvas);
       if (!vigente()) return;
-      const frontDocument = frontDetections.find(d => d.label === 'DOC_DNI');
-      console.log(`🔍 [ANVERSO] Detecciones totales: ${frontDetections.length} | DOC_DNI encontrado: ${!!frontDocument}`);
-      if (!frontDocument) {
-        console.warn('⚠️ [ANVERSO] → CENSURA MANUAL (no se detectó el documento DOC_DNI)');
-        manualFiles.front = frontFileToProcess;
-      } else if (frontDetections.length < 15) {
-        console.warn(`⚠️ [ANVERSO] → CENSURA MANUAL (solo ${frontDetections.length} detecciones, mínimo 15)`);
-        manualFiles.front = frontFileToProcess;
-      } else if (camposSinDetectar(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo).length > 0) {
-        // Con 15 detecciones o más puede faltar justo un campo que se tapa (ver utils/camposSinDetectar.js)
-        const faltan = camposSinDetectar(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo);
-        console.warn(`⚠️ [ANVERSO] → CENSURA MANUAL (no se han encontrado: ${faltan.join(', ')})`);
-        manualFiles.front = frontFileToProcess;
-      } else {
-        console.log('✅ [ANVERSO] → CENSURA AUTOMÁTICA');
-      }
+      // Cada cara se tapa sola ('auto'), se tapa con lo encontrado y pide a mano lo que falta ('parcial') o se tapa
+      // entera a mano ('manual'). Ver modoDeCensura en utils/camposSinDetectar.js
+      const modos = { front: modoDeCensura(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo) };
+      console.log(`🔍 [ANVERSO] ${frontDetections.length} detecciones → censura ${modos.front.modo} (${modos.front.motivo})`);
 
       let backDetections = [];
       let backGuardadas = null;
@@ -524,34 +522,36 @@ export default function DNIEditor({
         backDetections = backGuardadas?.detecciones
           || await detectWithFlatLight(backFileToProcess, detectDniFromCanvas);
         if (!vigente()) return;
-        const backDocument = backDetections.find(d => d.label === 'DOC_DNI_REV');
-        console.log(`🔍 [REVERSO] Detecciones totales: ${backDetections.length} | DOC_DNI_REV encontrado: ${!!backDocument}`);
-
-        if (!backDocument) {
-          console.warn('⚠️ [REVERSO] → CENSURA MANUAL (no se detectó el documento DOC_DNI_REV)');
-          manualFiles.back = backFileToProcess;
-        } else if (backDetections.length < 6) {
-          console.warn(`⚠️ [REVERSO] → CENSURA MANUAL (solo ${backDetections.length} detecciones, mínimo 6)`);
-          manualFiles.back = backFileToProcess;
-        } else if (camposSinDetectar(selectedBackFields, backDetections, 'reverso', mapUiToYolo).length > 0) {
-          const faltan = camposSinDetectar(selectedBackFields, backDetections, 'reverso', mapUiToYolo);
-          console.warn(`⚠️ [REVERSO] → CENSURA MANUAL (no se han encontrado: ${faltan.join(', ')})`);
-          manualFiles.back = backFileToProcess;
-        } else {
-          console.log('✅ [REVERSO] → CENSURA AUTOMÁTICA');
-        }
+        modos.back = modoDeCensura(selectedBackFields, backDetections, 'reverso', mapUiToYolo);
+        console.log(`🔍 [REVERSO] ${backDetections.length} detecciones → censura ${modos.back.modo} (${modos.back.motivo})`);
       }
 
-      // Se tapa cada cara automática una sola vez. La que va a censura manual se salta
+      // Se tapa cada cara una sola vez. La que va entera a censura manual se salta. La parcial se tapa con lo encontrado
+      // y después la censura manual pide solo lo que falta (FUN-2)
       const censurado = await censorDniComplete(
-        manualFiles.front ? null : frontFileToProcess,
-        manualFiles.back ? null : backFileToProcess,
+        modos.front.modo === 'manual' ? null : frontFileToProcess,
+        modos.back && modos.back.modo !== 'manual' ? backFileToProcess : null,
         { frontFields: selectedFrontFields, backFields: selectedBackFields },
         { frontDetections, backDetections }
       );
       if (!vigente()) return;
-      if (!manualFiles.front) result.frontImageUrl = censurado.frontImageUrl;
-      if (backFileToProcess && !manualFiles.back) result.backImageUrl = censurado.backImageUrl;
+
+      // Lo que va a la censura manual. Una cara entera lleva su foto sin tapar y una parcial la foto ya tapada con lo
+      // encontrado, y en faltan los campos que hay que tapar a mano en esa cara, con su nombre en la interfaz
+      const manualFiles = {};
+      const faltan = {};
+      const fotos = { front: frontFileToProcess, back: backFileToProcess };
+      const urlDe = { front: 'frontImageUrl', back: 'backImageUrl' };
+      Object.entries(modos).forEach(([lado, { modo, faltan: campos }]) => {
+        if (modo === 'auto') {
+          result[urlDe[lado]] = censurado[urlDe[lado]];
+        } else if (modo === 'parcial') {
+          manualFiles[lado] = dataUrlAArchivo(censurado[urlDe[lado]], `${lado === 'front' ? 'anverso' : 'reverso'}-tapado.jpg`);
+          faltan[lado] = campos.map((campo) => ({ campo, nombre: formatFieldName(campo) }));
+        } else {
+          manualFiles[lado] = fotos[lado];
+        }
+      });
 
       // --- GUARDAR EN BACKEND ---
       // Métricas de uso y el texto de la marca de agua (el campo avisa de que no se pongan datos personales).
@@ -581,10 +581,10 @@ export default function DNIEditor({
       // --------------------------
 
       if (Object.keys(manualFiles).length > 0) {
-        console.log(`📋 [RESULTADO] Censura manual necesaria para: ${Object.keys(manualFiles).join(', ')}`);
+        console.log(`📋 [RESULTADO] Censura manual necesaria para: ${Object.keys(manualFiles).map((lado) => `${lado} (${modos[lado].modo})`).join(', ')}`);
         console.log(`📋 [RESULTADO] Ya censurado automáticamente: ${[result.frontImageUrl ? 'anverso' : null, result.backImageUrl ? 'reverso' : null].filter(Boolean).join(', ') || 'ninguno'
           }`);
-        setManualCensorList(manualFiles);
+        setManualCensorList({ ...manualFiles, faltan });
         setProcessedResult(result);
         return;
       }
@@ -1183,6 +1183,7 @@ export default function DNIEditor({
         <ManualCensorModal
           frontFile={manualCensorList?.front}
           backFile={manualCensorList?.back}
+          faltan={manualCensorList?.faltan}
           onComplete={handleManualCensorComplete}
           onCancel={cancelarCensuraManual}
         />

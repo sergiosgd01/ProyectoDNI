@@ -8,6 +8,9 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
  * La cara que no llega (frontFile o backFile vacío) no se pide ni se genera.
  * onComplete la devuelve a null y el editor conserva su resultado automático.
  *
+ * Una cara parcial (FUN-2) llega ya tapada con lo que se ha encontrado, y faltan.front o faltan.back dicen qué campos
+ * quedan por tapar en ella, como { campo, nombre }. Entonces la ventana pide solo esos campos.
+ *
  * Los rectángulos se guardan en fracciones del ancho y del alto de la imagen original, de 0 a 1.
  * Así no dependen del tamaño con el que se ve el lienzo, que cambia de una cara a otra,
  * al cambiar el tamaño de la ventana y al girar el móvil, y cada cara se tapa justo donde se dibujó.
@@ -19,6 +22,21 @@ const MIN_RECT_SIZE = 10;
 
 // Cómo se nombra cada cara en los textos de la ventana
 const NOMBRE_CARA = { anverso: 'parte delantera', reverso: 'parte trasera' };
+const NOMBRE_LADO = { front: NOMBRE_CARA.anverso, back: NOMBRE_CARA.reverso };
+const LADO_DE_CARA = { anverso: 'front', reverso: 'back' };
+
+// Campos que quedan por tapar en una cara parcial (FUN-2), como etiquetas
+function ListaFaltan({ campos }) {
+  return (
+    <ul className="flex flex-wrap gap-1.5" aria-label="Falta por tapar">
+      {campos.map(({ campo, nombre }) => (
+        <li key={campo} className="bg-yellow-400 text-gray-900 text-xs font-semibold px-2 py-0.5 rounded-full">
+          {nombre}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // Móvil tumbado, con la misma consulta que la cámara (CameraCapture.jsx). La cabecera, las pestañas y los botones
 // se comían casi todo el alto y la foto se quedaba en una tira de unos 150 px, así que en ese caso pasan a una
@@ -55,6 +73,7 @@ const rectBetween = (start, end) => ({
 function ManualCensorModal({
   frontFile,
   backFile,
+  faltan = null,
   onComplete,
   onCancel
 }) {
@@ -621,8 +640,19 @@ function ManualCensorModal({
     }
   };
 
-  // Nombre de la única cara que hay que censurar a mano, o null si son las dos
-  const singleSideName = frontFile && backFile ? null : (frontFile ? 'parte delantera' : 'parte trasera');
+  // Lo que falta por tapar en una cara parcial (FUN-2), o null si esa cara se tapa entera a mano
+  const faltanDe = (lado) => (faltan?.[lado]?.length ? faltan[lado] : null);
+  const faltanAqui = faltanDe(currentSide);
+  // Caras de la ventana y las que se tapan enteras a mano
+  const lados = [frontFile && 'front', backFile && 'back'].filter(Boolean);
+  const enteras = lados.filter((lado) => !faltanDe(lado));
+  // Aviso de una cara entera. «En ambas caras» solo si las dos van enteras a mano
+  const textoCaraEntera = enteras.length === 2
+    ? 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'
+    : `No hemos podido detectar automáticamente los campos de la ${NOMBRE_LADO[currentSide]}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar.${lados.length === 1 ? ' Solo hace falta en esta cara.' : ''}`;
+  // En el aviso de seguir sin dibujar, si todas las caras sin rectángulos son parciales lo encontrado ya está tapado
+  const sinDibujarSoloParciales = missingSides.length > 0
+    && missingSides.every((cara) => faltanDe(LADO_DE_CARA[cara]));
 
   const totalRectangles = frontRectangles.length + backRectangles.length;
 
@@ -665,23 +695,29 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Mensaje de advertencia cuando falla la detección automática. En pantallas bajas (un iPhone SE con las barras
-          de Safari) solo queda el título, y con el móvil tumbado no sale, para dejar sitio a la foto. Lo que hay que
-          hacer ya lo dicen la cabecera y el pie */}
+      {/* Aviso de la cara que está en pantalla. En una cara entera, que la detección automática no ha funcionado, y en
+          una parcial, qué falta por tapar (FUN-2). En pantallas bajas (un iPhone SE con las barras de Safari) solo
+          quedan el título y lo que falta. Con el móvil tumbado no sale, para dejar sitio a la foto, y lo que falta va en
+          la columna de la derecha. Lo demás que hay que hacer ya lo dicen la cabecera y el pie */}
       <div className={`bg-gray-800 border-b border-gray-700 p-3 md:p-4 [@media(max-height:420px)]:hidden ${tumbado ? 'hidden' : ''}`}>
         <div className="max-w-4xl mx-auto">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center mt-0.5">
-              <i className="bi bi-exclamation-triangle-fill text-gray-900 text-sm"></i>
+              <i className={`bi ${faltanAqui ? 'bi-pencil-fill' : 'bi-exclamation-triangle-fill'} text-gray-900 text-sm`}></i>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-sm md:text-base font-medium mb-1">
-                Detección automática no disponible
+                {faltanAqui ? `Tapa lo que falta en la ${NOMBRE_LADO[currentSide]}` : 'Detección automática no disponible'}
               </p>
+              {faltanAqui && (
+                <div className="mb-1.5">
+                  <ListaFaltan campos={faltanAqui} />
+                </div>
+              )}
               <p className="text-gray-300 text-xs md:text-sm leading-relaxed [@media(max-height:600px)]:hidden">
-                {singleSideName
-                  ? `No hemos podido detectar automáticamente los campos de la ${singleSideName}. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar. Solo hace falta en esta cara.`
-                  : 'No hemos podido detectar automáticamente los campos del DNI. Por favor, dibuja rectángulos manualmente sobre los datos que deseas ocultar en ambas caras del documento.'}
+                {faltanAqui
+                  ? 'Lo que hemos encontrado ya está tapado. Dibuja un rectángulo sobre cada dato que falta y revisa que no quede nada más a la vista.'
+                  : textoCaraEntera}
               </p>
             </div>
           </div>
@@ -700,6 +736,7 @@ function ManualCensorModal({
                 handleSwitchSide('front');
                 setHighlightSide(null);
               }}
+              data-faltan={faltanDe('front')?.map(({ campo }) => campo).join(' ')}
               className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'front'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
@@ -727,6 +764,7 @@ function ManualCensorModal({
                 handleSwitchSide('back');
                 setHighlightSide(null);
               }}
+              data-faltan={faltanDe('back')?.map(({ campo }) => campo).join(' ')}
               className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'back'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
@@ -750,8 +788,22 @@ function ManualCensorModal({
         </div>
       </div>
 
-      {/* Con el móvil tumbado rellena la columna de la derecha entre las pestañas y el pie */}
-      {tumbado && <div aria-hidden="true" className="col-start-2 row-start-3 bg-gray-900 border-l border-gray-700" />}
+      {/* Con el móvil tumbado rellena la columna de la derecha entre las pestañas y el pie. En una cara parcial dice ahí
+          lo que falta por tapar, porque el aviso de arriba no sale */}
+      {tumbado && (
+        <div
+          aria-hidden={faltanAqui ? undefined : 'true'}
+          className="col-start-2 row-start-3 min-h-0 overflow-y-auto bg-gray-900 border-l border-gray-700 p-2"
+        >
+          {faltanAqui && (
+            <>
+              <p className="text-white text-xs font-medium mb-1.5">Falta por tapar</p>
+              <ListaFaltan campos={faltanAqui} />
+              <p className="text-gray-400 text-[11px] leading-snug mt-1.5">Lo encontrado ya está tapado. Revisa que no quede nada más a la vista</p>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Canvas container. Con el móvil tumbado ocupa la columna de la izquierda de arriba abajo */}
       <div
@@ -885,7 +937,9 @@ function ManualCensorModal({
             </p>
 
             <p className="text-gray-400 text-sm mb-5">
-              ¿Estás seguro de que quieres continuar? Los datos de {missingSides.length > 1 ? 'esas caras' : 'esa cara'} permanecerán visibles.
+              {sinDibujarSoloParciales
+                ? '¿Estás seguro de que quieres continuar? Lo que hemos encontrado ya está tapado, pero lo que falta por tapar se quedará a la vista.'
+                : `¿Estás seguro de que quieres continuar? Los datos de ${missingSides.length > 1 ? 'esas caras' : 'esa cara'} permanecerán visibles.`}
             </p>
 
             <div className="flex gap-3">
