@@ -189,19 +189,9 @@ export default function UploadPage({
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800 sm:mb-4">
               Subir ambas partes del DNI
             </h2>
-            <p className="hidden sm:block text-base md:text-lg text-gray-600 mb-2">
+            <p className="hidden sm:block text-base md:text-lg text-gray-600">
               Sube las fotos de la parte delantera y trasera de tu DNI
             </p>
-            <div className="hidden sm:flex items-center justify-center space-x-4 text-sm text-gray-500">
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${frontFile ? 'bg-primary-500' : 'bg-primary-300'}`}></div>
-                <span>Parte delantera</span>
-              </div>
-              <div className="flex items-center">
-                <div className={`w-3 h-3 rounded-full mr-2 ${backFile ? 'bg-secondary-500' : 'bg-secondary-300'}`}></div>
-                <span>Parte trasera</span>
-              </div>
-            </div>
           </div>
 
           {/* Grid responsive: una columna en móvil, dos columnas en pantallas medianas y grandes */}
