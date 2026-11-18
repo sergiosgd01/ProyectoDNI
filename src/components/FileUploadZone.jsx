@@ -1,5 +1,4 @@
 import React, { useState, useId, useEffect } from 'react';
-import CameraCapture from './CameraCapture';
 import ManualCropModal from './ManualCropModal';
 import Aviso from './Aviso';
 import { processWithYolo } from '../services/processWithYolo';
@@ -32,10 +31,10 @@ const ERRORES_SIN_DNI = ['no_detection', 'no_mask', 'low_confidence', 'extractio
 const MENSAJE_SIN_DNI = 'No hemos encontrado el DNI en la foto.';
 const SUGERENCIA_SIN_DNI = 'Prueba con otra foto en la que se vea el DNI entero, con buena luz y sin reflejos, o recórtalo tú a mano.';
 
-// expectedSide es la cara que pide esta zona ('anverso' o 'reverso'). La cámara avisa si se le enseña la otra
-function FileUploadZone({ onFileSelect, expectedSide = null }) {
+// onHacerFoto abre la cámara. No va aquí sino en la página de subida, que tiene una sola cámara para las dos caras
+// (ver UploadPage). Sin él no se ofrece hacer foto
+function FileUploadZone({ onFileSelect, onHacerFoto = null }) {
   const [isDragOver, setIsDragOver] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
   const [showManualCrop, setShowManualCrop] = useState(false);
   const [originalFileForCrop, setOriginalFileForCrop] = useState(null);
   const [conRaton, setConRaton] = useState(() => window.matchMedia(CONSULTA_RATON).matches);
@@ -47,8 +46,7 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
   const [aviso, setAviso] = useState(null);
   const fileInputId = useId();
 
-  // Atrás cierra la cámara o el recorte manual y se queda en la subida
-  useCloseOnBack(showCamera, () => setShowCamera(false));
+  // Atrás cierra el recorte manual y se queda en la subida
   useCloseOnBack(showManualCrop, () => setShowManualCrop(false));
 
   // Se vuelve a mirar si cambia, por ejemplo al conectar un ratón a una tablet
@@ -219,12 +217,6 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
     if (file) processAndSelectFile(file); // ✅ Procesar con YOLO
   };
 
-  const handleCameraCapture = (file, metadata) => {
-    // La cámara ya procesa con YOLO, solo pasar el resultado
-    onFileSelect(file, metadata);
-    setShowCamera(false);
-  };
-
   // ✅ Función para obtener el icono según el tipo de error
   const getErrorIcon = (errorType) => {
     switch (errorType) {
@@ -392,15 +384,17 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
           </>
         ) : (
           <div className="w-full flex flex-col gap-3 mb-4">
-            <button
-              type="button"
-              onClick={() => setShowCamera(true)}
-              disabled={isProcessing}
-              className="btn btn-principal w-full"
-            >
-              <i className="bi bi-camera-fill text-lg"></i>
-              <span>Hacer foto</span>
-            </button>
+            {onHacerFoto && (
+              <button
+                type="button"
+                onClick={onHacerFoto}
+                disabled={isProcessing}
+                className="btn btn-principal w-full"
+              >
+                <i className="bi bi-camera-fill text-lg"></i>
+                <span>Hacer foto</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => document.getElementById(fileInputId).click()}
@@ -428,14 +422,6 @@ function FileUploadZone({ onFileSelect, expectedSide = null }) {
           </div>
         </div>
       </div>
-
-      {showCamera && (
-        <CameraCapture
-          onCapture={handleCameraCapture}
-          onClose={() => setShowCamera(false)}
-          expectedSide={expectedSide}
-        />
-      )}
 
       {/* Modal de recorte manual */}
       {showManualCrop && originalFileForCrop && (

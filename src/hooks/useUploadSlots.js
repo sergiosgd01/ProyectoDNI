@@ -66,6 +66,9 @@ export function useUploadSlots() {
   const front = useMemo(() => ({ side: 'front', register }), [register]);
   const back = useMemo(() => ({ side: 'back', register }), [register]);
 
+  // Una cara está libre si su recuadro está a la vista, es decir, sin foto, y no está procesando otra
+  const libre = useCallback((side) => Boolean(handlers.current[side]) && !handlers.current[side].isBusy(), []);
+
   const distribute = useCallback((files, droppedOn) => {
     // Si entre lo soltado hay algo que no es una imagen, se descarta. Si no hay ninguna imagen,
     // se manda el primer archivo para que el recuadro explique qué formatos admite.
@@ -73,8 +76,7 @@ export function useUploadSlots() {
     const imagenes = files.filter((file) => file.type.startsWith('image/') || esHeicPorNombre(file));
     const fotos = imagenes.length ? imagenes : files.slice(0, 1);
 
-    // Una cara está libre si su recuadro está a la vista, es decir, sin foto, y no está procesando otra
-    const libres = ['front', 'back'].filter((side) => handlers.current[side] && !handlers.current[side].isBusy());
+    const libres = ['front', 'back'].filter(libre);
     const enviar = (side, file) => handlers.current[side].processFile(file);
 
     if (fotos.length === 1) {
@@ -96,7 +98,7 @@ export function useUploadSlots() {
     if (libres.length === 1) return 'Solo quedaba libre una cara, así que se ha subido una sola foto.';
     if (fotos.length > 2) return 'Solo se usan dos fotos, una por cara.';
     return null;
-  }, []);
+  }, [libre]);
 
-  return useMemo(() => ({ front, back, distribute }), [front, back, distribute]);
+  return useMemo(() => ({ front, back, distribute, libre }), [front, back, distribute, libre]);
 }

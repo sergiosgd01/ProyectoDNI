@@ -5,10 +5,12 @@ import SecuritySection from '../SecuritySection';
 import FAQ from '../FAQ';
 import Footer from '../Footer';
 import PrivacyNotice from '../PrivacyNotice';
+import CameraCapture from '../CameraCapture';
 import { useScrollToTop } from '../../hooks/useScrollToTop';
 import { usePreloadDetector } from '../../hooks/usePreloadDetector';
 import { UploadSlotProvider, useUploadSlots } from '../../hooks/useUploadSlots';
 import { usePageFileDrop } from '../../hooks/usePageFileDrop';
+import { useCloseOnBack } from '../../hooks/useNavigation';
 import { ATAJO_PEGAR } from '../../utils/atajos';
 
 export default function UploadPage({
@@ -50,6 +52,21 @@ export default function UploadPage({
     const timer = setTimeout(() => setAviso(null), 6000);
     return () => clearTimeout(timer);
   }, [aviso]);
+
+  // Cámara de las dos caras. Está aquí y no en cada recuadro porque, al terminar una cara, su recuadro se cambia por
+  // la vista previa y se llevaría la cámara con él. Si la otra cara aún no tiene foto, la cámara sigue con ella sin
+  // cerrarse, como quien le da la vuelta al DNI. Si ya la tiene, se cierra al terminar
+  const [camara, setCamara] = useState(null);
+  const abrirCamara = useCallback((cara) => {
+    const otra = cara === 'anverso' ? 'reverso' : 'anverso';
+    setCamara({ caras: slots.libre(otra === 'anverso' ? 'front' : 'back') ? [cara, otra] : [cara] });
+  }, [slots]);
+  const cerrarCamara = useCallback(() => setCamara(null), []);
+  // Atrás cierra la cámara y se queda en la subida con las fotos que ya se hayan hecho
+  useCloseOnBack(Boolean(camara), cerrarCamara);
+  const fotoDeLaCamara = useCallback((file, metadata, cara) => {
+    (cara === 'reverso' ? onBackFileSelect : onFrontFileSelect)(file, metadata);
+  }, [onFrontFileSelect, onBackFileSelect]);
 
   const carasLibres = [!frontFile && 'delantera', !backFile && 'trasera'].filter(Boolean);
   let textoArrastre = 'Suelta la foto en el recuadro de su cara';
@@ -230,6 +247,7 @@ export default function UploadPage({
                   selectedFile={frontFile}
                   onFileSelect={onFrontFileSelect}
                   onClearImage={onClearFrontFile}
+                  onHacerFoto={() => abrirCamara('anverso')}
                   stepInfo={{
                     current: 1,
                     total: 2,
@@ -259,6 +277,7 @@ export default function UploadPage({
                   selectedFile={backFile}
                   onFileSelect={onBackFileSelect}
                   onClearImage={onClearBackFile}
+                  onHacerFoto={() => abrirCamara('reverso')}
                   stepInfo={{
                     current: 2,
                     total: 2,
@@ -328,6 +347,10 @@ export default function UploadPage({
           )}
         </div>
       </section>
+
+      {camara && (
+        <CameraCapture caras={camara.caras} onCapture={fotoDeLaCamara} onClose={cerrarCamara} />
+      )}
 
       {!isProcessMode && (
         <>

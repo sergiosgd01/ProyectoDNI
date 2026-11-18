@@ -1,20 +1,19 @@
 import React from 'react';
 import FileUploadZone from './FileUploadZone';
 
+// onHacerFoto abre la cámara de la página de subida en esta cara (ver UploadPage)
 const MainSection = ({
   selectedFile,
   onFileSelect,
   onClearImage,
+  onHacerFoto,
   stepInfo,
   onContinue
 }) => {
   return (
     <div className="w-full">
       {!selectedFile ? (
-        <FileUploadZone
-          onFileSelect={onFileSelect}
-          expectedSide={stepInfo?.side === 'delantera' ? 'anverso' : stepInfo?.side === 'trasera' ? 'reverso' : null}
-        />
+        <FileUploadZone onFileSelect={onFileSelect} onHacerFoto={onHacerFoto} />
       ) : (
         <div className="space-y-4">
           {/* Vista previa de la imagen */}

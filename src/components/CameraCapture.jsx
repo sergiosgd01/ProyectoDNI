@@ -85,6 +85,16 @@ const HINT_BACKGROUNDS = {
   ajustando: 'bg-amber-600/90',
 };
 
+// Nombre de cada cara en los textos de la cámara
+const NOMBRE_CARA = { anverso: 'delantera', reverso: 'trasera' };
+// Al pasar a la otra cara, tiempo que se enseña que la primera está lista
+const AVISO_CARA_HECHA_MS = 2000;
+// Y tiempo mínimo hasta que la foto de la otra cara se hace sola, para que dé tiempo a ver ese aviso. Más no hace
+// falta, porque la foto no se hace mientras se le da la vuelta al DNI ni con la cara que no toca
+const ESPERA_OTRA_CARA_MS = 1000;
+// Sin decir qué caras se piden, una sola foto de cualquiera de ellas
+const UNA_CARA_CUALQUIERA = [null];
+
 /**
  * Recuadro donde se coloca el DNI. Va fuera de CameraCapture para que no se vuelva a crear en cada
  * render, que con la captura automática son varios por segundo.
@@ -179,7 +189,13 @@ function CaptureProblem({ problem, onRepeat, onUse, onCancel }) {
   );
 }
 
-function CameraCapture({ onCapture, onClose, expectedSide = null }) {
+/**
+ * Cámara para hacer la foto del DNI. caras dice qué caras se piden y en qué orden ('anverso', 'reverso', o null si
+ * vale cualquiera). Con dos, al terminar la primera se sigue con la segunda sin cerrar la cámara, como quien le da la
+ * vuelta al DNI. onCapture(foto, metadatos, cara) se llama al terminar cada cara y onClose al cerrar la cámara, tanto
+ * al terminar la última como al cerrarla antes
+ */
+function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -212,6 +228,20 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   // Si se sale de la vista mientras se pide la cámara, por ejemplo con el botón Atrás del navegador,
   // la cámara llega cuando el componente ya no está y nadie la apagaría
   const isMountedRef = useRef(false);
+  // Cara que se está pidiendo (su posición en caras) y la que viene después, si queda alguna
+  const [paso, setPaso] = useState(0);
+  const expectedSide = caras[paso] ?? null;
+  const siguienteCara = caras[paso + 1] ?? null;
+  // Cara que se acaba de terminar al pasar a la otra, con la miniatura de su foto. Se enseña un momento
+  const [caraHecha, setCaraHecha] = useState(null);
+  useEffect(() => {
+    if (!caraHecha) return undefined;
+    const timer = setTimeout(() => setCaraHecha(null), AVISO_CARA_HECHA_MS);
+    return () => {
+      clearTimeout(timer);
+      URL.revokeObjectURL(caraHecha.miniatura);
+    };
+  }, [caraHecha]);
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
@@ -485,10 +515,25 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     }
   };
 
-  const finishCapture = (file, metadata) => {
-    onCapture?.(file, metadata);
-    stopCamera();
-    onClose();
+  // La cara que se pedía ya tiene foto. Se entrega y, si queda otra, la cámara sigue con ella sin cerrarse. Lo de la
+  // cara anterior (fotos fallidas, avisos y la foto para recortar a mano) no vale para la nueva
+  const terminarCara = (file, metadata) => {
+    onCapture?.(file, metadata, expectedSide);
+    if (!siguienteCara) {
+      stopCamera();
+      onClose();
+      return;
+    }
+    failedChecksRef.current = 0;
+    bestAttemptRef.current = null;
+    setCaptureProblem(null);
+    setDetectionError(null);
+    setRetryNotice(null);
+    setCapturedFileForCrop(null);
+    setCaraHecha({ cara: expectedSide, miniatura: URL.createObjectURL(file) });
+    setPaso((actual) => actual + 1);
+    // Como al cerrar un aviso con «Intentar de nuevo», el vídeo se vuelve a poner en marcha si se ha parado
+    if (videoRef.current?.paused) videoRef.current.play().catch(() => {});
   };
 
   // Mira con el mismo detector que el editor si en la foto ya recortada se leen los datos (ver
@@ -538,7 +583,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
         const metadata = { yolo: { ok: true, confidence: resp.confidence } };
         const check = await checkCapture(processedFile);
         if (!check || check.ok) {
-          finishCapture(processedFile, metadata);
+          terminarCara(processedFile, metadata);
           return;
         }
 
@@ -600,7 +645,7 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
 
   const handleUseAnyway = () => {
     const best = bestAttemptRef.current;
-    if (best) finishCapture(best.file, best.metadata);
+    if (best) terminarCara(best.file, best.metadata);
   };
 
   const handleDeviceChange = (deviceId) => {
@@ -669,21 +714,28 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
     guideRef,
     enabled: !isLoading && !error && !detectionError && !captureProblem && !isProcessing && !showManualCrop,
     expectedSide,
-    warmupMs: retryNotice ? RETRY_PAUSE_MS : 0,
+    warmupMs: retryNotice ? RETRY_PAUSE_MS : caraHecha ? ESPERA_OTRA_CARA_MS : 0,
     onReady: handleAutoCapture,
   });
 
+  // Qué cara se pide, para los textos. Con las dos caras, también por cuál se va
+  const nombreCara = expectedSide ? NOMBRE_CARA[expectedSide] : null;
+  const titulo = nombreCara ? `Parte ${nombreCara}` : 'Capturar DNI';
+  const contador = caras.length > 1 ? `${paso + 1} de ${caras.length}` : null;
+  const avisoColocar = nombreCara ? `Coloca la parte ${nombreCara} dentro del recuadro` : HINTS.place;
+
   // Mientras se hace la foto el recuadro sigue en verde y se pide no moverse. Justo después de una foto
-  // fallida se enseña el motivo en vez del aviso en directo
+  // fallida se enseña el motivo en vez del aviso en directo, y al pasar a la otra cara, que la primera está lista
   const isTakingPhoto = capturePhase === 'foto';
+  const avisoCaraHecha = !isTakingPhoto && caraHecha;
   const guideTone = isProcessing || autoCapture.status === 'listo' || autoCapture.status === 'disparado'
     ? 'listo'
     : retryNotice || autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
   const guideProgress = isTakingPhoto ? 1 : autoCapture.progress;
   const hintText = isTakingPhoto
     ? HINTS.capturing
-    : retryNotice || autoCapture.hint || 'Coloca el DNI dentro del recuadro';
-  const hintBackground = isTakingPhoto
+    : retryNotice || (autoCapture.hint === HINTS.place ? avisoColocar : autoCapture.hint) || avisoColocar;
+  const hintBackground = isTakingPhoto || avisoCaraHecha
     ? HINT_BACKGROUNDS.listo
     : retryNotice ? HINT_BACKGROUNDS.ajustando : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
   const isAutoAvailable = autoCapture.status !== 'manual';
@@ -725,27 +777,45 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
   );
 
   // Mientras el servidor analiza la foto no se enseña, porque quedaría debajo de «Analizando DNI».
-  // Los lectores de pantalla lo leen cada vez que cambia
+  // Los lectores de pantalla lo leen cada vez que cambia. Al pasar a la otra cara lleva la miniatura de la primera, y
+  // con el móvil tumbado va en una línea para que quepa en la fila de arriba sin tapar el recuadro
   const hintPill = capturePhase !== 'analisis' && (
     <div
       data-captura-estado={autoCapture.status}
+      data-cara-hecha={avisoCaraHecha ? caraHecha.cara : undefined}
       role="status"
       aria-live="polite"
-      className={`inline-block ${hintBackground} backdrop-blur-sm rounded-2xl px-6 py-3 shadow-xl transition-colors duration-200`}
+      className={`inline-flex items-center gap-3 ${hintBackground} backdrop-blur-sm rounded-2xl ${avisoCaraHecha ? `pl-3 pr-5 ${tumbado ? 'py-1.5' : 'py-2'}` : 'px-6 py-3'} shadow-xl transition-colors duration-200`}
     >
-      <p className="text-white text-sm font-semibold">{hintText}</p>
+      {avisoCaraHecha ? (
+        <>
+          <img src={caraHecha.miniatura} alt="" className={`${tumbado ? 'h-8' : 'h-10'} w-auto shrink-0 rounded-md border border-white/60`} />
+          <p className="text-white text-sm text-left">
+            <span className={`${tumbado ? '' : 'block'} font-semibold`}>Parte {NOMBRE_CARA[caraHecha.cara]} lista{tumbado ? '.' : ''}</span>{' '}
+            <span className={tumbado ? '' : 'block'}>Ahora dale la vuelta al DNI</span>
+          </p>
+        </>
+      ) : (
+        <p className="text-white text-sm font-semibold">{hintText}</p>
+      )}
     </div>
   );
 
   // Vista móvil fullscreen
   if (isMobile) {
     return (
-      <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      <div className="fixed inset-0 bg-black z-50 flex flex-col" data-captura-cara={expectedSide || undefined} data-captura-paso={paso + 1}>
         {/* Con el móvil tumbado el título solo lo leen los lectores de pantalla, para dejar la fila de arriba al aviso */}
         <div className={`absolute top-0 left-0 right-0 z-20 ${tumbado ? 'p-3' : 'p-4'} flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent`}>
           <h3 className={tumbado ? 'sr-only' : 'text-white font-semibold text-lg flex items-center'}>
             <i className="bi bi-camera mr-2"></i>
-            Capturar DNI
+            {titulo}
+            {contador && (
+              <>
+                {' '}
+                <span className="ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium">{contador}</span>
+              </>
+            )}
           </h3>
           <button
             onClick={handleClose}
@@ -951,13 +1021,11 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               setDetectionError(null);
               setCapturedFileForCrop(null);
 
-              // Enviar imagen recortada al siguiente paso directamente
-              onCapture?.(croppedFile, {
+              // La imagen recortada se entrega directamente y, si queda otra cara, se sigue con ella
+              terminarCara(croppedFile, {
                 yolo: { ok: true, manualCrop: true },
                 manualCrop: true
               });
-              stopCamera();
-              onClose();
             }}
             onCancel={() => {
               setShowManualCrop(false);
@@ -970,12 +1038,18 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
 
   // Vista desktop
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4" data-captura-cara={expectedSide || undefined} data-captura-paso={paso + 1}>
       <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[95vh] flex flex-col overflow-hidden">
         <div className="p-4 sm:p-6 border-b flex justify-between items-center flex-shrink-0" style={{ borderColor: 'var(--color-border-default)' }}>
           <h3 className="text-lg sm:text-xl font-bold flex items-center" style={{ color: 'var(--color-text-primary)' }}>
             <i className="bi bi-camera mr-2 text-xl sm:text-2xl" style={{ color: 'var(--color-primary)' }}></i>
-            Capturar DNI
+            {titulo}
+            {contador && (
+              <>
+                {' '}
+                <span className="ml-2 text-sm font-medium" style={{ color: 'var(--color-text-muted)' }}>{contador}</span>
+              </>
+            )}
           </h3>
           <button onClick={handleClose} className="text-2xl hover:opacity-70 transition-opacity" style={{ color: 'var(--color-text-muted)' }}>
             <i className="bi bi-x"></i>
@@ -1173,13 +1247,11 @@ function CameraCapture({ onCapture, onClose, expectedSide = null }) {
               setDetectionError(null);
               setCapturedFileForCrop(null);
 
-              // Enviar imagen recortada al siguiente paso directamente
-              onCapture?.(croppedFile, {
+              // La imagen recortada se entrega directamente y, si queda otra cara, se sigue con ella
+              terminarCara(croppedFile, {
                 yolo: { ok: true, manualCrop: true },
                 manualCrop: true
               });
-              stopCamera();
-              onClose();
             }}
             onCancel={() => {
               setShowManualCrop(false);
