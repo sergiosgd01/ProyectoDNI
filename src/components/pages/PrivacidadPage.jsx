@@ -58,19 +58,13 @@ export default function PrivacidadPage({ onGoHome }) {
               'Solo mientras se procesa, unos segundos. No se guarda',
             ],
             [
-              'El texto de algunos campos, leído en tu navegador',
-              'Comprobar si la detección funcionó',
-              'Solo en tu dispositivo. Al servidor solo llega si cada campo se pudo leer (sí o no), nunca su contenido',
-              'No se guarda',
-            ],
-            [
               'La copia censurada y con marca de agua',
               'Que la descargues',
               'Solo en tu dispositivo',
               'Hasta que cierras la página',
             ],
             [
-              'Estadísticas anónimas de uso (perfil elegido, campos tapados, si la censura fue automática o manual, resultados técnicos de la detección y fecha)',
+              'Estadísticas anónimas de uso (perfil elegido, campos tapados, incluida la fotografía, si la censura fue automática o manual, qué campos encontró el detector en cada cara y con qué confianza, sin su contenido ni su posición, versión del modelo y fecha)',
               'Mejorar la herramienta e investigar',
               'Base de datos del proyecto',
               info.plazoEstadisticas,
@@ -162,8 +156,8 @@ export default function PrivacidadPage({ onGoHome }) {
         <ul className="list-disc pl-5 space-y-2">
           <li>Todas las conexiones van cifradas con HTTPS.</li>
           <li>
-            Las librerías que se ejecutan en tu navegador (OpenCV y ONNX Runtime) se descargan de esta
-            misma web, no de servidores ajenos.
+            Las librerías que se ejecutan en tu navegador (OpenCV, ONNX Runtime y libheif, que abre las fotos
+            HEIC del iPhone) se descargan de esta misma web, no de servidores ajenos.
           </li>
           <li>
             La foto solo existe mientras se procesa y después se borra. Los registros del servidor no guardan ni la

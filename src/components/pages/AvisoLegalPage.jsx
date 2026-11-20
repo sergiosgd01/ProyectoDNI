@@ -52,7 +52,7 @@ export default function AvisoLegalPage({ onGoHome }) {
             que están tapados todos los datos que querías ocultar.
           </li>
           <li>
-            La zona de letras del reverso (MRZ) repite el nombre, el número de DNI, las fechas y otros datos. Si
+            La zona de letras de la parte trasera (MRZ) repite el nombre, el número de DNI, las fechas y otros datos. Si
             quieres ocultarlos, tápala también.
           </li>
           <li>

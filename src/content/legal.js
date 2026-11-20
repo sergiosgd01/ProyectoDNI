@@ -14,7 +14,7 @@ export const LEGAL_INFO = {
   regionAtlas: 'Servidores de MongoDB Atlas',
   garantiaEEUU: 'Cláusulas contractuales tipo o Marco de Privacidad de Datos UE-EE. UU.',
   titularDerechos: 'sus autores',
-  fechaActualizacion: '15 de noviembre de 2026',
+  fechaActualizacion: '20 de noviembre de 2026',
 };
 
 export const LEGAL_PATHS = {
