@@ -25,7 +25,7 @@ export default function AvisoLegalPage({ onGoHome }) {
   return (
     <LegalPageLayout title="Aviso legal" onGoHome={onGoHome}>
       <p>
-        Protege tu Identidad es una herramienta gratuita para tapar datos del DNI antes de compartir una copia.
+        Protege tu identidad es una herramienta gratuita para tapar datos del DNI antes de compartir una copia.
         Este aviso da la información que exige el artículo 10 de la Ley 34/2002 de servicios de la sociedad de la
         información (LSSI-CE).
       </p>

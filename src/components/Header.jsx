@@ -99,7 +99,8 @@ function Header({ onShowHome, onStartProcess }) {
           >
             <img src="/logo-web.png" alt="" className="h-9 w-9 sm:h-10 sm:w-10 flex-none object-contain" />
             <span className="min-w-0 max-[359px]:hidden">
-              <span className="block truncate text-base sm:text-xl font-bold leading-tight text-gray-900">Protector DNI</span>
+              {/* En el móvil el nombre no cabe en una línea junto a «Subir mi DNI» y pasa a dos */}
+              <span className="block text-base sm:text-xl font-bold leading-tight text-gray-900">Protege tu identidad</span>
               <span className="hidden sm:block text-xs font-medium uppercase tracking-wide text-secondary-600">Seguridad digital</span>
             </span>
           </a>

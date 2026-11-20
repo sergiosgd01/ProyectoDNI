@@ -53,7 +53,7 @@ function Footer() {
               <span className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-white p-1.5">
                 <img src="/logo-web.png" alt="" className="h-full w-full object-contain" />
               </span>
-              <span className="text-xl font-bold tracking-tight text-white">Protector DNI</span>
+              <span className="text-xl font-bold tracking-tight text-white">Protege tu identidad</span>
             </div>
             <p className="mt-4 text-sm leading-relaxed">
               La herramienta gratuita para proteger tu documento de identidad antes de compartirlo.
@@ -79,7 +79,7 @@ function Footer() {
         </div>
 
         <div className="mt-8 md:mt-12 flex flex-col gap-4 border-t border-gray-800 pt-6 text-xs md:flex-row md:items-center md:justify-between">
-          <p>© {new Date().getFullYear()} Protector DNI. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} Protege tu identidad. Todos los derechos reservados.</p>
           <nav className="flex flex-wrap items-center gap-x-5 gap-y-2" aria-label="Información legal">
             <EnlaceVista view={VIEWS.AVISO_LEGAL} href={LEGAL_PATHS.avisoLegal} className={ENLACE}>Aviso legal</EnlaceVista>
             <EnlaceVista view={VIEWS.PRIVACIDAD} href={LEGAL_PATHS.privacidad} className={ENLACE}>Política de privacidad</EnlaceVista>
