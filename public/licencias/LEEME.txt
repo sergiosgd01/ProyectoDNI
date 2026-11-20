@@ -30,26 +30,6 @@ ONNX Runtime Web 1.24.1, motor en WebAssembly
   SHA-256            5febcf74919ee7ba3c7e838290c9ef2c03d6da297f06a8facfd7d22f623d7cd9
   Licencia           MIT, onnxruntime-1.24.1-LICENSE.txt y avisos de terceros en onnxruntime-1.24.1-ThirdPartyNotices.txt
 
-Tesseract.js 5.1.1, worker del OCR
-  Ruta en la web     /assets/worker.min-<huella>.js
-  Copia de           paquete npm tesseract.js@5.1.1, dist/worker.min.js
-  SHA-256            aca1229639fc9907d86f96e825955a2b7c5716d17f3bc3acd71f9c7ab66181fc
-  Licencia           Apache 2.0, tesseract.js-5.1.1-LICENSE.txt y las de lo que incluye en tesseract.js-5.1.1-worker.min.js.LICENSE.txt
-
-Tesseract.js-core 5.1.1, motor del OCR
-  Ruta en la web     /assets/tesseract-core-simd.wasm-<huella>.js
-  Copia de           paquete npm tesseract.js-core@5.1.1, tesseract-core-simd.wasm.js
-  SHA-256            63f232c4f7a97b04e52eb940202700b2c6239783a75d0ff0553274fac530cd5c
-  Licencia           Apache 2.0, tesseract.js-core-5.1.1-LICENSE.txt
-
-Datos del idioma español de Tesseract 4.0.0
-  Ruta en la web     /assets/tessdata-<huella>/spa.traineddata.gz
-  Copia de           paquete npm @tesseract.js-data/spa@1.0.0, 4.0.0/spa.traineddata.gz
-                     Es el mismo archivo que https://tessdata.projectnaptha.com/4.0.0/spa.traineddata.gz
-  SHA-256            6cd52c545bceeacb2e43fad64fc0703a711c482ba20d1ca4b6915c09de9973e6
-  Licencia           Apache 2.0, tessdata-4.0.0-LICENSE.txt, la del repositorio naptha/tessdata del que salen los datos
-                     El paquete npm se declara MIT en su package.json y no trae ningún texto de licencia
-
 libheif 1.23.5 con libde265 1.0.15, motor en WebAssembly que abre las fotos HEIC
   Ruta en la web     /assets/libheif-<huella>.wasm
   Copia de           paquete npm libheif-js@1.23.5, libheif-wasm/libheif.wasm
