@@ -198,7 +198,11 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
     const readAnalysis = createFrameReader();
     const readMotion = createFrameReader();
     const detectionCanvas = document.createElement('canvas');
-    const detectionContext = detectionCanvas.getContext('2d');
+    // Con willReadFrequently el lienzo va en la memoria normal y no en la de la gráfica. En Safari del iPhone el
+    // fotograma leído con createImageBitmap no se dibujaba en un lienzo de la gráfica: el detector recibía una imagen
+    // vacía y no encontraba nunca el DNI (21/11/2026, miniatura negra con ?depurar-camara). En los lienzos con
+    // willReadFrequently de la luz y el movimiento el mismo fotograma sí se dibujaba
+    const detectionContext = detectionCanvas.getContext('2d', { willReadFrequently: true });
     // Lo que recibió el detector, en pequeño, para el panel de depuración
     const debugViewCanvas = debugEnabled ? document.createElement('canvas') : null;
     let debugView = null;
