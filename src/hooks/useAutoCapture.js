@@ -67,6 +67,15 @@ const MIN_HINT_MS = 700;
 // una vez por segundo. Sirve para ver en un móvil si el detector recibe el DNI derecho, entero y nítido
 const DEBUG_VIEW_WIDTH = 200;
 const DEBUG_VIEW_EVERY_MS = 1000;
+// Archivo de la web que está corriendo, con la huella de su contenido. En el panel sirve para saber si el móvil ya
+// tiene la última versión publicada o sigue con la de antes en la caché
+const WEB_FILE = (() => {
+  try {
+    return new URL(import.meta.url).pathname.split('/').pop();
+  } catch {
+    return '-';
+  }
+})();
 
 // Ancho y alto de lo que se lee: el vídeo o un bitmap ya sacado de él
 const sourceSize = (source) => (source instanceof HTMLVideoElement
@@ -327,6 +336,7 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
           detecciones: placement?.detections ?? '-',
           cajas: placement?.boxes ?? '-',
           documento: placement?.documentConfidence ? placement.documentConfidence.toFixed(2) : '-',
+          web: WEB_FILE,
           pantalla: `${screenAngle()}°`,
           foto: 'ImageCapture' in window ? 'ImageCapture' : 'fotograma del vídeo',
           // La imagen, que el panel enseña debajo de los números
