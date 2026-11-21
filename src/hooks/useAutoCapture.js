@@ -10,6 +10,7 @@ import {
   SHARPNESS_SMOOTH,
   SHARPNESS_WINDOW_MS,
   analysisInterval,
+  clampRect,
   evaluatePlacement,
   expandRect,
   guideRectInVideo,
@@ -67,6 +68,11 @@ const MIN_HINT_MS = 700;
 const DEBUG_VIEW_WIDTH = 200;
 const DEBUG_VIEW_EVERY_MS = 1000;
 
+// Ancho y alto de lo que se lee: el vídeo o un bitmap ya sacado de él
+const sourceSize = (source) => (source instanceof HTMLVideoElement
+  ? { width: source.videoWidth, height: source.videoHeight }
+  : { width: source.width, height: source.height });
+
 // Veces que se vuelve a intentar cargar el detector si falla, por ejemplo por un corte de la red, y espera entre intentos
 const LOAD_RETRIES = 3;
 const LOAD_RETRY_MS = 3000;
@@ -91,13 +97,16 @@ function createFrameReader() {
    * Píxeles de la zona del vídeo o del bitmap reducida a width x height. Un bitmap ya leído del vídeo se dibuja
    * directamente en el lienzo legible, que en el Xiaomi era tres veces más rápido que pasar por el lienzo normal
    */
-  return (source, area, width, height) => {
+  return (source, requested, width, height) => {
     if (scaled.width !== width || scaled.height !== height) {
       scaled.width = width;
       scaled.height = height;
       readable.width = width;
       readable.height = height;
     }
+    // Safari no dibuja nada si la zona se sale de lo leído (ver clampRect)
+    const { width: sourceWidth, height: sourceHeight } = sourceSize(source);
+    const area = clampRect(requested, sourceWidth, sourceHeight) || requested;
     if (source instanceof HTMLVideoElement) {
       scaledContext.drawImage(source, area.x, area.y, area.width, area.height, 0, 0, width, height);
       readableContext.drawImage(scaled, 0, 0);
@@ -198,11 +207,7 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
     const readAnalysis = createFrameReader();
     const readMotion = createFrameReader();
     const detectionCanvas = document.createElement('canvas');
-    // Con willReadFrequently el lienzo va en la memoria normal y no en la de la gráfica. En Safari del iPhone el
-    // fotograma leído con createImageBitmap no se dibujaba en un lienzo de la gráfica: el detector recibía una imagen
-    // vacía y no encontraba nunca el DNI (21/11/2026, miniatura negra con ?depurar-camara). En los lienzos con
-    // willReadFrequently de la luz y el movimiento el mismo fotograma sí se dibujaba
-    const detectionContext = detectionCanvas.getContext('2d', { willReadFrequently: true });
+    const detectionContext = detectionCanvas.getContext('2d');
     // Lo que recibió el detector, en pequeño, para el panel de depuración
     const debugViewCanvas = debugEnabled ? document.createElement('canvas') : null;
     let debugView = null;
@@ -360,12 +365,17 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
       const region = expandRect(guideRect, DETECTION_MARGIN, video.videoWidth, video.videoHeight);
       if (!region) return;
 
+      // La zona se pasa a píxeles de lo leído y se recorta a ello. Por el redondeo podía salirse una fracción de píxel
+      // del bitmap, y entonces Safari no dibujaba nada y el detector recibía una imagen vacía (ver clampRect)
+      const { width: sourceWidth, height: sourceHeight } = sourceSize(frame.source);
+      const source = clampRect(frameArea(frame, region), sourceWidth, sourceHeight);
+      if (!source) return;
+
       const scale = Math.min(1, DETECTOR_MAX_SIDE / Math.max(region.width, region.height));
       const width = Math.max(1, Math.round(region.width * scale));
       const height = Math.max(1, Math.round(region.height * scale));
       detectionCanvas.width = width;
       detectionCanvas.height = height;
-      const source = frameArea(frame, region);
       detectionContext.drawImage(frame.source, source.x, source.y, source.width, source.height, 0, 0, width, height);
 
       const view = { region, scale, canvasWidth: width, canvasHeight: height, guide: guideRect };

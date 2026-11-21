@@ -6,6 +6,7 @@ import {
   HINTS,
   captureArea,
   checkFinalPhoto,
+  clampRect,
   expandRect,
   guideRectInVideo,
   measureFrame,
@@ -28,7 +29,10 @@ const SHARPNESS_SAMPLE_WIDTH = 480;
 
 // Nitidez de una zona de una imagen (el lienzo con el fotograma o la foto ya abierta), reducida a un ancho fijo
 // para que las dos se puedan comparar
-function sharpnessOf(source, rect) {
+function sharpnessOf(source, requested) {
+  // La zona de la foto puede salirse una fracción de píxel del bitmap, y entonces Safari no dibuja nada (ver clampRect)
+  const rect = clampRect(requested, source.width, source.height);
+  if (!rect) return 0;
   const width = SHARPNESS_SAMPLE_WIDTH;
   const height = Math.max(8, Math.round((width * rect.height) / rect.width));
   const sample = document.createElement('canvas');

@@ -164,6 +164,24 @@ export function expandRect(rect, margin, maxWidth, maxHeight) {
 }
 
 /**
+ * Recorta un rectángulo para que no se salga de una imagen de width x height. Devuelve null si no queda nada dentro.
+ *
+ * Safari no dibuja nada si la zona que se le pide a drawImage se sale de un ImageBitmap, aunque sea una fracción de
+ * píxel. Chrome y Firefox la recortan ellos solos. En el iPhone la zona del detector se salía por redondeo y el
+ * detector recibía una imagen vacía, así que la foto no se hacía nunca sola (comprobado el 21/11/2026 en Safari de
+ * iOS 26.4: con x = -0,4 no dibuja y recortada a la imagen sí)
+ */
+export function clampRect(rect, width, height) {
+  if (!rect) return null;
+  const x = Math.max(0, rect.x);
+  const y = Math.max(0, rect.y);
+  const right = Math.min(width, rect.x + rect.width);
+  const bottom = Math.min(height, rect.y + rect.height);
+  if (!(right > x) || !(bottom > y)) return null;
+  return { x, y, width: right - x, height: bottom - y };
+}
+
+/**
  * Mide luz, nitidez, reflejos y movimiento de un fotograma.
  * @param {ImageData} imageData - Zona del recuadro ya reducida
  * @param {Float32Array|null} previousSmall - Versión pequeña del fotograma anterior, para el movimiento

@@ -11,6 +11,7 @@ import {
   analysisInterval,
   captureArea,
   checkFinalPhoto,
+  clampRect,
   evaluatePlacement,
   expandRect,
   imageQualityHint,
@@ -20,6 +21,19 @@ import {
   sharperCapture,
   videoRectInPhoto,
 } from './liveCapture.js';
+
+test('la zona que se dibuja no se sale de la imagen, ni por una fracción de píxel', () => {
+  // Dentro, no se toca
+  assert.deepEqual(clampRect({ x: 10, y: 20, width: 100, height: 50 }, 500, 300), { x: 10, y: 20, width: 100, height: 50 });
+  // Lo que pasaba en el iPhone: la zona del detector empezaba en -0,4 o acababa 0,7 px más allá del bitmap
+  assert.deepEqual(clampRect({ x: -0.4, y: 0, width: 500, height: 300 }, 500, 300), { x: 0, y: 0, width: 499.6, height: 300 });
+  const derecha = clampRect({ x: 0.3, y: 0, width: 500.4, height: 300 }, 500, 300);
+  assert.equal(derecha.x, 0.3);
+  assert.ok(derecha.x + derecha.width <= 500);
+  // Fuera del todo o sin zona, nada
+  assert.equal(clampRect({ x: 600, y: 0, width: 50, height: 50 }, 500, 300), null);
+  assert.equal(clampRect(null, 500, 300), null);
+});
 
 test('la foto del iPhone tumbado, que sale de pie, se gira hacia donde está la pantalla', () => {
   // Lo que pasó el 20/11/2026: vídeo tumbado 3840x2160, foto de pie y la parte de arriba del móvil a la izquierda
