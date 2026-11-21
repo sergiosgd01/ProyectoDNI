@@ -16,6 +16,7 @@ import {
   imageQualityHint,
   measureFrame,
   median,
+  screenAngle,
 } from '../utils/liveCapture';
 
 // Ancho de la copia del recuadro con la que se mide el movimiento
@@ -60,6 +61,11 @@ const WARMUP_MS = 600;
 // se queda al menos este tiempo antes de cambiar por otro. Sin esto el texto parpadea y no da tiempo a leerlo
 const HINT_CONFIRM_FRAMES = 2;
 const MIN_HINT_MS = 700;
+
+// Con ?depurar-camara el panel enseña en pequeño lo que recibió el detector la última vez, a este ancho y como mucho
+// una vez por segundo. Sirve para ver en un móvil si el detector recibe el DNI derecho, entero y nítido
+const DEBUG_VIEW_WIDTH = 200;
+const DEBUG_VIEW_EVERY_MS = 1000;
 
 // Veces que se vuelve a intentar cargar el detector si falla, por ejemplo por un corte de la red, y espera entre intentos
 const LOAD_RETRIES = 3;
@@ -193,6 +199,10 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
     const readMotion = createFrameReader();
     const detectionCanvas = document.createElement('canvas');
     const detectionContext = detectionCanvas.getContext('2d');
+    // Lo que recibió el detector, en pequeño, para el panel de depuración
+    const debugViewCanvas = debugEnabled ? document.createElement('canvas') : null;
+    let debugView = null;
+    let lastDebugViewAt = 0;
     // Para el panel de depuración: cuánto tarda cada análisis y cada cuánto se hace
     let analysisMs = null;
     let analysisEveryMs = null;
@@ -308,6 +318,10 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
           detecciones: placement?.detections ?? '-',
           cajas: placement?.boxes ?? '-',
           documento: placement?.documentConfidence ? placement.documentConfidence.toFixed(2) : '-',
+          pantalla: `${screenAngle()}°`,
+          foto: 'ImageCapture' in window ? 'ImageCapture' : 'fotograma del vídeo',
+          // La imagen, que el panel enseña debajo de los números
+          vista: debugView,
         };
       }
       if (key === lastPublished && !debug) return;
@@ -360,6 +374,13 @@ export function useAutoCapture({ videoRef, guideRef, enabled, expectedSide = nul
           if (cancelled) return;
           const finishedAt = performance.now();
           lastDetectionMs = finishedAt - startedAt;
+          if (debugViewCanvas && finishedAt - lastDebugViewAt >= DEBUG_VIEW_EVERY_MS) {
+            lastDebugViewAt = finishedAt;
+            debugViewCanvas.width = DEBUG_VIEW_WIDTH;
+            debugViewCanvas.height = Math.max(1, Math.round((DEBUG_VIEW_WIDTH * height) / width));
+            debugViewCanvas.getContext('2d').drawImage(detectionCanvas, 0, 0, debugViewCanvas.width, debugViewCanvas.height);
+            debugView = debugViewCanvas.toDataURL('image/jpeg', 0.7);
+          }
           placement = { ...evaluatePlacement(boxes, view, expectedSide), startedAt, finishedAt };
           placementRef.current = placement.found ? { docRect: placement.docRect, at: finishedAt } : null;
           const gap = usarWorker()

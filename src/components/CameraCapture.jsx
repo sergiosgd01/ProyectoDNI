@@ -836,7 +836,9 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
       className={`absolute ${positionClass} z-30 rounded-lg bg-black/75 px-3 py-2 font-mono text-[11px] leading-tight text-white pointer-events-none`}
     >
       {Object.entries(autoCapture.debug).map(([name, value]) => (
-        <div key={name}>{name} {value}</div>
+        name === 'vista'
+          ? value && <img key={name} src={value} alt="" className="mt-1 w-[200px] max-w-full rounded" />
+          : <div key={name}>{name} {value}</div>
       ))}
     </div>
   );
