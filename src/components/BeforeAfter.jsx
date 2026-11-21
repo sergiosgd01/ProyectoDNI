@@ -1,10 +1,15 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 // Comparador de la portada. A la izquierda de la línea se ve la foto original y a la derecha, la protegida.
 // El marco tiene la proporción de las dos imágenes (473 x 301), así que la foto lo llena entero.
 // La línea se mueve pulsando o arrastrando con el ratón o el dedo, y con las flechas desde el tirador.
 // Con el dedo, el navegador se queda los gestos verticales (touch-pan-y), así que la página baja aunque el dedo
-// empiece encima de la foto. La línea solo se arrastra cuando el dedo va sobre todo de lado
+// empiece encima de la foto. La línea solo se arrastra cuando el dedo va sobre todo de lado.
+//
+// En el iPhone touch-pan-y no basta. Safari mueve la página con la parte vertical de cualquier gesto, aunque vaya casi
+// de lado, y al empezar a moverla cancela el arrastre de la línea. Por eso, si el primer movimiento del dedo va más de
+// lado que en vertical, se le pide que no mueva la página durante ese gesto (preventDefault en touchmove). Safari
+// decide si mueve la página con el primer touchmove, así que la decisión se toma ahí y vale para todo el gesto
 
 // Lo que tiene que ir el dedo de lado antes de que la línea empiece a seguirlo
 const UMBRAL_ARRASTRE_PX = 8;
@@ -15,6 +20,49 @@ function BeforeAfter({ original, protegida }) {
   const tiradorRef = useRef(null);
   // Gesto en curso. Qué puntero es, dónde empezó, dónde estaba la línea y si ya se está arrastrando
   const gestoRef = useRef(null);
+
+  // Ver la explicación de arriba. Va con addEventListener porque React registra touchmove como pasivo y ahí
+  // preventDefault no hace nada. Con dos dedos no se toca nada, para que se pueda ampliar la página
+  useEffect(() => {
+    const marco = marcoRef.current;
+    // Dónde empezó el dedo y si el gesto va de lado (true), en vertical (false) o aún no se sabe (null)
+    let toque = null;
+
+    const alTocar = (e) => {
+      toque = e.touches.length === 1
+        ? { x: e.touches[0].clientX, y: e.touches[0].clientY, deLado: null }
+        : null;
+    };
+
+    const alMoverDedo = (e) => {
+      if (!toque || e.touches.length !== 1) {
+        toque = null;
+        return;
+      }
+      if (toque.deLado === null) {
+        const deLado = Math.abs(e.touches[0].clientX - toque.x);
+        const enVertical = Math.abs(e.touches[0].clientY - toque.y);
+        if (deLado === 0 && enVertical === 0) return;
+        toque.deLado = deLado > enVertical;
+      }
+      if (toque.deLado && e.cancelable) e.preventDefault();
+    };
+
+    const alSoltar = () => {
+      toque = null;
+    };
+
+    marco.addEventListener('touchstart', alTocar, { passive: true });
+    marco.addEventListener('touchmove', alMoverDedo, { passive: false });
+    marco.addEventListener('touchend', alSoltar);
+    marco.addEventListener('touchcancel', alSoltar);
+    return () => {
+      marco.removeEventListener('touchstart', alTocar);
+      marco.removeEventListener('touchmove', alMoverDedo);
+      marco.removeEventListener('touchend', alSoltar);
+      marco.removeEventListener('touchcancel', alSoltar);
+    };
+  }, []);
 
   const moverA = (clientX) => {
     const marco = marcoRef.current.getBoundingClientRect();
