@@ -418,6 +418,48 @@ export function videoRectInPhoto(rect, videoWidth, videoHeight, photoWidth, phot
   };
 }
 
+/**
+ * Giro de la pantalla en grados: 0 en vertical, 90 con la parte de arriba del móvil a la izquierda y 270 a la derecha.
+ * Safari en el iPhone lo da en screen.orientation desde iOS 16.4 y, antes, solo en window.orientation (90 y -90)
+ */
+export function screenAngle() {
+  const angle = Number(window.screen?.orientation?.angle ?? window.orientation ?? 0) || 0;
+  return ((angle % 360) + 360) % 360;
+}
+
+/**
+ * Cuánto hay que girar la foto hecha con ImageCapture para que quede como se ve el vídeo, en grados en sentido
+ * contrario a las agujas del reloj (0, 90 o 270).
+ *
+ * En el iPhone, con el móvil tumbado, Safari entrega el vídeo tumbado pero la foto de pie, como si el móvil siguiera en
+ * vertical, así que el DNI sale de lado y el servidor no lo encuentra. Comprobado el 20/11/2026: con la parte de arriba
+ * del móvil a la izquierda (screen.orientation.angle 90) el DNI salía girado un cuarto de vuelta a la derecha.
+ * Solo se gira cuando la foto y el vídeo no tienen la misma orientación. Si la tienen, como en Android, se deja igual.
+ *
+ * @param {object} medidas
+ * @param {number} medidas.photoWidth - Ancho de la foto tal como la enseña el navegador
+ * @param {number} medidas.photoHeight
+ * @param {number} medidas.videoWidth - videoWidth del vídeo de la cámara
+ * @param {number} medidas.videoHeight
+ * @param {number} medidas.screenAngle - Giro de la pantalla ahora: 0 en vertical, 90 con la parte de arriba del móvil a
+ *   la izquierda y 270 a la derecha (screen.orientation.angle)
+ * @param {number} [medidas.openingAngle] - Giro de la pantalla al abrir la cámara. Si la foto sale tumbada con el
+ *   vídeo de pie, se supone que se ve derecha con este giro
+ * @returns {0|90|270}
+ */
+export function photoRotation({ photoWidth, photoHeight, videoWidth, videoHeight, screenAngle, openingAngle }) {
+  if (!photoWidth || !photoHeight || !videoWidth || !videoHeight) return 0;
+  if (photoWidth === photoHeight || videoWidth === videoHeight) return 0;
+  const photoLandscape = photoWidth > photoHeight;
+  if (photoLandscape === videoWidth > videoHeight) return 0;
+  // Giro con el que la foto se vería derecha. De pie, en vertical. Tumbada, con el que se abrió la cámara
+  const photoAngle = !photoLandscape ? 0 : (openingAngle === 90 || openingAngle === 270 ? openingAngle : 90);
+  const rotation = ((((screenAngle || 0) - photoAngle) % 360) + 360) % 360;
+  // Si foto y vídeo no coinciden el giro es de un cuarto de vuelta. Si el ángulo de la pantalla no lo dice, por
+  // ejemplo porque el navegador no lo da, se toma el que se vio en el iPhone
+  return rotation === 90 || rotation === 270 ? rotation : 90;
+}
+
 // La foto de ImageCapture se usa salvo que el fotograma del vídeo se vea claramente más nítido. En un Xiaomi Poco X3
 // NFC la foto salía borrosa aunque el vídeo se viera nítido. Si la foto sale bien, como en un Galaxy S24 Ultra, es
 // mejor que el fotograma porque tiene más resolución y menos ruido

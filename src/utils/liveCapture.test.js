@@ -16,9 +16,36 @@ import {
   imageQualityHint,
   measureFrame,
   median,
+  photoRotation,
   sharperCapture,
   videoRectInPhoto,
 } from './liveCapture.js';
+
+test('la foto del iPhone tumbado, que sale de pie, se gira hacia donde está la pantalla', () => {
+  // Lo que pasó el 20/11/2026: vídeo tumbado 3840x2160, foto de pie y la parte de arriba del móvil a la izquierda
+  const iphone = { photoWidth: 2160, photoHeight: 3840, videoWidth: 3840, videoHeight: 2160 };
+  assert.equal(photoRotation({ ...iphone, screenAngle: 90, openingAngle: 0 }), 90);
+  // Con la parte de arriba del móvil a la derecha, el cuarto de vuelta va al otro lado
+  assert.equal(photoRotation({ ...iphone, screenAngle: 270, openingAngle: 0 }), 270);
+  // Si el navegador no dice el giro de la pantalla, se toma el del iPhone
+  assert.equal(photoRotation({ ...iphone, screenAngle: undefined }), 90);
+});
+
+test('la foto que ya tiene la orientación del vídeo no se gira', () => {
+  // Galaxy S24 Ultra en vertical: foto 3:4 de pie y vídeo 9:16 de pie
+  assert.equal(photoRotation({ photoWidth: 3000, photoHeight: 4000, videoWidth: 2160, videoHeight: 3840, screenAngle: 0 }), 0);
+  // Tumbados los dos
+  assert.equal(photoRotation({ photoWidth: 4000, photoHeight: 3000, videoWidth: 3840, videoHeight: 2160, screenAngle: 90 }), 0);
+  // Sin medidas no se toca
+  assert.equal(photoRotation({ photoWidth: 0, photoHeight: 0, videoWidth: 3840, videoHeight: 2160, screenAngle: 90 }), 0);
+});
+
+test('la foto tumbada con el vídeo de pie se gira según cómo se abrió la cámara', () => {
+  // Cámara abierta con el móvil tumbado a la izquierda y vuelta a poner en vertical
+  const tumbadaDePie = { photoWidth: 3840, photoHeight: 2160, videoWidth: 2160, videoHeight: 3840, screenAngle: 0 };
+  assert.equal(photoRotation({ ...tumbadaDePie, openingAngle: 90 }), 270);
+  assert.equal(photoRotation({ ...tumbadaDePie, openingAngle: 270 }), 90);
+});
 
 test('el análisis deja libre al menos lo que tarda, sin bajar del mínimo ni pasar del máximo', () => {
   assert.equal(analysisInterval(null), ANALYSIS_MIN_INTERVAL_MS);

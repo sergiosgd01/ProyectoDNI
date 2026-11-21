@@ -9,10 +9,12 @@ import {
   expandRect,
   guideRectInVideo,
   measureFrame,
+  photoRotation,
+  screenAngle,
   sharperCapture,
   videoRectInPhoto,
 } from '../utils/liveCapture';
-import { prepareImageForUpload } from '../utils/imageResize';
+import { MAX_UPLOAD_SIDE, prepareImageForUpload } from '../utils/imageResize';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
 
 // Veces que la cámara repite sola una foto que no ha salido bien antes de preguntar qué hacer
@@ -36,6 +38,64 @@ function sharpnessOf(source, rect) {
   context.imageSmoothingQuality = 'high';
   context.drawImage(source, rect.x, rect.y, rect.width, rect.height, 0, 0, width, height);
   return measureFrame(context.getImageData(0, 0, width, height)).sharpness;
+}
+
+// Abre una foto como la enseña el navegador, ya girada según su EXIF, igual que al reducirla antes de subirla
+function abrirImagen(blob) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => resolve({ img, url });
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('No se pudo abrir la foto'));
+    };
+    img.src = url;
+  });
+}
+
+// Gira la foto de ImageCapture para que quede como se ve el vídeo (ver photoRotation). Al girarla se deja con el lado
+// mayor a MAX_UPLOAD_SIDE, como se subiría de todos modos, y así el lienzo no pasa del límite de Safari en el iPhone.
+// Si no hay que girarla o no se puede, devuelve la misma foto
+async function enderezarFoto(photo, video, anguloAlAbrir) {
+  let abierta = null;
+  try {
+    abierta = await abrirImagen(photo);
+    const { img } = abierta;
+    const giro = photoRotation({
+      photoWidth: img.naturalWidth,
+      photoHeight: img.naturalHeight,
+      videoWidth: video.videoWidth,
+      videoHeight: video.videoHeight,
+      screenAngle: screenAngle(),
+      openingAngle: anguloAlAbrir,
+    });
+    if (!giro) return photo;
+
+    const escala = Math.min(1, MAX_UPLOAD_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const ancho = Math.round(img.naturalWidth * escala);
+    const alto = Math.round(img.naturalHeight * escala);
+    const lienzo = document.createElement('canvas');
+    // Con un cuarto de vuelta se cambian el ancho y el alto
+    lienzo.width = alto;
+    lienzo.height = ancho;
+    const contexto = lienzo.getContext('2d');
+    contexto.imageSmoothingQuality = 'high';
+    contexto.translate(lienzo.width / 2, lienzo.height / 2);
+    // En el lienzo un ángulo positivo gira en el sentido de las agujas del reloj, y photoRotation lo da al contrario
+    contexto.rotate((-giro * Math.PI) / 180);
+    contexto.drawImage(img, -ancho / 2, -alto / 2, ancho, alto);
+    const girada = await new Promise((resolve) => {
+      lienzo.toBlob(resolve, 'image/jpeg', 0.95);
+    });
+    console.log(`📸 Foto girada ${giro}° para que quede como el vídeo`);
+    return girada || photo;
+  } catch (err) {
+    console.error('[CameraCapture] No se pudo girar la foto:', err);
+    return photo;
+  } finally {
+    if (abierta) URL.revokeObjectURL(abierta.url);
+  }
 }
 
 // Una fracción de 0 a 1 escrita como porcentaje en español, con coma decimal y espacio antes de %
@@ -200,6 +260,8 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const guideRef = useRef(null);
+  // Giro de la pantalla cuando se encendió la cámara (ver enderezarFoto)
+  const anguloAlAbrirRef = useRef(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [devices, setDevices] = useState([]);
@@ -308,6 +370,7 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
           return;
         }
         streamRef.current = newStream;
+        anguloAlAbrirRef.current = screenAngle();
 
         // Enfoque continuo si la cámara lo permite (Chrome en Android), para que la captura automática
         // no espere a un enfoque que no llega. Si falla, la cámara sigue como venga por defecto
@@ -462,8 +525,10 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
 
     if ('ImageCapture' in window && track && track.readyState === 'live') {
       try {
-        const photo = await new ImageCapture(track).takePhoto();
-        console.log('📸 Foto a resolución completa:', photo.size, photo.type);
+        const tomada = await new ImageCapture(track).takePhoto();
+        console.log('📸 Foto a resolución completa:', tomada.size, tomada.type);
+        // En el iPhone tumbado la foto sale de pie aunque el vídeo esté tumbado
+        const photo = await enderezarFoto(tomada, video, anguloAlAbrirRef.current);
         if (await choosePhotoOrFrame(photo, canvas, frame, video) === 'foto') return photo;
         console.log('📸 El fotograma del vídeo se ve más nítido que la foto, se usa el fotograma');
       } catch (err) {
