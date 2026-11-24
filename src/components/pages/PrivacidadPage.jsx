@@ -64,7 +64,7 @@ export default function PrivacidadPage({ onGoHome }) {
               'Hasta que cierras la página',
             ],
             [
-              'Estadísticas anónimas de uso (perfil elegido, campos tapados, incluida la fotografía, si la censura fue automática o manual, qué campos encontró el detector en cada cara y con qué confianza, sin su contenido ni su posición, versión del modelo y fecha)',
+              'Estadísticas anónimas de uso (perfil elegido, campos que marcas para tapar, incluida la fotografía, si la censura fue automática o manual, qué campos encontró el detector en cada cara y con qué confianza, si pudo colocar la plantilla del DNI y con qué precisión, qué campos estaban fuera de su sitio o se taparon con ella y si se pudo separar la calle del resto del domicilio, siempre sin su contenido ni su posición, versión del modelo y fecha)',
               'Mejorar la herramienta e investigar',
               'Base de datos del proyecto',
               info.plazoEstadisticas,
@@ -183,7 +183,7 @@ export default function PrivacidadPage({ onGoHome }) {
       <LegalSection title="Cambios en esta política">
         <p>
           Si cambia el funcionamiento de la herramienta, actualizaremos esta política. Última actualización el{' '}
-          {info.fechaActualizacion}.
+          {info.fechaActualizacionPrivacidad}.
         </p>
       </LegalSection>
     </LegalPageLayout>

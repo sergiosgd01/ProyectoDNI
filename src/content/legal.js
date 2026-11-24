@@ -15,6 +15,8 @@ export const LEGAL_INFO = {
   garantiaEEUU: 'Cláusulas contractuales tipo o Marco de Privacidad de Datos UE-EE. UU.',
   titularDerechos: 'sus autores',
   fechaActualizacion: '20 de noviembre de 2026',
+  // La privacidad cambia sola cuando cambian las estadísticas que se guardan (MET-4, 24/11/2026), sin tocar el aviso legal
+  fechaActualizacionPrivacidad: '24 de noviembre de 2026',
 };
 
 export const LEGAL_PATHS = {
