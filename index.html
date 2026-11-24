@@ -6,11 +6,12 @@
   <link rel="icon" type="image/png" href="/logo-web.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Content Security Policy para prevenir XSS -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+  <!-- Content Security Policy para prevenir XSS. El backend local (http://localhost:5000) ya no está en la publicada
+       (SEG-7). Con npm run dev lo añade vite.config.js (plugin cspLocal) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self';
                    script-src 'self' 'unsafe-eval';
-                   img-src 'self' data: blob:; 
-                   connect-src 'self' https://ia.defiendetuidentidad.es https://api.defiendetuidentidad.es http://localhost:5000 data: blob:;
+                   img-src 'self' data: blob:;
+                   connect-src 'self' https://ia.defiendetuidentidad.es https://api.defiendetuidentidad.es data: blob:;
                    style-src 'self' 'unsafe-inline'; 
                    font-src 'self';
                    worker-src 'self' blob:;

@@ -21,8 +21,16 @@ const assetFileNames = ({ names }) => {
   return 'assets/[name]-[hash][extname]'
 }
 
+// En local (npm run dev) la web guarda las métricas en el backend local, http://localhost:5000 (VITE_API_BASE_URL del
+// .env). Desde SEG-7 (24/11/2026) la CSP publicada de index.html no lo permite, así que solo al servir en local se añade
+const cspLocal = {
+  name: 'csp-local',
+  apply: 'serve',
+  transformIndexHtml: (html) => html.replace("connect-src 'self'", "connect-src 'self' http://localhost:5000"),
+}
+
 export default defineConfig(({ command }) => ({
-  plugins: [react()],
+  plugins: [react(), cspLocal],
   // En la versión publicada se quitan los mensajes de consola (log, info, debug y warn)
   // para que no aparezcan nombres de archivo, fotos ni datos del DNI. console.error se mantiene.
   // En local (npm run dev) siguen saliendo todos.
