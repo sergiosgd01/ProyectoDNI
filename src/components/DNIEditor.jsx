@@ -7,8 +7,10 @@ import { detectDniFromCanvas } from './dni_scripts/dni_detector';
 import { detectWithFlatLight } from '../utils/flatLight';
 import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
 import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
-import { censorDniComplete, mapUiToYolo } from './dni_scripts/dni_censor'
-import { modoDeCensura } from '../utils/camposSinDetectar';
+import { censorDniComplete } from './dni_scripts/dni_censor'
+import { planDeCara } from '../utils/planCensura';
+import { ajustarPlantilla } from '../utils/plantillaDni';
+import { lineasDelDomicilio } from '../utils/lineasDomicilio';
 import WatermarkInput from './WatermarkInput';
 import Aviso from './Aviso';
 import { useCloseOnBack } from '../hooks/useNavigation';
@@ -38,6 +40,25 @@ function apuntarDetecciones(foto, detecciones, cara) {
   else deteccionesPorFoto.set(foto, { detecciones, caras: new Set([cara]) });
 }
 
+// Ancho y alto de cada foto, que hacen falta para colocar sobre ella la plantilla del DNI (utils/plantillaDni.js).
+// Se miden igual que las mira el detector, con createImageBitmap, así que salen en los mismos píxeles que sus cajas
+const tamanosPorFoto = new WeakMap();
+
+async function tamanoDeFoto(foto) {
+  if (!tamanosPorFoto.has(foto)) {
+    try {
+      const bitmap = await createImageBitmap(foto);
+      tamanosPorFoto.set(foto, { ancho: bitmap.width, alto: bitmap.height });
+      bitmap.close?.();
+    } catch (error) {
+      // Sin tamaño no se coloca la plantilla y se tapa como antes, solo con lo que encuentre el modelo
+      console.error('[DNIEditor] No se ha podido medir la foto:', error);
+      return null;
+    }
+  }
+  return tamanosPorFoto.get(foto);
+}
+
 // La imagen tapada que devuelve censorDniComplete (una URL data: en JPEG) como archivo, para abrirla en la censura
 // manual. Se pasa a bytes aquí y no con fetch, que la política de contenido de la web podría no dejar
 function dataUrlAArchivo(dataUrl, nombre) {
@@ -52,9 +73,13 @@ function dataUrlAArchivo(dataUrl, nombre) {
 // Clases del modelo que corresponden a elementos de seguridad del anverso
 const HOLOGRAM_CLASSES = ['ESP', 'ESP_HOLO', 'ES', 'OPT_VAR'];
 
-// Explicación corta que va bajo el nombre de las casillas que no se entienden solas
+// Explicación corta que va bajo el nombre de las casillas que no se entienden solas. Las tres repiten otros datos y la web
+// intenta taparlas también cuando se tapan esos datos (ver DONDE_SALE en utils/planCensura.js). Dice «intenta» porque
+// solo lo consigue si el modelo las encuentra o si la plantilla del DNI encaja
 const AYUDA_CAMPOS = {
-  cli: 'Es la imagen pequeña de la parte delantera que cambia al inclinar el DNI y repite la fecha de expedición.'
+  cli: 'Es la imagen pequeña de la parte delantera que cambia al inclinar el DNI. Repite una fecha y tu cara, así que la web intenta taparla también si tapas la fecha de expedición, la de caducidad o la fotografía.',
+  mrz: 'Son las tres líneas de letras y números de abajo. Repiten nombre, número, fechas, sexo y nacionalidad, así que la web intenta taparlas también si tapas alguno de esos datos.',
+  ventanaSoporte: 'Es la ventanita transparente con el número de soporte. La web intenta taparla también si tapas el número de soporte.'
 };
 
 // Etiqueta de cada cara en la vista previa. Si se puede, lleva al lado el botón para corregir su recorte
@@ -444,6 +469,7 @@ export default function DNIEditor({
   // Lleva qué se eligió tapar y cómo fue el procesado, nunca datos leídos del DNI.
   // caras.front y caras.back traen las detecciones de esa cara, también cuando salen de la caché,
   // y manual, que dice si esa cara va a censura manual. caras.back es null si no hay reverso.
+  // plantilla trae la plantilla colocada y el plan de la cara, y en el reverso si se separó la calle (MET-4).
   // modelo es la versión del modelo de campos (ver obtenerVersionModelo en metricasDeteccion.js).
   // Los datos nuevos se añaden aquí
   const armarMetricas = (caras, modelo) => ({
@@ -463,6 +489,8 @@ export default function DNIEditor({
       reverso: caras.back ? caras.back.detecciones : null,
       anversoAutomatico: !caras.front.manual,
       reversoAutomatico: Boolean(caras.back) && !caras.back.manual,
+      anversoPlantilla: caras.front.plantilla,
+      reversoPlantilla: caras.back?.plantilla,
       modelo
     })
   });
@@ -510,10 +538,6 @@ export default function DNIEditor({
       const frontDetections = frontGuardadas?.detecciones
         || await detectWithFlatLight(frontFileToProcess, detectDniFromCanvas);
       if (!vigente()) return;
-      // Cada cara se tapa sola ('auto'), se tapa con lo encontrado y pide a mano lo que falta ('parcial') o se tapa
-      // entera a mano ('manual'). Ver modoDeCensura en utils/camposSinDetectar.js
-      const modos = { front: modoDeCensura(selectedFrontFields, frontDetections, 'anverso', mapUiToYolo) };
-      console.log(`🔍 [ANVERSO] ${frontDetections.length} detecciones → censura ${modos.front.modo} (${modos.front.motivo})`);
 
       let backDetections = [];
       let backGuardadas = null;
@@ -522,8 +546,52 @@ export default function DNIEditor({
         backDetections = backGuardadas?.detecciones
           || await detectWithFlatLight(backFileToProcess, detectDniFromCanvas);
         if (!vigente()) return;
-        modos.back = modoDeCensura(selectedBackFields, backDetections, 'reverso', mapUiToYolo);
-        console.log(`🔍 [REVERSO] ${backDetections.length} detecciones → censura ${modos.back.modo} (${modos.back.motivo})`);
+      }
+
+      // Cada cara se tapa sola ('auto'), se tapa con lo encontrado y pide a mano lo que falta ('parcial') o se tapa
+      // entera a mano ('manual'). Cada dato se tapa también donde se repite, y lo que el modelo no encuentra se tapa en
+      // su sitio si la plantilla del DNI encaja con lo encontrado. Ver utils/planCensura.js y utils/plantillaDni.js
+      const campos = { anverso: selectedFrontFields, reverso: selectedBackFields };
+      const [frontTamano, backTamano] = await Promise.all([
+        tamanoDeFoto(frontFileToProcess),
+        backFileToProcess ? tamanoDeFoto(backFileToProcess) : null
+      ]);
+      if (!vigente()) return;
+      const frontAjuste = ajustarPlantilla(frontDetections, 'anverso', frontTamano);
+      const modos = {
+        front: planDeCara({ cara: 'anverso', campos, detecciones: frontDetections, ajuste: frontAjuste, tamano: frontTamano })
+      };
+      // Lo que se envía de la plantilla en las métricas (MET-4)
+      const plantillas = { front: { ajuste: frontAjuste, plan: modos.front }, back: null };
+      console.log(`🔍 [ANVERSO] ${frontDetections.length} detecciones, ${frontAjuste.motivo} → censura ${modos.front.modo} (${modos.front.motivo})`);
+      if (backFileToProcess) {
+        const backAjuste = ajustarPlantilla(backDetections, 'reverso', backTamano);
+        // Para tapar la calle y dejar a la vista el municipio y la provincia (Viajes) hay que separar las líneas del
+        // domicilio. Solo se intenta con una única caja DOMICILIO. Si no salen claras, se tapa el bloque entero
+        let lineasDomicilio = null;
+        const cajasDomicilio = backDetections.filter((d) => d.label === 'DOMICILIO');
+        const soloLaCalle = selectedBackFields.domicilio === true && selectedBackFields.municipio !== true
+          && selectedBackFields.provincia !== true;
+        const domicilioPedido = soloLaCalle && cajasDomicilio.length === 1;
+        if (domicilioPedido) {
+          lineasDomicilio = await lineasDelDomicilio(backFileToProcess, cajasDomicilio[0]).catch((error) => {
+            console.error('[DNIEditor] No se han podido separar las líneas del domicilio:', error);
+            return null;
+          });
+          if (!vigente()) return;
+        }
+        modos.back = planDeCara({
+          cara: 'reverso', campos, detecciones: backDetections, ajuste: backAjuste, tamano: backTamano, lineasDomicilio
+        });
+        plantillas.back = {
+          ajuste: backAjuste,
+          plan: modos.back,
+          // Si se pidió tapar solo la calle y la cara no fue entera a mano, si se pudo. Con más de una caja DOMICILIO no
+          // se intenta y se tapa el bloque entero, así que cuenta como no partido
+          domicilioPartido: soloLaCalle && modos.back.modo !== 'manual' && cajasDomicilio.length > 0
+            ? Boolean(lineasDomicilio) : null,
+        };
+        console.log(`🔍 [REVERSO] ${backDetections.length} detecciones, ${backAjuste.motivo} → censura ${modos.back.modo} (${modos.back.motivo})`);
       }
 
       // Se tapa cada cara una sola vez. La que va entera a censura manual se salta. La parcial se tapa con lo encontrado
@@ -532,22 +600,23 @@ export default function DNIEditor({
         modos.front.modo === 'manual' ? null : frontFileToProcess,
         modos.back && modos.back.modo !== 'manual' ? backFileToProcess : null,
         { frontFields: selectedFrontFields, backFields: selectedBackFields },
-        { frontDetections, backDetections }
+        { cajas: { front: modos.front.cajas, back: modos.back?.cajas } }
       );
       if (!vigente()) return;
 
       // Lo que va a la censura manual. Una cara entera lleva su foto sin tapar y una parcial la foto ya tapada con lo
-      // encontrado, y en faltan los campos que hay que tapar a mano en esa cara, con su nombre en la interfaz
+      // encontrado, y en faltan los campos que hay que tapar a mano en esa cara, con su nombre en la interfaz. Una copia
+      // de un dato (la ventana del soporte, el número pequeño...) trae su propio nombre
       const manualFiles = {};
       const faltan = {};
       const fotos = { front: frontFileToProcess, back: backFileToProcess };
       const urlDe = { front: 'frontImageUrl', back: 'backImageUrl' };
-      Object.entries(modos).forEach(([lado, { modo, faltan: campos }]) => {
+      Object.entries(modos).forEach(([lado, { modo, faltan: pendientes }]) => {
         if (modo === 'auto') {
           result[urlDe[lado]] = censurado[urlDe[lado]];
         } else if (modo === 'parcial') {
           manualFiles[lado] = dataUrlAArchivo(censurado[urlDe[lado]], `${lado === 'front' ? 'anverso' : 'reverso'}-tapado.jpg`);
-          faltan[lado] = campos.map((campo) => ({ campo, nombre: formatFieldName(campo) }));
+          faltan[lado] = pendientes.map(({ campo, nombre }) => ({ campo, nombre: nombre || formatFieldName(campo) }));
         } else {
           manualFiles[lado] = fotos[lado];
         }
@@ -564,8 +633,10 @@ export default function DNIEditor({
       if (!frontGuardadas?.caras.has('front') || (backFileToProcess && !backGuardadas?.caras.has('back'))) {
         console.log("💾 Guardando métricas de uso...");
         const caras = {
-          front: { detecciones: frontDetections, manual: Boolean(manualFiles.front) },
-          back: backFileToProcess ? { detecciones: backDetections, manual: Boolean(manualFiles.back) } : null
+          front: { detecciones: frontDetections, manual: Boolean(manualFiles.front), plantilla: plantillas.front },
+          back: backFileToProcess
+            ? { detecciones: backDetections, manual: Boolean(manualFiles.back), plantilla: plantillas.back }
+            : null
         };
         // Normalmente la versión del modelo ya llegó. Si no, se espera como mucho 3 s (ver metricasDeteccion.js)
         obtenerVersionModelo().then((modelo) => dniApi.saveDniRecord(armarMetricas(caras, modelo)))

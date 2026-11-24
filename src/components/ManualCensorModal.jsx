@@ -30,7 +30,7 @@ function ListaFaltan({ campos }) {
   return (
     <ul className="flex flex-wrap gap-1.5" aria-label="Falta por tapar">
       {campos.map(({ campo, nombre }) => (
-        <li key={campo} className="bg-yellow-400 text-gray-900 text-xs font-semibold px-2 py-0.5 rounded-full">
+        <li key={`${campo}:${nombre}`} className="bg-yellow-400 text-gray-900 text-xs font-semibold px-2 py-0.5 rounded-full">
           {nombre}
         </li>
       ))}

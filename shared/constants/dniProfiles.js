@@ -1,8 +1,9 @@
 // Perfiles predefinidos del editor.
 // Cada campo dice si el perfil lo tapa (true) o lo deja a la vista (false). Es el mismo criterio que siguen
 // las casillas del editor («marcada = censurar»), censorDniComplete y hiddenFields en las métricas.
-// CLI, lugar de nacimiento y ventana del soporte no aparecen en ningún perfil, así que ningún perfil los tapa.
-// Falta decidir qué debe hacer cada perfil con ellos.
+// CLI, lugar de nacimiento y ventana del soporte no aparecen en ningún perfil. Aun así, desde el 23/11/2026 el CLI y
+// la ventana se tapan solos cuando se tapa el dato que repiten (ver DONDE_SALE en src/utils/planCensura.js). Falta
+// decidir qué hace cada perfil con el lugar de nacimiento (DEC-1).
 // La fotografía va a false en todos los perfiles, porque muchos sitios necesitan ver la cara para comprobar que el DNI
 // es de quien lo enseña. Solo se tapa marcando su casilla o con «Censurar todo».
 const DNI_PROFILES_DATA = {
@@ -12,12 +13,10 @@ const DNI_PROFILES_DATA = {
     description: 'Para reservas, controles de identidad y visados',
     icon: '✈️',
     color: 'blue',
-    // Deja a la vista nombre, apellidos, número de DNI, nacimiento, nacionalidad y caducidad.
-    // Municipio y provincia deberían verse también, pero de momento se tapan para no enseñar la calle.
-    // La casilla «Municipio» tapa la caja DOMICILIO del modelo, que cubre calle, municipio y provincia.
-    // «Domicilio» y «Provincia» apuntan a clases que el modelo no tiene, así que solas no tapan nada.
-    // Se marcan las tres para que las casillas y hiddenFields digan lo que de verdad se tapa.
-    // Cuando la calle tenga su propia clase, municipio y provincia pasarán a false.
+    // Deja a la vista nombre, apellidos, número de DNI, nacimiento, nacionalidad, caducidad, municipio y provincia.
+    // El modelo ve el domicilio como un solo bloque. Desde CEN-2 (23/11/2026) la web separa sus líneas y tapa solo la
+    // calle (ver src/utils/lineasDomicilio.js). Si no se ven claras las cuatro líneas, tapa el bloque entero, municipio y
+    // provincia incluidos.
     frontFields: {
       nombre: false,
       apellidos: false,
@@ -35,8 +34,8 @@ const DNI_PROFILES_DATA = {
     backFields: {
       mrz: true,
       domicilio: true,
-      municipio: true,
-      provincia: true,
+      municipio: false,
+      provincia: false,
       equipoExpedidor: true,
       progenitores: true,
     },

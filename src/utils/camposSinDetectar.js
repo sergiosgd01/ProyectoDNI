@@ -8,6 +8,10 @@
  *
  * Desde FUN-2 (18/11/2026) esa censura manual es parcial. Si el DNI se reconoce bien, la cara se tapa con lo que sí se
  * ha encontrado y la ventana de censura manual pide solo lo que falta (ver modoDeCensura).
+ *
+ * Desde el 23/11/2026 el editor decide con planDeCara (planCensura.js), que usa las constantes de aquí, tapa también
+ * las copias de cada dato y rellena con la plantilla del DNI lo que no encuentra. modoDeCensura se queda como
+ * referencia de cómo se decidía antes, y sus pruebas comprueban que planDeCara sin plantilla decide igual.
  */
 
 // Clases que el detector encuentra en cada cara del DNI 4.0 (las que da con los especímenes del banco de pruebas).
