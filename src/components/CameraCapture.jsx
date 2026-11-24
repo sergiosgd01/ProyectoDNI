@@ -17,6 +17,7 @@ import {
 } from '../utils/liveCapture';
 import { MAX_UPLOAD_SIDE, prepareImageForUpload } from '../utils/imageResize';
 import { detectDniFromFile } from './dni_scripts/dni_detector';
+import { girarFoto } from '../utils/girarFoto';
 
 // Veces que la cámara repite sola una foto que no ha salido bien antes de preguntar qué hacer
 const MAX_AUTO_RETRIES = 2;
@@ -125,6 +126,10 @@ const FILA_ARRIBA = 64;
 // la que se hace sola. Cuenta desde que la cámara empieza a preparar la detección y vuelve a empezar cuando ya busca el
 // DNI, así que con una red lenta el botón también sale aunque el detector no haya terminado de cargar
 const MANUAL_BUTTON_DELAY_MS = 8000;
+// Tiempo buscando sin encontrar el DNI a partir del cual el aviso pide ponerlo del derecho y en horizontal (FUN-7). El
+// detector apenas reconoce un DNI boca abajo o de lado (grabado con el S24 el 24/11/2026), así que no se puede saber si
+// está girado y se dice por si acaso
+const SIN_ENCONTRAR_MS = 4000;
 // Fase de la captura automática según su estado, para el plazo del botón. Mientras se hace o se analiza una foto no
 // cuenta, y al volver a la cámara empieza de cero
 const AUTO_PHASES = {
@@ -623,6 +628,25 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
     }
   };
 
+  // La foto recortada puede venir boca abajo o de lado si el DNI estaba girado. Se prueba girada, 180° si está en
+  // horizontal y 90° a cada lado si está en vertical, como hace el editor (FLU-2). Devuelve la girada si así se leen los
+  // datos, o null (FUN-7)
+  const probarGirada = async (file) => {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const vertical = bitmap.height > bitmap.width;
+      bitmap.close?.();
+      for (const cuartos of (vertical ? [1, 3] : [2])) {
+        const girada = await girarFoto(file, cuartos);
+        const check = await checkCapture(girada);
+        if (check?.ok) return girada;
+      }
+    } catch (err) {
+      console.error('[CameraCapture] No se pudo probar la foto girada:', err);
+    }
+    return null;
+  };
+
   // Envía la foto al servidor de recorte
   const processCapturedBlob = async (blob, auto) => {
     const capturedFile = new File([blob], 'dni-camera-capture.jpg', {
@@ -670,6 +694,17 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
         }
         if (!check || check.ok) {
           terminarCara(processedFile, metadata);
+          return;
+        }
+        // Si no se leen los datos, puede que la foto esté girada. Girada y bien, vale
+        const girada = await probarGirada(processedFile);
+        if (cancelado()) {
+          setCapturedFileForCrop(null);
+          return;
+        }
+        if (girada) {
+          console.log('🔄 [capturePhoto] La foto estaba girada y se ha enderezado');
+          terminarCara(girada, metadata);
           return;
         }
 
@@ -815,13 +850,28 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
   // fallida se enseña el motivo en vez del aviso en directo, y al pasar a la otra cara, que la primera está lista
   const isTakingPhoto = capturePhase === 'foto';
   const avisoCaraHecha = !isTakingPhoto && caraHecha;
+  // Si lleva SIN_ENCONTRAR_MS sin encontrar el DNI, el aviso pide además ponerlo del derecho y en horizontal
+  const sinEncontrar = autoCapture.hint === HINTS.place && !retryNotice && !isTakingPhoto;
+  const [buscaDemasiado, setBuscaDemasiado] = useState(false);
+  useEffect(() => {
+    if (!sinEncontrar) return undefined;
+    const temporizador = setTimeout(() => setBuscaDemasiado(true), SIN_ENCONTRAR_MS);
+    return () => {
+      clearTimeout(temporizador);
+      setBuscaDemasiado(false);
+    };
+  }, [sinEncontrar]);
+  const avisoDerecho = nombreCara
+    ? `Pon la parte ${nombreCara} del derecho y en horizontal, dentro del recuadro`
+    : 'Pon el DNI del derecho y en horizontal, dentro del recuadro';
   const guideTone = isProcessing || autoCapture.status === 'listo' || autoCapture.status === 'disparado'
     ? 'listo'
     : retryNotice || autoCapture.status === 'ajustando' ? 'ajuste' : 'neutral';
   const guideProgress = isTakingPhoto ? 1 : autoCapture.progress;
   const hintText = isTakingPhoto
     ? HINTS.capturing
-    : retryNotice || (autoCapture.hint === HINTS.place ? avisoColocar : autoCapture.hint) || avisoColocar;
+    : retryNotice || (autoCapture.hint === HINTS.place ? (buscaDemasiado ? avisoDerecho : avisoColocar) : autoCapture.hint)
+      || avisoColocar;
   const hintBackground = isTakingPhoto || avisoCaraHecha
     ? HINT_BACKGROUNDS.listo
     : retryNotice ? HINT_BACKGROUNDS.ajustando : HINT_BACKGROUNDS[autoCapture.status] || 'bg-black/70';
