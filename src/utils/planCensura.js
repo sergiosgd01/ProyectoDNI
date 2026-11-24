@@ -82,6 +82,43 @@ function cliEntero(caja) {
 
 const rect = (d) => ({ x: d.x, y: d.y, width: d.width, height: d.height });
 
+// Qué hay que tapar en una cara con las casillas marcadas, como clase → { campo, clase, copia }. Una clase pedida como
+// dato y como copia cuenta como dato
+function requisitosDeCara(cara, campos) {
+  const requisitos = new Map();
+  for (const caraCampos of ['anverso', 'reverso']) {
+    for (const [campo, tapar] of Object.entries(campos?.[caraCampos] || {})) {
+      if (tapar !== true) continue;
+      for (const r of DONDE_SALE[campo] || [{ cara: caraCampos, clase: campo.toUpperCase(), copia: false }]) {
+        if (r.cara !== cara) continue;
+        const previo = requisitos.get(r.clase);
+        if (!previo || (previo.copia && !r.copia)) requisitos.set(r.clase, { campo, clase: r.clase, copia: r.copia });
+      }
+    }
+  }
+  return requisitos;
+}
+
+/**
+ * Copias de lo marcado que hay en una cara, para avisar de ellas cuando la cara va entera a censura manual. Quien tapa
+ * a mano sabe qué ha marcado, pero no que la ventana transparente repite el número de soporte, el CLI una fecha y la
+ * cara pequeña, o la MRZ casi todo el anverso. Antes no se decía y, por ejemplo, con Viajes y la trasera boca abajo la
+ * ventana se quedaba a la vista. Una zona marcada también como dato no sale, porque ya se tapa como tal. En una cara
+ * parcial no hace falta, porque planDeCara ya pide en faltan las copias que no encuentra
+ * @param {'anverso'|'reverso'} cara
+ * @param {{anverso: Object, reverso: Object}} campos - Casillas de las dos caras, true = tapar
+ * @returns {Array<{campo: string, nombre?: string}>} Como faltan, con nombre si la copia no se llama como su casilla
+ */
+export function copiasDeLoMarcado(cara, campos) {
+  const copias = [];
+  for (const { campo, clase, copia } of requisitosDeCara(cara, campos).values()) {
+    if (!copia) continue;
+    const aMano = COPIA_A_MANO[`${cara}:${clase}`] || { campo };
+    if (!copias.some((c) => c.campo === aMano.campo && c.nombre === aMano.nombre)) copias.push(aMano);
+  }
+  return copias;
+}
+
 /**
  * Encoge una zona para no tapar las cajas de datos que se dejan a la vista, sin meterse nunca en su núcleo (la zona
  * sin margen), que es donde está el dato que se tapa. Si una caja visible pisa el núcleo, la zona se queda como está.
@@ -137,18 +174,7 @@ export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = 
       cajas: [], rellenadas: [], fueraDeSitio: [] };
   }
 
-  // Qué hay que tapar en esta cara. Una clase pedida como dato y como copia cuenta como dato
-  const requisitos = new Map();
-  for (const caraCampos of ['anverso', 'reverso']) {
-    for (const [campo, tapar] of Object.entries(campos?.[caraCampos] || {})) {
-      if (tapar !== true) continue;
-      for (const r of DONDE_SALE[campo] || [{ cara: caraCampos, clase: campo.toUpperCase(), copia: false }]) {
-        if (r.cara !== cara) continue;
-        const previo = requisitos.get(r.clase);
-        if (!previo || (previo.copia && !r.copia)) requisitos.set(r.clase, { campo, clase: r.clase, copia: r.copia });
-      }
-    }
-  }
+  const requisitos = requisitosDeCara(cara, campos);
   const fiable = Boolean(ajuste?.fiable);
   // Sin la plantilla no se puede saber si una caja está en su sitio, y se fía de todas como antes
   const enSuSitio = (d) => !fiable || ajuste.enSuSitio(d);

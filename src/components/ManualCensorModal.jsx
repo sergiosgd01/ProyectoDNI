@@ -11,6 +11,9 @@ import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from
  * Una cara parcial (FUN-2) llega ya tapada con lo que se ha encontrado, y faltan.front o faltan.back dicen qué campos
  * quedan por tapar en ella, como { campo, nombre }. Entonces la ventana pide solo esos campos.
  *
+ * En una cara entera, copias.front o copias.back dicen qué zonas repiten algo que se ha marcado (la ventana del
+ * soporte, el CLI, la MRZ...), con la misma forma, y el aviso pide taparlas también (24/11/2026).
+ *
  * Los rectángulos se guardan en fracciones del ancho y del alto de la imagen original, de 0 a 1.
  * Así no dependen del tamaño con el que se ve el lienzo, que cambia de una cara a otra,
  * al cambiar el tamaño de la ventana y al girar el móvil, y cada cara se tapa justo donde se dibujó.
@@ -25,10 +28,10 @@ const NOMBRE_CARA = { anverso: 'parte delantera', reverso: 'parte trasera' };
 const NOMBRE_LADO = { front: NOMBRE_CARA.anverso, back: NOMBRE_CARA.reverso };
 const LADO_DE_CARA = { anverso: 'front', reverso: 'back' };
 
-// Campos que quedan por tapar en una cara parcial (FUN-2), como etiquetas
-function ListaFaltan({ campos }) {
+// Campos que quedan por tapar en una cara parcial (FUN-2), o copias que tapar también en una entera, como etiquetas
+function ListaFaltan({ campos, etiqueta = 'Falta por tapar' }) {
   return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="Falta por tapar">
+    <ul className="flex flex-wrap gap-1.5" aria-label={etiqueta}>
       {campos.map(({ campo, nombre }) => (
         <li key={`${campo}:${nombre}`} className="bg-yellow-400 text-gray-900 text-xs font-semibold px-2 py-0.5 rounded-full">
           {nombre}
@@ -74,6 +77,7 @@ function ManualCensorModal({
   frontFile,
   backFile,
   faltan = null,
+  copias = null,
   onComplete,
   onCancel
 }) {
@@ -643,6 +647,9 @@ function ManualCensorModal({
   // Lo que falta por tapar en una cara parcial (FUN-2), o null si esa cara se tapa entera a mano
   const faltanDe = (lado) => (faltan?.[lado]?.length ? faltan[lado] : null);
   const faltanAqui = faltanDe(currentSide);
+  // En una cara entera, las zonas que repiten algo marcado, o null si no hay ninguna
+  const copiasDe = (lado) => (!faltanDe(lado) && copias?.[lado]?.length ? copias[lado] : null);
+  const copiasAqui = copiasDe(currentSide);
   // Caras de la ventana y las que se tapan enteras a mano
   const lados = [frontFile && 'front', backFile && 'back'].filter(Boolean);
   const enteras = lados.filter((lado) => !faltanDe(lado));
@@ -719,6 +726,14 @@ function ManualCensorModal({
                   ? 'Lo que hemos encontrado ya está tapado. Dibuja un rectángulo sobre cada dato que falta y revisa que no quede nada más a la vista.'
                   : textoCaraEntera}
               </p>
+              {/* En una cara entera, las zonas que repiten algo marcado. Se ven también en pantallas bajas, como lo que
+                  falta en una parcial */}
+              {copiasAqui && (
+                <div className="mt-1.5">
+                  <p className="text-white text-xs md:text-sm mb-1">Tapa también estas zonas, que repiten datos que has marcado:</p>
+                  <ListaFaltan campos={copiasAqui} etiqueta="Tapa también" />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -737,6 +752,7 @@ function ManualCensorModal({
                 setHighlightSide(null);
               }}
               data-faltan={faltanDe('front')?.map(({ campo }) => campo).join(' ')}
+              data-copias={copiasDe('front')?.map(({ campo }) => campo).join(' ')}
               className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'front'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
@@ -765,6 +781,7 @@ function ManualCensorModal({
                 setHighlightSide(null);
               }}
               data-faltan={faltanDe('back')?.map(({ campo }) => campo).join(' ')}
+              data-copias={copiasDe('back')?.map(({ campo }) => campo).join(' ')}
               className={`btn btn-sm ${tumbado ? 'w-full' : ''} ${currentSide === 'back'
                 ? 'bg-white text-gray-900'
                 : 'btn-oscuro'
@@ -792,7 +809,7 @@ function ManualCensorModal({
           lo que falta por tapar, porque el aviso de arriba no sale */}
       {tumbado && (
         <div
-          aria-hidden={faltanAqui ? undefined : 'true'}
+          aria-hidden={faltanAqui || copiasAqui ? undefined : 'true'}
           className="col-start-2 row-start-3 min-h-0 overflow-y-auto bg-gray-900 border-l border-gray-700 p-2"
         >
           {faltanAqui && (
@@ -800,6 +817,13 @@ function ManualCensorModal({
               <p className="text-white text-xs font-medium mb-1.5">Falta por tapar</p>
               <ListaFaltan campos={faltanAqui} />
               <p className="text-gray-400 text-[11px] leading-snug mt-1.5">Lo encontrado ya está tapado. Revisa que no quede nada más a la vista</p>
+            </>
+          )}
+          {copiasAqui && (
+            <>
+              <p className="text-white text-xs font-medium mb-1.5">Tapa también</p>
+              <ListaFaltan campos={copiasAqui} etiqueta="Tapa también" />
+              <p className="text-gray-400 text-[11px] leading-snug mt-1.5">Estas zonas repiten datos que has marcado</p>
             </>
           )}
         </div>

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ANCLAS, ZONAS, ajustarPlantilla, homografia, margenDeZona, zonaEnFoto } from './plantillaDni.js';
-import { planDeCara, recortarContraVisibles } from './planCensura.js';
+import { copiasDeLoMarcado, planDeCara, recortarContraVisibles } from './planCensura.js';
 import { modoDeCensura } from './camposSinDetectar.js';
 
 // Cajas de las clases que no sirven de ancla, de 0 a 1 en el carné (medianas del estudio)
@@ -368,4 +368,32 @@ test('al tapar una zona no se pisa un dato a la vista, salvo dentro del núcleo'
   assert.deepEqual(recortarContraVisibles(zona, nucleo, [derecha]), { x: 80, y: 90, width: 130, height: 60 });
   const encima = { x: 150, y: 110, width: 30, height: 10 };
   assert.deepEqual(recortarContraVisibles(zona, nucleo, [encima]), zona);
+});
+
+// Copias de lo marcado en una cara que va entera a censura manual (24/11/2026)
+
+test('con Viajes y una cara entera a mano se avisa de las zonas que repiten lo marcado', () => {
+  // Detrás la ventana repite el número de soporte. La MRZ no sale, porque ya está marcada
+  assert.deepEqual(copiasDeLoMarcado('reverso', VIAJES), [{ campo: 'ventanaSoporte' }]);
+  // Delante el CLI repite la fecha de expedición y la ventana el número de soporte
+  assert.deepEqual(copiasDeLoMarcado('anverso', VIAJES),
+    [{ campo: 'cli' }, { campo: 'numeroSoporte', nombre: 'Ventana del soporte' }]);
+});
+
+test('con «Censurar todo» solo se avisa de las copias que no tienen casilla propia', () => {
+  assert.deepEqual(copiasDeLoMarcado('reverso', TODO), []);
+  assert.deepEqual(copiasDeLoMarcado('anverso', TODO),
+    [{ campo: 'dni', nombre: 'Número de DNI pequeño' }, { campo: 'numeroSoporte', nombre: 'Ventana del soporte' }]);
+});
+
+test('con solo el nombre marcado, la trasera entera a mano avisa de la MRZ, que lo repite', () => {
+  const soloNombre = { anverso: { nombre: true }, reverso: {} };
+  assert.deepEqual(copiasDeLoMarcado('reverso', soloNombre), [{ campo: 'mrz' }]);
+  assert.deepEqual(copiasDeLoMarcado('anverso', soloNombre), []);
+});
+
+test('sin nada marcado no se avisa de ninguna copia', () => {
+  const nada = { anverso: {}, reverso: {} };
+  assert.deepEqual(copiasDeLoMarcado('anverso', nada), []);
+  assert.deepEqual(copiasDeLoMarcado('reverso', nada), []);
 });

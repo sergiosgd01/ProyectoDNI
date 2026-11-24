@@ -8,7 +8,7 @@ import { detectWithFlatLight } from '../utils/flatLight';
 import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
 import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
 import { censorDniComplete } from './dni_scripts/dni_censor'
-import { planDeCara } from '../utils/planCensura';
+import { copiasDeLoMarcado, planDeCara } from '../utils/planCensura';
 import { ajustarPlantilla } from '../utils/plantillaDni';
 import { lineasDelDomicilio } from '../utils/lineasDomicilio';
 import WatermarkInput from './WatermarkInput';
@@ -606,9 +606,11 @@ export default function DNIEditor({
 
       // Lo que va a la censura manual. Una cara entera lleva su foto sin tapar y una parcial la foto ya tapada con lo
       // encontrado, y en faltan los campos que hay que tapar a mano en esa cara, con su nombre en la interfaz. Una copia
-      // de un dato (la ventana del soporte, el número pequeño...) trae su propio nombre
+      // de un dato (la ventana del soporte, el número pequeño...) trae su propio nombre. En copias van, de cada cara entera,
+      // las zonas que repiten algo marcado, para avisar de ellas (ver copiasDeLoMarcado)
       const manualFiles = {};
       const faltan = {};
+      const copias = {};
       const fotos = { front: frontFileToProcess, back: backFileToProcess };
       const urlDe = { front: 'frontImageUrl', back: 'backImageUrl' };
       Object.entries(modos).forEach(([lado, { modo, faltan: pendientes }]) => {
@@ -619,6 +621,8 @@ export default function DNIEditor({
           faltan[lado] = pendientes.map(({ campo, nombre }) => ({ campo, nombre: nombre || formatFieldName(campo) }));
         } else {
           manualFiles[lado] = fotos[lado];
+          copias[lado] = copiasDeLoMarcado(lado === 'front' ? 'anverso' : 'reverso', campos)
+            .map(({ campo, nombre }) => ({ campo, nombre: nombre || formatFieldName(campo) }));
         }
       });
 
@@ -655,7 +659,7 @@ export default function DNIEditor({
         console.log(`📋 [RESULTADO] Censura manual necesaria para: ${Object.keys(manualFiles).map((lado) => `${lado} (${modos[lado].modo})`).join(', ')}`);
         console.log(`📋 [RESULTADO] Ya censurado automáticamente: ${[result.frontImageUrl ? 'anverso' : null, result.backImageUrl ? 'reverso' : null].filter(Boolean).join(', ') || 'ninguno'
           }`);
-        setManualCensorList({ ...manualFiles, faltan });
+        setManualCensorList({ ...manualFiles, faltan, copias });
         setProcessedResult(result);
         return;
       }
@@ -1255,6 +1259,7 @@ export default function DNIEditor({
           frontFile={manualCensorList?.front}
           backFile={manualCensorList?.back}
           faltan={manualCensorList?.faltan}
+          copias={manualCensorList?.copias}
           onComplete={handleManualCensorComplete}
           onCancel={cancelarCensuraManual}
         />
