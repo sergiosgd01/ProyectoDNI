@@ -38,44 +38,28 @@ const MainSection = ({
             </div>
           </div>
 
-          {/* Información de confirmación, en verde porque todo ha ido bien */}
-          <div className="bg-success-50 border border-success-200 rounded-lg p-4">
-            <div className="flex items-center justify-center text-success-800 mb-3">
-              <i className="bi bi-check-circle-fill mr-2 text-lg"></i>
-              <span className="font-semibold">
-                ¡Parte {stepInfo?.side || ''} seleccionada!
-              </span>
-            </div>
-            
-            <p className="text-success-800 text-sm text-center mb-3">
-              {stepInfo?.current === 1 ? 
-                'Perfecto. Ahora procederemos a cargar la parte trasera de tu DNI.' :
-                'Excelente. Tienes ambas partes cargadas. Procederás al editor para seleccionar los campos.'
-              }
-            </p>
-            
+          {/* Confirmación en una línea, en verde porque todo ha ido bien. Antes eran tres líneas que decían lo mismo con
+              otras palabras, y la de la parte delantera hablaba de cargar la trasera aunque ya estuviera (UX-12) */}
+          <div className="bg-success-50 border border-success-200 rounded-lg px-4 py-3 text-success-800 text-sm flex flex-wrap items-center justify-center gap-x-2 gap-y-3">
+            <span className="flex items-center font-semibold">
+              <i className="bi bi-check-circle-fill mr-2 text-base" aria-hidden="true"></i>
+              Parte {stepInfo?.side || ''} lista
+            </span>
             {stepInfo && (
-              <div className="flex items-center justify-center">
-                <span className="bg-success-700 text-white px-3 py-1 rounded-full text-xs font-medium mr-2">
-                  {stepInfo.current}/{stepInfo.total}
-                </span>
-                <span className="text-success-800 text-sm">
-                  {stepInfo.current === 1 ? 'Continuarás con la parte trasera' : 'Listo para el editor'}
-                </span>
-              </div>
+              <span className="bg-success-700 text-white px-2.5 py-0.5 rounded-full text-xs font-medium">
+                {stepInfo.current}/{stepInfo.total}
+              </span>
             )}
 
             {/* Botón para continuar manualmente */}
             {onContinue && (
-              <div className="mt-4 text-center">
-                <button
-                  onClick={onContinue}
-                  className="btn btn-sm btn-principal"
-                >
-                  <i className="bi bi-arrow-right"></i>
-                  {stepInfo?.current === 1 ? 'Continuar con parte trasera' : 'Ir al editor'}
-                </button>
-              </div>
+              <button
+                onClick={onContinue}
+                className="btn btn-sm btn-principal w-full sm:w-auto"
+              >
+                <i className="bi bi-arrow-right"></i>
+                {stepInfo?.current === 1 ? 'Continuar con parte trasera' : 'Ir al editor'}
+              </button>
             )}
           </div>
         </div>
