@@ -7,6 +7,7 @@ import { detectDniFromCanvas } from './dni_scripts/dni_detector';
 import { detectWithFlatLight } from '../utils/flatLight';
 import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
 import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
+import { useUrlDeArchivo } from '../hooks/useUrlDeArchivo';
 import { censorDniComplete } from './dni_scripts/dni_censor'
 import { copiasDeLoMarcado, planDeCara } from '../utils/planCensura';
 import { ajustarPlantilla } from '../utils/plantillaDni';
@@ -156,6 +157,10 @@ export default function DNIEditor({
   const [cachedValidation, setCachedValidation] = useState(initialValidation);
 
   const [manualCensorList, setManualCensorList] = useState(null);
+
+  // Direcciones de las dos fotos para la vista previa, una por foto y liberadas al cambiarla (UX-4)
+  const urlFrente = useUrlDeArchivo(DEMO_MODE.enabled ? null : frontFile);
+  const urlTrasera = useUrlDeArchivo(DEMO_MODE.enabled ? null : backFile);
 
   // Scroll inicial al principio de la página
   useScrollToTop();
@@ -921,7 +926,7 @@ export default function DNIEditor({
                     />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                       <img
-                        src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : URL.createObjectURL(frontFile)}
+                        src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : urlFrente ?? undefined}
                         alt="Parte delantera del DNI"
                         className="w-full h-auto rounded-lg shadow-md"
                       />
@@ -943,7 +948,7 @@ export default function DNIEditor({
                       />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
                         <img
-                          src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : URL.createObjectURL(backFile)}
+                          src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : urlTrasera ?? undefined}
                           alt="Parte trasera del DNI"
                           className="w-full h-auto rounded-lg shadow-md"
                         />

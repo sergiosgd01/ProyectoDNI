@@ -1,5 +1,6 @@
 import React from 'react';
 import FileUploadZone from './FileUploadZone';
+import { useUrlDeArchivo } from '../hooks/useUrlDeArchivo';
 
 // onHacerFoto abre la cámara de la página de subida en esta cara (ver UploadPage)
 const MainSection = ({
@@ -10,6 +11,7 @@ const MainSection = ({
   stepInfo,
   onContinue
 }) => {
+  const urlFoto = useUrlDeArchivo(selectedFile);
   return (
     <div className="w-full">
       {!selectedFile ? (
@@ -20,7 +22,7 @@ const MainSection = ({
           <div className="w-full bg-gray-50 rounded-lg overflow-hidden border-2 border-primary-200">
             <div className="relative">
               <img 
-                src={URL.createObjectURL(selectedFile)} 
+                src={urlFoto ?? undefined}
                 alt="Previsualización del DNI" 
                 className="w-full h-64 object-contain bg-white" 
               />
