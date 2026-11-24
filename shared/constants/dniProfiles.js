@@ -11,7 +11,7 @@ const DNI_PROFILES_DATA = {
     id: 'viajes',
     name: 'Viajes',
     description: 'Para reservas, controles de identidad y visados',
-    icon: '✈️',
+    icon: 'bi-airplane',
     color: 'blue',
     // Deja a la vista nombre, apellidos, número de DNI, nacimiento, nacionalidad, caducidad, municipio y provincia.
     // El modelo ve el domicilio como un solo bloque. Desde CEN-2 (23/11/2026) la web separa sus líneas y tapa solo la
@@ -44,7 +44,7 @@ const DNI_PROFILES_DATA = {
     id: 'salud',
     name: 'Salud',
     description: 'Para hospitales y clínicas',
-    icon: '🏥',
+    icon: 'bi-heart-pulse',
     color: 'red',
     // Deja a la vista nombre, apellidos, número de DNI y nacimiento
     frontFields: {
@@ -74,7 +74,7 @@ const DNI_PROFILES_DATA = {
     id: 'administrativo',
     name: 'Administrativo / legal',
     description: 'Para trámites oficiales que requieren domicilio',
-    icon: '📋',
+    icon: 'bi-file-earmark-text',
     color: 'purple',
     // Deja a la vista nombre, apellidos, número de DNI, nacimiento, domicilio, municipio y provincia
     frontFields: {
@@ -104,7 +104,7 @@ const DNI_PROFILES_DATA = {
     id: 'financiero',
     name: 'Financiero / banca',
     description: 'Para verificaciones bancarias y de identidad de clientes',
-    icon: '🏦',
+    icon: 'bi-bank',
     color: 'green',
     // Deja a la vista nombre, apellidos, número de DNI, nacimiento y nacionalidad
     frontFields: {

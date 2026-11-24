@@ -43,7 +43,9 @@ export default function ProfileSelector({ selectedProfile, onProfileSelect, sele
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
-                  <span className="text-xl mr-3">{profile.icon}</span>
+                  {/* Icono de Bootstrap Icons, como el resto de la web. Antes eran emojis, que cada sistema pinta
+                      a su manera (UX-14, punto 12) */}
+                  <i className={`bi ${profile.icon} text-lg mr-3 text-gray-600`} aria-hidden="true"></i>
                   <span className="font-medium text-base text-gray-800">{profile.name}</span>
                 </div>
                 {isSelected && (
