@@ -5,6 +5,8 @@ import { useColors } from '../theme/useColors';
 import { useScrollToTop } from '../hooks/useScrollToTop';
 import { detectDniFromCanvas } from './dni_scripts/dni_detector';
 import { detectWithFlatLight } from '../utils/flatLight';
+import { girarFoto } from '../utils/girarFoto';
+import { DOCUMENTO_POR_CARA, MIN_DETECCIONES } from '../utils/camposSinDetectar';
 import ZonaDescarga, { AccionesCopia } from './ZonaDescarga';
 import { useCopiaProtegida } from '../hooks/useCopiaProtegida';
 import { useUrlDeArchivo } from '../hooks/useUrlDeArchivo';
@@ -33,6 +35,16 @@ import { completarCampos, construirDeteccion, obtenerVersionModelo } from '../ut
 // Se apuntan cuando un procesado termina bien, justo al decidir si se envían sus métricas, para que cada foto
 // cuente una sola vez en cada cara. Con un WeakMap la entrada desaparece cuando la web deja de usar la foto.
 const deteccionesPorFoto = new WeakMap();
+
+// Fotos que la web ha girado por estar boca abajo o de lado (FLU-2), y fotos que ha probado a girar sin que se
+// reconocieran. En ninguna se vuelve a probar, así que «Procesar de nuevo» no repite el intento
+const enderezadasPorLaWeb = new WeakSet();
+const probadasSinEnderezar = new WeakSet();
+
+// Si el detector reconoce la cara, con su documento y bastantes cajas. Es lo que pide planDeCara para no mandarla
+// entera a censura manual
+const caraReconocida = (detecciones, cara) => detecciones.some((d) => d.label === DOCUMENTO_POR_CARA[cara])
+  && detecciones.length >= MIN_DETECCIONES[cara];
 
 // Guarda las detecciones de una foto, si no estaban, y apunta que ya se ha contado en esa cara
 function apuntarDetecciones(foto, detecciones, cara) {
@@ -144,6 +156,7 @@ export default function DNIEditor({
   backMetadata = null,
   onAdjustCrop,
   onRotate,
+  onEnderezar,
   onSwapSides,
   onBack,
   onProcessed,
@@ -251,10 +264,15 @@ export default function DNIEditor({
   // «Girar» e «Intercambiar caras» arreglan a mano el DNI girado, boca abajo o con las caras cambiadas, que si no
   // acaba en censura manual. Como con «Ajustar recorte», no se puede mientras se procesa y el resultado anterior se borra
   const [avisoGiro, setAvisoGiro] = useState(null);
+  // Aviso de que la web ha girado una cara que estaba boca abajo (FLU-2)
+  const [avisoEnderezado, setAvisoEnderezado] = useState(null);
+  // Si al procesar se ha girado alguna cara y hay que volver a procesar en cuanto llegue la foto girada
+  const reprocesarRef = useRef(false);
   const olvidarResultado = () => {
     setProcessedResult(null);
     setManualCensorList(null);
     setProcessingError(null);
+    setAvisoEnderezado(null);
   };
 
   const girarCara = (side) =>
@@ -553,6 +571,57 @@ export default function DNIEditor({
         if (!vigente()) return;
       }
 
+      // Una cara boca abajo o de lado no se reconoce y acababa entera en censura manual (FLU-2). Si una cara no se
+      // reconoce, se prueba girada, 180° si el recorte está en horizontal y 90° a cada lado si está en vertical, como
+      // llega del servidor un DNI fotografiado de lado. Si girada sí se reconoce, se cambia por la girada, con sus
+      // detecciones ya guardadas, y se vuelve a procesar con ella. Al cambiar la foto este procesado queda sin efecto
+      // (ver ejecucionRef) y lo retoma el efecto de abajo
+      if (onEnderezar && !DEMO_MODE.enabled) {
+        // Si algo falla al probar, la cara sigue como antes, a censura manual, en vez de dar error
+        const probarGirada = async (archivo, detecciones, cara) => {
+          if (!archivo || caraReconocida(detecciones, cara) || enderezadasPorLaWeb.has(archivo)
+            || probadasSinEnderezar.has(archivo)) return null;
+          try {
+            const { ancho, alto } = await tamanoDeFoto(archivo);
+            let mejor = null;
+            for (const cuartos of (alto > ancho ? [1, 3] : [2])) {
+              const girada = await girarFoto(archivo, cuartos);
+              const deteccionesGirada = await detectWithFlatLight(girada, detectDniFromCanvas);
+              if (caraReconocida(deteccionesGirada, cara)
+                && (!mejor || deteccionesGirada.length > mejor.detecciones.length)) {
+                mejor = { girada, cuartos, detecciones: deteccionesGirada };
+              }
+            }
+            if (!mejor) {
+              probadasSinEnderezar.add(archivo);
+              return null;
+            }
+            enderezadasPorLaWeb.add(mejor.girada);
+            // Sin contar aún en ninguna cara, para que el procesado con la foto girada guarde sus métricas
+            deteccionesPorFoto.set(mejor.girada, { detecciones: mejor.detecciones, caras: new Set() });
+            return mejor;
+          } catch (error) {
+            console.error('[DNIEditor] No se ha podido probar la cara girada:', error);
+            return null;
+          }
+        };
+        const frente = await probarGirada(frontFileToProcess, frontDetections, 'anverso');
+        if (!vigente()) return;
+        const trasera = await probarGirada(backFileToProcess, backDetections, 'reverso');
+        if (!vigente()) return;
+        if (frente || trasera) {
+          const giradas = [frente && ['parte delantera', frente.cuartos], trasera && ['parte trasera', trasera.cuartos]]
+            .filter(Boolean);
+          setAvisoEnderezado(giradas.length === 2
+            ? 'Las dos caras estaban giradas y las hemos enderezado.'
+            : `La ${giradas[0][0]} estaba ${giradas[0][1] === 2 ? 'boca abajo' : 'de lado'} y la hemos enderezado.`);
+          reprocesarRef.current = true;
+          if (frente) onEnderezar('front', frente.girada, frente.cuartos);
+          if (trasera) onEnderezar('back', trasera.girada, trasera.cuartos);
+          return;
+        }
+      }
+
       // Cada cara se tapa sola ('auto'), se tapa con lo encontrado y pide a mano lo que falta ('parcial') o se tapa
       // entera a mano ('manual'). Cada dato se tapa también donde se repite, y lo que el modelo no encuentra se tapa en
       // su sitio si la plantilla del DNI encaja con lo encontrado. Ver utils/planCensura.js y utils/plantillaDni.js
@@ -680,7 +749,8 @@ export default function DNIEditor({
     } finally {
       if (enCursoRef.current === ejecucion) {
         enCursoRef.current = null;
-        setIsProcessing(false);
+        // Si se ha girado una cara, el procesado sigue enseguida con la foto girada y «Procesando» no se quita
+        if (!reprocesarRef.current) setIsProcessing(false);
       }
     }
   };
@@ -690,6 +760,16 @@ export default function DNIEditor({
     setProcessingError(null);
     await handleProcessDNI();
   };
+
+  // Después de girar una cara boca abajo (FLU-2), en cuanto llega la foto girada se procesa otra vez con ella. Va por
+  // una referencia para llamar siempre a la última versión de handleProcessDNI, que ya ve la foto nueva
+  const procesarRef = useRef(handleProcessDNI);
+  procesarRef.current = handleProcessDNI;
+  useEffect(() => {
+    if (!reprocesarRef.current) return;
+    reprocesarRef.current = false;
+    procesarRef.current();
+  }, [frontFile, backFile]);
 
   // La copia protegida que se descarga, con la marca de agua (ver useCopiaProtegida y ZonaDescarga). Mientras falta
   // tapar a mano alguna cara no hay copia que preparar
@@ -854,6 +934,26 @@ export default function DNIEditor({
                 </Aviso>
               )}
 
+              {/* La web ha girado una cara que estaba boca abajo (FLU-2). No es un error, así que va en gris */}
+              {avisoEnderezado && (
+                <div
+                  role="status"
+                  data-aviso="enderezada"
+                  className="mb-4 flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-left text-gray-800"
+                >
+                  <i className="bi bi-arrow-repeat mt-0.5 text-base" aria-hidden="true"></i>
+                  <p className="flex-1 min-w-0">{avisoEnderezado} Si no estaba bien, usa «Girar».</p>
+                  <button
+                    type="button"
+                    onClick={() => setAvisoEnderezado(null)}
+                    aria-label="Cerrar aviso"
+                    className="-mr-1 -mt-0.5 p-1 rounded-md transition-colors hover:bg-gray-200"
+                  >
+                    <i className="bi bi-x-lg" aria-hidden="true"></i>
+                  </button>
+                </div>
+              )}
+
               {/* MOSTRAR resultado procesado si existe */}
               {processedResult ? (
                 <div className="space-y-4">
@@ -879,6 +979,9 @@ export default function DNIEditor({
                       <img
                         src={processedResult.frontImageUrl}
                         alt="Parte delantera del DNI procesada"
+                        // Cuartos de vuelta que lleva la foto respecto al recorte, si se giró a mano o la web la enderezó (FLU-2).
+                        // El banco de pruebas lo usa para comparar el resultado con el recorte que vio al abrir el editor
+                        data-giro={frontMetadata?.giro || 0}
                         className="w-full h-auto rounded-lg shadow-md"
                       />
                     </div>
@@ -901,6 +1004,9 @@ export default function DNIEditor({
                         <img
                           src={processedResult.backImageUrl}
                           alt="Parte trasera del DNI procesada"
+                          // Cuartos de vuelta que lleva la foto respecto al recorte, si se giró a mano o la web la enderezó (FLU-2).
+                          // El banco de pruebas lo usa para comparar el resultado con el recorte que vio al abrir el editor
+                          data-giro={backMetadata?.giro || 0}
                           className="w-full h-auto rounded-lg shadow-md"
                         />
                       </div>

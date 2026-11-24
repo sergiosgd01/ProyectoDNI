@@ -262,6 +262,19 @@ function App() {
     select(girado, { ...metadata, giro, recorteSinGirar: giro === 0 ? null : sinGirar });
   }, [frontFile, backFile, frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
 
+  // El editor ha visto al procesar que una cara llegaba boca abajo o de lado y la ha girado (FLU-2). Se pone la foto que
+  // ya ha girado y detectado el editor, para no repetir la detección. Cuenta como tantos giros de «Girar» como cuartos
+  // de vuelta, así que un giro a mano después sigue desde el recorte sin girar
+  const handleEnderezar = useCallback((side, girada, cuartos = 2) => {
+    const [file, metadata, select] = side === 'front'
+      ? [frontFile, frontMetadata, handleFrontFileSelect]
+      : [backFile, backMetadata, handleBackFileSelect];
+    if (!file || !girada) return;
+    const sinGirar = metadata?.recorteSinGirar || file;
+    const giro = ((metadata?.recorteSinGirar ? metadata.giro || 0 : 0) + cuartos) % 4;
+    select(girada, { ...metadata, giro, recorteSinGirar: sinGirar });
+  }, [frontFile, backFile, frontMetadata, backMetadata, handleFrontFileSelect, handleBackFileSelect]);
+
   // Cambia el anverso por el reverso con todo lo de cada cara (foto original, esquinas, giro...).
   // Se intercambian los mismos archivos, sin copiarlos
   const handleSwapSides = useCallback(() => {
@@ -344,6 +357,7 @@ function App() {
             backMetadata={backMetadata}
             onAdjustCrop={handleAdjustCrop}
             onRotate={handleRotate}
+            onEnderezar={handleEnderezar}
             onSwapSides={handleSwapSides}
             manualDetection={isManualDetection}
             onBack={handleBackToStep}
