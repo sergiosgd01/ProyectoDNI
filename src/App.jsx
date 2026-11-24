@@ -15,6 +15,9 @@ import { DEMO_MODE } from './config/demoMode';
 import { girarFoto } from './utils/girarFoto';
 import './index.css';
 
+// Vistas que llevan la cabecera de la web, con el logo y el menú
+const VISTAS_CON_CABECERA = [VIEWS.HOME, VIEWS.JORNADAS_CACERES, VIEWS.JORNADAS_MERIDA, VIEWS.AVISO_LEGAL, VIEWS.PRIVACIDAD];
+
 function App() {
   const {
     frontFile,
@@ -371,10 +374,10 @@ function App() {
       // Carteles en JPEG de 1400 px, de 0,9 y 1 MB. Los PNG de 8 y 9,5 MB que se cargaban antes siguen en public por si
       // alguien enlazó la imagen directamente (UX-5, 24/11/2026)
       case VIEWS.JORNADAS_CACERES:
-        return <JornadasPage imageSrc="/jornadasCaceres.jpg" />;
+        return <JornadasPage imageSrc="/jornadasCaceres.jpg" onGoHome={goHome} />;
 
       case VIEWS.JORNADAS_MERIDA:
-        return <JornadasPage imageSrc="/jornadasMerida.jpg" />;
+        return <JornadasPage imageSrc="/jornadasMerida.jpg" onGoHome={goHome} />;
 
       case VIEWS.AVISO_LEGAL:
         return <AvisoLegalPage onGoHome={goHome} />;
@@ -404,8 +407,9 @@ function App() {
           <ProcessingLoader onComplete={() => setShowProcessingLoader(false)} />
         )}
 
-        {/* Renderizar Header solo en la vista inicial */}
-        {currentView === VIEWS.HOME && (
+        {/* La cabecera, con el logo, va en la portada y en las páginas de contenido (jornadas, aviso legal y
+            privacidad). Antes solo salía en la portada (UX-14, punto 15). La subida y el editor tienen su propia barra */}
+        {VISTAS_CON_CABECERA.includes(currentView) && (
           <Header onShowHome={goHome} onStartProcess={handleStartProcess} />
         )}
 

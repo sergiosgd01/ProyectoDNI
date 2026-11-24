@@ -14,8 +14,9 @@ export function LegalSection({ title, children }) {
 export default function LegalPageLayout({ title, onGoHome, children }) {
   useScrollToTop();
 
+  // pt-16 deja sitio a la cabecera de la web, que va fija arriba (ver VISTAS_CON_CABECERA en App.jsx)
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
+    <div className="min-h-screen flex flex-col bg-gray-100 pt-16">
       <main className="flex-grow py-8 sm:py-12 px-4">
         <div className="max-w-3xl mx-auto">
           <button
