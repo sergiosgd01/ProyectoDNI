@@ -27,7 +27,9 @@ const SUGERENCIA_REINTENTAR = 'Vuelve a intentarlo dentro de unos minutos o reco
 const sugerenciaDeEstado = (status) =>
   status === 413 ? 'Prueba con otra foto o recórtala a mano.' : SUGERENCIA_REINTENTAR;
 
-export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_API_URL || 'http://localhost:8000/process', timeout = 90000 } = {}) {
+// signal, si llega, permite cancelar la petición desde fuera (la cámara, con «Cancelar» mientras analiza). Entonces se
+// devuelve errorType 'cancelado', que no es un error y no se enseña
+export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_API_URL || 'http://localhost:8000/process', timeout = 90000, signal = null } = {}) {
 
   // ✅ Validación básica
   if (!file || !(file instanceof File || file instanceof Blob)) {
@@ -39,6 +41,8 @@ export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_AP
 
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
+  if (signal?.aborted) controller.abort();
+  signal?.addEventListener('abort', () => controller.abort(), { once: true });
 
   try {
     const res = await fetch(url, {
@@ -111,6 +115,11 @@ export async function processWithYolo(file, { url = import.meta.env.VITE_YOLO_AP
     };
   } catch (err) {
     clearTimeout(id);
+
+    // Cancelada desde fuera. No es un error
+    if (err.name === 'AbortError' && signal?.aborted) {
+      return { ok: false, errorType: 'cancelado', message: 'Cancelado' };
+    }
 
     // ✅ Detectar timeout específicamente
     if (err.name === 'AbortError') {

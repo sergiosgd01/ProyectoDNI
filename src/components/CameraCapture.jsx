@@ -277,6 +277,8 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
   // captura automática y no se admiten más fotos. Van separadas porque hacer la foto a resolución completa
   // tarda, y hasta que no está hecha hay que seguir pidiendo que no se mueva el DNI
   const [capturePhase, setCapturePhase] = useState(null);
+  // Para cancelar con «Cancelar» la petición al servidor mientras se analiza la foto (FUN-7, 24/11/2026)
+  const analisisRef = useRef(null);
   const isProcessing = capturePhase !== null;
   // Foto que ha llegado bien al servidor pero no sirve para censurarla sola, con lo que se le dice a la persona
   const [captureProblem, setCaptureProblem] = useState(null);
@@ -579,8 +581,11 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
       setCapturePhase('analisis');
       await processCapturedBlob(blob, auto);
     } finally {
+      analisisRef.current = null;
       isCapturingRef.current = false;
       setCapturePhase(null);
+      // Si se ha cancelado, el vídeo vuelve a ponerse en marcha por si se había parado
+      if (videoRef.current?.paused) videoRef.current.play().catch(() => {});
     }
   };
 
@@ -638,8 +643,16 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
     setCapturedFileForCrop(uploadFile);
     setDetectionError(null);
 
+    const analisis = new AbortController();
+    analisisRef.current = analisis;
+    const cancelado = () => analisis.signal.aborted;
     try {
-      const resp = await processWithYolo(uploadFile);
+      const resp = await processWithYolo(uploadFile, { signal: analisis.signal });
+      // Cancelado mientras se analizaba. La cámara sigue como antes de hacer la foto
+      if (cancelado()) {
+        setCapturedFileForCrop(null);
+        return;
+      }
 
       if (resp.ok && resp.blob) {
         // ✅ ÉXITO: DNI detectado y procesado correctamente
@@ -651,6 +664,10 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
         console.log('✅ [capturePhoto] YOLO procesado exitosamente, confianza:', resp.confidence);
         const metadata = { yolo: { ok: true, confidence: resp.confidence } };
         const check = await checkCapture(processedFile);
+        if (cancelado()) {
+          setCapturedFileForCrop(null);
+          return;
+        }
         if (!check || check.ok) {
           terminarCara(processedFile, metadata);
           return;
@@ -686,6 +703,7 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
         });
       }
     } catch (err) {
+      if (cancelado()) return;
       console.error('[CameraCapture] Error inesperado:', err);
 
       setDetectionError({
@@ -825,6 +843,14 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
       <div className="text-center text-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-3"></div>
         <p>Analizando DNI...</p>
+        {/* Si el servidor tarda, se puede volver a la cámara sin esperar (FUN-7). La foto se descarta */}
+        <button
+          type="button"
+          onClick={() => analisisRef.current?.abort()}
+          className="mt-5 btn btn-sm btn-oscuro"
+        >
+          Cancelar
+        </button>
       </div>
     </div>
   );
