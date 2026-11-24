@@ -15,6 +15,8 @@ import { copiasDeLoMarcado, planDeCara } from '../utils/planCensura';
 import { ajustarPlantilla } from '../utils/plantillaDni';
 import { lineasDelDomicilio } from '../utils/lineasDomicilio';
 import WatermarkInput from './WatermarkInput';
+import FotoConMarca from './FotoConMarca';
+import ZonasIluminadas from './ZonasIluminadas';
 import Aviso from './Aviso';
 import { useCloseOnBack } from '../hooks/useNavigation';
 import { DEMO_MODE } from '../config/demoMode';
@@ -170,6 +172,8 @@ export default function DNIEditor({
   const [cachedValidation, setCachedValidation] = useState(initialValidation);
 
   const [manualCensorList, setManualCensorList] = useState(null);
+  // Campo por el que pasa el ratón o el teclado, para iluminar su sitio en las fotos (UX-12)
+  const [campoIluminado, setCampoIluminado] = useState(null);
 
   // Direcciones de las dos fotos para la vista previa, una por foto y liberadas al cambiarla (UX-4)
   const urlFrente = useUrlDeArchivo(DEMO_MODE.enabled ? null : frontFile);
@@ -976,9 +980,10 @@ export default function DNIEditor({
                       ocupado={Boolean(girando)}
                     />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                      <img
+                      <FotoConMarca
                         src={processedResult.frontImageUrl}
                         alt="Parte delantera del DNI procesada"
+                        marca={watermarkText}
                         // Cuartos de vuelta que lleva la foto respecto al recorte, si se giró a mano o la web la enderezó (FLU-2).
                         // El banco de pruebas lo usa para comparar el resultado con el recorte que vio al abrir el editor
                         data-giro={frontMetadata?.giro || 0}
@@ -1001,9 +1006,10 @@ export default function DNIEditor({
                         ocupado={Boolean(girando)}
                       />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                        <img
+                        <FotoConMarca
                           src={processedResult.backImageUrl}
                           alt="Parte trasera del DNI procesada"
+                          marca={watermarkText}
                           // Cuartos de vuelta que lleva la foto respecto al recorte, si se giró a mano o la web la enderezó (FLU-2).
                           // El banco de pruebas lo usa para comparar el resultado con el recorte que vio al abrir el editor
                           data-giro={backMetadata?.giro || 0}
@@ -1031,11 +1037,14 @@ export default function DNIEditor({
                       ocupado={Boolean(girando)}
                     />
                     <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                      <img
-                        src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : urlFrente ?? undefined}
-                        alt="Parte delantera del DNI"
-                        className="w-full h-auto rounded-lg shadow-md"
-                      />
+                      <div className="relative">
+                        <img
+                          src={DEMO_MODE.enabled ? '/demo/front-image.jpg' : urlFrente ?? undefined}
+                          alt="Parte delantera del DNI"
+                          className="w-full h-auto rounded-lg shadow-md"
+                        />
+                        <ZonasIluminadas campo={campoIluminado} cara="anverso" />
+                      </div>
                     </div>
                   </div>
 
@@ -1053,11 +1062,14 @@ export default function DNIEditor({
                         ocupado={Boolean(girando)}
                       />
                       <div className="bg-gray-50 rounded-lg p-2 sm:p-4 mb-4">
-                        <img
-                          src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : urlTrasera ?? undefined}
-                          alt="Parte trasera del DNI"
-                          className="w-full h-auto rounded-lg shadow-md"
-                        />
+                        <div className="relative">
+                          <img
+                            src={DEMO_MODE.enabled ? '/demo/back-image.jpg' : urlTrasera ?? undefined}
+                            alt="Parte trasera del DNI"
+                            className="w-full h-auto rounded-lg shadow-md"
+                          />
+                          <ZonasIluminadas campo={campoIluminado} cara="reverso" />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1074,25 +1086,8 @@ export default function DNIEditor({
                 </div>
               )}
 
-              {/* Información del perfil seleccionado */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 sm:p-4 mt-4">
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm sm:text-base">Configuración actual</h4>
-                <div className="space-y-1 text-xs sm:text-sm text-gray-700">
-                  <div>
-                    <strong>Perfil:</strong> {
-                      selectedProfile
-                        ? DNI_PROFILES.getProfileById(selectedProfile)?.name
-                        : 'Personalizado'
-                    }
-                  </div>
-                  <div>
-                    <strong>Estado:</strong>
-                    <span className={processedResult ? "text-success-700 font-medium" : ""}>
-                      {processedResult ? ' Procesado' : ' Listo para procesar'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {/* Aquí iba «Configuración actual», con el perfil y si estaba procesado. Repetía el selector de perfiles y lo
+                  que ya se ve en la pantalla, y se quitó con el punto 10 de UX-14 (24/11/2026) */}
             </div>
 
             {/* Configuración */}
@@ -1138,12 +1133,18 @@ export default function DNIEditor({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {frontfields.map((fieldName) => (
                       <div key={fieldName} className="h-fit">
-                        <label className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors">
+                        <label
+                          className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors"
+                          onMouseEnter={() => setCampoIluminado(fieldName)}
+                          onMouseLeave={() => setCampoIluminado(null)}
+                        >
                           <div className="relative flex items-center justify-center">
                             <input
                               type="checkbox"
                               checked={isFieldSelected(fieldName)}
                               onChange={() => handleFieldToggle(fieldName)}
+                              onFocus={() => setCampoIluminado(fieldName)}
+                              onBlur={() => setCampoIluminado(null)}
                               className="sr-only"
                             />
                             <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${isFieldSelected(fieldName) ? 'shadow-md' : ''
@@ -1192,12 +1193,18 @@ export default function DNIEditor({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {backfields.map((fieldName) => (
                       <div key={fieldName} className="h-fit">
-                        <label className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors">
+                        <label
+                          className="flex items-center cursor-pointer border border-gray-200 rounded-lg p-2 sm:p-3 hover:bg-gray-50 transition-colors"
+                          onMouseEnter={() => setCampoIluminado(fieldName)}
+                          onMouseLeave={() => setCampoIluminado(null)}
+                        >
                           <div className="relative flex items-center justify-center">
                             <input
                               type="checkbox"
                               checked={isFieldSelected(fieldName)}
                               onChange={() => handleFieldToggle(fieldName)}
+                              onFocus={() => setCampoIluminado(fieldName)}
+                              onBlur={() => setCampoIluminado(null)}
                               className="sr-only"
                             />
                             <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center ${isFieldSelected(fieldName) ? 'shadow-md' : ''
@@ -1311,21 +1318,8 @@ export default function DNIEditor({
                   </button>
                 )}
 
-                <div className="text-center text-xs sm:text-sm text-gray-600 my-3">
-                  {selectedProfile
-                    ? `Configuración: ${DNI_PROFILES.getProfileById(selectedProfile)?.name}`
-                    : 'Configuración personalizada'
-                  }
-                </div>
-
-                {/* Botón de regreso */}
-                <button
-                  onClick={onBack}
-                  className="btn btn-secundario w-full"
-                >
-                  <i className="bi bi-arrow-left"></i>
-                  Cambiar fotos
-                </button>
+                {/* Aquí iban «Configuración: <perfil>» y otro «Cambiar fotos», que ya están en el selector de perfiles y arriba,
+                    junto a «Inicio» (UX-14, punto 10) */}
               </div>
             </div>
           </div>

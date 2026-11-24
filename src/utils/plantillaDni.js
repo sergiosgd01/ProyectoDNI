@@ -69,7 +69,7 @@ export const ZONAS = {
 
 // Zonas de los datos de largo variable del anverso. No se tapan nunca sin haberlos encontrado, solo sirven para saber
 // si su caja está en su sitio
-const ZONAS_SOLO_PARA_COMPROBAR = {
+export const ZONAS_SOLO_PARA_COMPROBAR = {
   anverso: {
     APELLIDOS: [0.380, 0.271, 0.660, 0.425],
     NOMBRE: [0.376, 0.417, 0.650, 0.506],
