@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { NOMBRES_COPIA, disponerEnA4, motivoErrorCompartir, puedeCompartirPdf } from '../utils/copiaProtegida';
-import { caraConMarca, crearImagenDosCaras, crearPdf, descargarArchivo, miniaturaConMarca } from '../utils/crearCopia';
+import { caraConMarca, crearImagenDosCaras, crearPdf, descargarArchivo, miniaturaConMarca, precargarPdf } from '../utils/crearCopia';
 
 // La copia protegida de la zona de descarga (ver ZonaDescarga). Se prepara sola en cuanto hay resultado (las caras
 // con la marca de agua, el PDF y su miniatura), así que descargar y compartir son inmediatos y la zona puede enseñar
@@ -53,6 +53,11 @@ export function useCopiaProtegida({ delantera, trasera, marca }) {
   const enCurso = useRef(null);
   // Los datos de ahora, para dejar a medias la copia de otros que se estuviera preparando
   const actuales = useRef(null);
+
+  // jsPDF se pide al abrir el editor, mientras se eligen los datos, y no al terminar de procesar (ver precargarPdf)
+  useEffect(() => {
+    precargarPdf();
+  }, []);
 
   // La copia de los datos de ahora. Si ya se está preparando, devuelve esa misma promesa en vez de empezar otra
   const obtener = useCallback(() => {

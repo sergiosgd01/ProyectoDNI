@@ -51,8 +51,15 @@ export async function miniaturaConMarca(url, marca, ancho = 240) {
   return lienzo.toDataURL('image/jpeg', 0.85);
 }
 
+// Pide jsPDF por adelantado, al abrir el editor, para tenerlo ya cuando haga falta. Antes solo se pedía al preparar la
+// copia, justo después de procesar, y si en ese momento se cortaba la conexión (pasó el 24/11/2026 con el S24 por
+// cable) salía «No se ha podido preparar la copia». Si ahora falla no pasa nada, crearPdf lo vuelve a pedir
+export function precargarPdf() {
+  import('jspdf').catch(() => {});
+}
+
 // El PDF, una hoja A4 con las caras ya con la marca de agua (ver disponerEnA4). jsPDF se carga aquí y no al abrir
-// la web, porque solo hace falta al terminar de procesar
+// la web, porque solo hace falta al terminar de procesar (precargarPdf lo pide antes, al abrir el editor)
 export async function crearPdf(caras) {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
