@@ -91,11 +91,12 @@ export default function UploadPage({
           inline: 'nearest'
         });
 
-        // Agregar efecto visual temporal de destacado
-        backSectionRef.current.classList.add('ring-2', 'ring-blue-400', 'ring-opacity-50');
+        // Agregar efecto visual temporal de destacado, en el rojo del «2» de la parte trasera. Era azul, un color que la
+        // web no usa para nada más (UX-14, punto 11)
+        backSectionRef.current.classList.add('ring-2', 'ring-secondary-400', 'ring-opacity-50');
         setTimeout(() => {
           if (backSectionRef.current) {
-            backSectionRef.current.classList.remove('ring-2', 'ring-blue-400', 'ring-opacity-50');
+            backSectionRef.current.classList.remove('ring-2', 'ring-secondary-400', 'ring-opacity-50');
           }
         }, 2000);
 
@@ -115,11 +116,11 @@ export default function UploadPage({
           inline: 'nearest'
         });
 
-        // Agregar efecto visual temporal de destacado
-        completionMessageRef.current.classList.add('ring-2', 'ring-secondary-400', 'ring-opacity-50');
+        // Agregar efecto visual temporal de destacado, en verde, como el mensaje de que todo ha ido bien. Era azul (UX-14, punto 11)
+        completionMessageRef.current.classList.add('ring-2', 'ring-success-400', 'ring-opacity-50');
         setTimeout(() => {
           if (completionMessageRef.current) {
-            completionMessageRef.current.classList.remove('ring-2', 'ring-secondary-400', 'ring-opacity-50');
+            completionMessageRef.current.classList.remove('ring-2', 'ring-success-400', 'ring-opacity-50');
           }
         }, 3000);
 

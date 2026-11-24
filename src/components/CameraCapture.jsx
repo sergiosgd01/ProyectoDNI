@@ -994,7 +994,7 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
                     {capturedFileForCrop && (
                       <button
                         onClick={() => setShowManualCrop(true)}
-                        className="bg-blue-600 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors"
+                        className="bg-gray-700 text-white w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-gray-600 transition-colors"
                       >
                         <i className="bi bi-crop"></i>
                         Recortar manualmente
@@ -1247,7 +1247,7 @@ function CameraCapture({ onCapture, onClose, caras = UNA_CARA_CUALQUIERA }) {
                       {capturedFileForCrop && (
                         <button
                           onClick={() => setShowManualCrop(true)}
-                          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                          className="w-full py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 bg-gray-700 text-white hover:bg-gray-600 transition-colors"
                         >
                           <i className="bi bi-crop"></i>
                           Recortar manualmente

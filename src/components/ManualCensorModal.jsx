@@ -856,7 +856,8 @@ function ManualCensorModal({
             {/* Mensaje instructivo para móviles */}
             {isMobile && !hasInteracted && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="bg-blue-600/90 text-white px-4 py-3 rounded-lg shadow-2xl max-w-xs mx-4 text-center animate-pulse">
+                {/* Gris oscuro, como el resto de la ventana. Era azul, un color que la web no usa para nada más (UX-14, punto 11) */}
+                <div className="bg-gray-900/90 border border-white/20 text-white px-4 py-3 rounded-lg shadow-2xl max-w-xs mx-4 text-center">
                   <i className="bi bi-hand-index-thumb text-3xl mb-2 block"></i>
                   <p className="font-medium text-sm">
                     Pulsa sobre la imagen para empezar a censurar el documento
