@@ -354,11 +354,13 @@ function App() {
           />
         );
 
+      // Carteles en JPEG de 1400 px, de 0,9 y 1 MB. Los PNG de 8 y 9,5 MB que se cargaban antes siguen en public por si
+      // alguien enlazó la imagen directamente (UX-5, 24/11/2026)
       case VIEWS.JORNADAS_CACERES:
-        return <JornadasPage imageSrc="/jornadasCaceres.png" />;
+        return <JornadasPage imageSrc="/jornadasCaceres.jpg" />;
 
       case VIEWS.JORNADAS_MERIDA:
-        return <JornadasPage imageSrc="/jornadasMerida.png" />;
+        return <JornadasPage imageSrc="/jornadasMerida.jpg" />;
 
       case VIEWS.AVISO_LEGAL:
         return <AvisoLegalPage onGoHome={goHome} />;

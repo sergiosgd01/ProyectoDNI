@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Páginas de la web con dirección propia (ver PAGE_PATHS en src/hooks/useNavigation.js). Inicio, subida y editor
+     comparten «/». Antes /sitemap.xml devolvía la página de la web (UX-5) -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://protegetuidentidad.es/</loc></url>
+  <url><loc>https://protegetuidentidad.es/privacidad</loc></url>
+  <url><loc>https://protegetuidentidad.es/aviso-legal</loc></url>
+  <url><loc>https://protegetuidentidad.es/jornadas-caceres</loc></url>
+  <url><loc>https://protegetuidentidad.es/jornadas-merida</loc></url>
+</urlset>
