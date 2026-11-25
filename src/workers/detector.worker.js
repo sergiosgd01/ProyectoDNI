@@ -21,11 +21,6 @@ const cargar = (modelo) => {
     sesion = ort.InferenceSession.create(modelo, {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
-    }).then((creada) => {
-      // Cuántos hilos usa al final (VEL-6). Si el navegador no admite hilos, ONNX Runtime lo deja en uno.
-      // Solo sale en local, porque la versión publicada quita los console.info
-      console.info(`[detector.worker] ONNX Runtime con ${ort.env.wasm.numThreads} hilos`);
-      return creada;
     }).catch((error) => {
       // Si falla, por ejemplo sin conexión, el siguiente intento vuelve a cargarlo
       sesion = null;
@@ -36,11 +31,8 @@ const cargar = (modelo) => {
 };
 
 const atender = async (data) => {
-  const { id, tipo, modelo, unHilo } = data;
+  const { id, tipo, modelo } = data;
   try {
-    // El hilo principal crea un worker con un solo hilo si el anterior falló con varios (VEL-6). Vale solo antes de
-    // la primera carga, que es cuando ONNX Runtime prepara los hilos
-    if (unHilo) ort.env.wasm.numThreads = 1;
     const cargada = await cargar(modelo);
     if (tipo === 'cargar') {
       self.postMessage({ id, ok: true });
@@ -56,7 +48,7 @@ const atender = async (data) => {
       : new Float32Array(salida.data);
     self.postMessage({ id, ok: true, datos, forma: Array.from(salida.dims) }, [datos.buffer]);
   } catch (error) {
-    self.postMessage({ id, ok: false, error: String(error?.message || error), hilos: ort.env.wasm.numThreads });
+    self.postMessage({ id, ok: false, error: String(error?.message || error) });
   }
 };
 

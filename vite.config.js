@@ -29,13 +29,6 @@ const cspLocal = {
   transformIndexHtml: (html) => html.replace("connect-src 'self'", "connect-src 'self' http://localhost:5000"),
 }
 
-// Las mismas cabeceras de aislamiento que public/_headers pone en Netlify (VEL-6). Así, al servir la web en local con
-// npm run dev o vite preview, el modelo de campos también usa varios hilos y se ve si algo deja de cargar
-const aislamiento = {
-  'Cross-Origin-Opener-Policy': 'same-origin',
-  'Cross-Origin-Embedder-Policy': 'require-corp',
-}
-
 export default defineConfig(({ command }) => ({
   plugins: [react(), cspLocal],
   // En la versión publicada se quitan los mensajes de consola (log, info, debug y warn)
@@ -80,10 +73,6 @@ export default defineConfig(({ command }) => ({
     allowedHosts: [
       '.ngrok-free.dev',
       '.ngrok.io'
-    ],
-    headers: aislamiento
-  },
-  preview: {
-    headers: aislamiento
+    ]
   }
 }))

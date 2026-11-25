@@ -11,13 +11,11 @@ let worker = null;
 let disponible = typeof Worker !== 'undefined'
   && !new URLSearchParams(window.location.search).has('sin-worker');
 let siguienteId = 1;
-// Tras un fallo con varios hilos el worker se cambia por otro con uno solo (VEL-6, ver probarSinHilos)
-let unHilo = false;
 // Peticiones que esperan respuesta, por su id
 const pendientes = new Map();
 
-const rechazarPendientes = (motivo, datos = {}) => {
-  pendientes.forEach(({ reject }) => reject(Object.assign(new Error(motivo), datos)));
+const rechazarPendientes = (motivo) => {
+  pendientes.forEach(({ reject }) => reject(new Error(motivo)));
   pendientes.clear();
 };
 
@@ -27,14 +25,8 @@ const crearWorker = () => {
     const peticion = pendientes.get(data.id);
     if (!peticion) return;
     pendientes.delete(data.id);
-    if (data.ok) {
-      peticion.resolve(data);
-      return;
-    }
-    const error = new Error(data.error || 'El worker del detector ha fallado');
-    // Con cuántos hilos estaba ONNX Runtime cuando falló
-    error.hilos = data.hilos;
-    peticion.reject(error);
+    if (data.ok) peticion.resolve(data);
+    else peticion.reject(new Error(data.error || 'El worker del detector ha fallado'));
   };
   // El archivo del worker no carga o el navegador no admite workers de tipo módulo
   nuevo.onerror = (evento) => {
@@ -54,31 +46,12 @@ const pedir = (mensaje, transferir = []) => new Promise((resolve, reject) => {
     if (!worker) worker = crearWorker();
     const id = siguienteId++;
     pendientes.set(id, { resolve, reject });
-    worker.postMessage({ ...mensaje, id, unHilo }, transferir);
+    worker.postMessage({ ...mensaje, id }, transferir);
   } catch (error) {
     desactivarWorker();
     reject(error);
   }
 });
-
-/**
- * Si el worker ha fallado con varios hilos (VEL-6), lo cambia por uno nuevo con un solo hilo, como antes de VEL-6,
- * y devuelve true. Así un navegador que no puede arrancar los hilos, por ejemplo por la memoria compartida, sigue
- * detectando fuera del hilo principal. Si ya iba con un hilo devuelve false y el fallo no era de los hilos
- * @param {Error} error - Error con el que ha fallado la petición al worker
- */
-export const probarSinHilos = (error) => {
-  // La petición se cortó porque el worker se cambiaba por uno con un hilo. También se repite en el nuevo
-  if (error?.cambioDeWorker) return true;
-  if (unHilo || !(error?.hilos > 1)) return false;
-  unHilo = true;
-  if (worker) {
-    worker.terminate();
-    worker = null;
-  }
-  rechazarPendientes('El worker del detector se cambia por uno con un solo hilo', { cambioDeWorker: true });
-  return true;
-};
 
 /** Si la detección va a ir por el worker. Cuando es false, cada pasada para la página lo que tarda */
 export const usarWorker = () => disponible;

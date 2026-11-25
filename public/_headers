@@ -6,15 +6,6 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Embedder-Policy: require-corp
-
-# Las dos últimas aíslan la web de otros dominios (VEL-6). Así el navegador deja usar memoria compartida y
-# ONNX Runtime reparte cada pasada del modelo de campos entre varios hilos (ver src/config/onnxConfig.js).
-# A cambio la web solo puede cargar de otro dominio lo que llegue con CORS o con Cross-Origin-Resource-Policy.
-# Hoy no carga nada de fuera (ver la CSP de index.html) y las llamadas al recorte y al backend ya van con CORS.
-# Si algún día se añade algo de otro dominio, como una fuente, un vídeo o un script, hay que comprobar que cargue.
-# vite.config.js pone las mismas cabeceras al servir la web en local.
 
 # Los archivos de /assets llevan en el nombre una huella que cambia con cada versión,
 # así que el navegador puede guardarlos un año sin volver a preguntar.

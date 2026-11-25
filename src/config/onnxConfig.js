@@ -8,16 +8,3 @@ import mjs from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.mjs?url';
 import wasm from 'onnxruntime-web/ort-wasm-simd-threaded.jsep.wasm?url';
 
 ort.env.wasm.wasmPaths = { mjs, wasm };
-
-// Hilos del motor (VEL-6). Con la página aislada de otros dominios (crossOriginIsolated, lo que consiguen las cabeceras
-// COOP y COEP de public/_headers), ONNX Runtime reparte cada pasada del modelo entre varios hilos, que son workers que
-// crea él mismo. En un Mac una pasada del modelo de campos baja de 160 a 49 ms con 4 hilos.
-// Se usan solo dentro del worker del detector (src/workers/detector.worker.js) y si ese worker puede crear otros.
-// Son los mismos que pondría ONNX Runtime por su cuenta, la mitad de los núcleos y 4 como mucho.
-// En el hilo principal, que es el respaldo cuando el worker falla, se queda en un hilo como antes, para que el
-// respaldo no dependa de los hilos.
-// Un worker no tiene document
-const enWorker = typeof document === 'undefined';
-ort.env.wasm.numThreads = enWorker && self.crossOriginIsolated && typeof Worker !== 'undefined'
-  ? Math.min(4, Math.ceil((navigator.hardwareConcurrency || 1) / 2))
-  : 1;
