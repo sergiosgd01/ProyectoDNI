@@ -2,16 +2,19 @@
  * Prepara la foto en el navegador antes de enviarla al servidor de recorte.
  *
  * El servidor devuelve el DNI con 2000 px de lado mayor como mucho y no admite archivos de más
- * de 10 MB. Una foto de 24 o 48 MP lleva mucha más resolución de la que se aprovecha, tarda en subir
- * y a menudo supera ese límite. Aquí se deja en el tamaño de una foto de 12 MP.
+ * de 10 MB. Una foto de 12 MP o más lleva más resolución de la que se aprovecha y tarda en subir,
+ * sobre todo con datos móviles, y las de 24 o 48 MP a menudo superan ese límite. Aquí se deja en el
+ * tamaño de una foto de 8 MP.
  * Al volver a codificar la imagen se pierden también los metadatos EXIF, entre ellos la ubicación.
  *
- * Las fotos de hasta 12 MP no se redimensionan a propósito. Reducirlas más acorta la subida, pero
- * cambia el recorte que hace el servidor y en fotos giradas llega a empeorarlo.
+ * Hasta VEL-1c (25/11/2026) las fotos de 12 MP se subían sin tocar, porque reducirlas cambiaba el
+ * recorte del servidor y con el DNI girado llegaba a empeorarlo. Desde FLU-3 el servidor saca bien
+ * las esquinas también con la foto reducida.
  */
 
-// Lado mayor de la foto que se sube. 4096 px deja pasar sin tocar las fotos de 12 MP de cualquier móvil
-export const MAX_UPLOAD_SIDE = 4096;
+// Lado mayor de la foto que se sube, el de una foto de 8 MP. Una foto de 12 MP de un móvil pasa de
+// unos 2,3 MB a 0,9 MB
+export const MAX_UPLOAD_SIDE = 3264;
 
 // Calidad del JPEG que se sube
 export const UPLOAD_JPEG_QUALITY = 0.85;
