@@ -8,6 +8,13 @@ const certKeyPath = path.resolve('./cert-key.pem');
 const certPath = path.resolve('./cert.pem');
 const httpsEnabled = fs.existsSync(certKeyPath) && fs.existsSync(certPath);
 
+// Sufijo de los archivos que el navegador arranca como worker: los workers de la web y el cargador de ONNX Runtime, con
+// el que este arranca sus hilos (VEL-6). Con la página aislada, el navegador solo los arranca si llegan con la cabecera
+// COEP de public/_headers. Cloudflare y los navegadores guardan /assets un año, y el 25/11/2026 una copia de antes de
+// VEL-6, con el mismo nombre y sin COEP, dejó «Procesar DNI» colgado. Con el sufijo esos archivos cambian de nombre y
+// nadie recibe una copia vieja. Si algún día cambian las cabeceras de esos archivos, hay que cambiar también el sufijo
+const SUFIJO_WORKERS = 'h1'
+
 // Nombres de los archivos que Vite copia sin tocarlos (imágenes, fuentes y las librerías de src/config).
 // Vale para la web y para sus workers, que se compilan aparte y piden algunos de esos mismos archivos
 const assetFileNames = ({ names }) => {
@@ -17,7 +24,7 @@ const assetFileNames = ({ names }) => {
   // El cargador de ONNX Runtime es un .mjs y se publica con extensión .js, con el mismo contenido.
   // Netlify no documenta con qué tipo sirve .mjs y el navegador rechaza el módulo si no llega como JavaScript.
   // Con .js sale como el resto del código de la web (application/javascript, comprobado en producción)
-  if (names.some((nombre) => nombre.endsWith('.mjs'))) return 'assets/[name]-[hash].js'
+  if (names.some((nombre) => nombre.endsWith('.mjs'))) return `assets/[name]-[hash]-${SUFIJO_WORKERS}.js`
   return 'assets/[name]-[hash][extname]'
 }
 
@@ -27,6 +34,13 @@ const cspLocal = {
   name: 'csp-local',
   apply: 'serve',
   transformIndexHtml: (html) => html.replace("connect-src 'self'", "connect-src 'self' http://localhost:5000"),
+}
+
+// Las mismas cabeceras de aislamiento que public/_headers pone en Netlify (VEL-6). Así, al servir la web en local con
+// npm run dev o vite preview, el modelo de campos también usa varios hilos y se ve si algo deja de cargar
+const aislamiento = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
 }
 
 export default defineConfig(({ command }) => ({
@@ -52,7 +66,7 @@ export default defineConfig(({ command }) => ({
   worker: {
     format: 'es',
     rollupOptions: {
-      output: { assetFileNames }
+      output: { assetFileNames, entryFileNames: `assets/[name]-[hash]-${SUFIJO_WORKERS}.js` }
     }
   },
   // libheif solo se importa desde el worker de las fotos HEIC (src/workers/heic.worker.js), que Vite no mira al
@@ -73,6 +87,10 @@ export default defineConfig(({ command }) => ({
     allowedHosts: [
       '.ngrok-free.dev',
       '.ngrok.io'
-    ]
+    ],
+    headers: aislamiento
+  },
+  preview: {
+    headers: aislamiento
   }
 }))

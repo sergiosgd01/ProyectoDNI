@@ -5,7 +5,9 @@ import * as ort from 'onnxruntime-web';
 // (Error: expected magic word 00 61 73 6d, found 3c 21 64 6f)
 import '../../config/onnxConfig';
 // El modelo se ejecuta en un worker para no parar la página. Si no se puede, se ejecuta aquí como antes
-import { usarWorker, desactivarWorker, cargarEnWorker, ejecutarEnWorker } from '../../utils/detectorWorker';
+import {
+  usarWorker, desactivarWorker, cargarEnWorker, ejecutarEnWorker, probarSinHilos
+} from '../../utils/detectorWorker';
 
 const MODEL_PATH = "/models/best.onnx";
 const MODEL_INPUT_SIZE = 640;
@@ -47,15 +49,18 @@ const ensureSession = () => {
 export const preloadDetector = () => {
   const enEsteHilo = () => ensureSession().then(() => true, () => false);
   if (!usarWorker()) return enEsteHilo();
-  return cargarEnWorker(MODEL_PATH).then(() => true, (error) => {
+  const respaldo = (error) => {
     console.error('[dni_detector] El worker del detector no ha cargado el modelo:', error);
+    // Si falló con varios hilos (VEL-6), antes se prueba otro worker con uno solo
+    if (probarSinHilos(error)) return cargarEnWorker(MODEL_PATH).then(() => true, respaldo);
     // Si en el hilo principal sí carga, el fallo era del worker y se deja de usar. Si tampoco carga, lo normal es
     // que se haya cortado la red, y el siguiente intento vuelve a probar con el worker
     return enEsteHilo().then((listo) => {
       if (listo) desactivarWorker();
       return listo;
     });
-  });
+  };
+  return cargarEnWorker(MODEL_PATH).then(() => true, respaldo);
 };
 
 // --- 2. PREPROCESAMIENTO ---
@@ -187,13 +192,18 @@ const postprocessing = (outputTensor, meta) => {
 
 // --- 4. FUNCIÓN CORE ---
 const runYoloInference = async (canvas) => {
-  if (usarWorker()) {
+  // Hasta dos intentos en el worker. Si el primero falla con varios hilos, el segundo va en otro con uno (VEL-6)
+  for (let intento = 0; intento < 2 && usarWorker(); intento++) {
     try {
       const { tensor, meta } = preprocessing(canvas, MODEL_INPUT_SIZE);
       const { datos, forma } = await ejecutarEnWorker(MODEL_PATH, tensor.data, tensor.dims);
       return postprocessing({ data: datos, dims: forma }, meta);
     } catch (error) {
-      // La entrada se entregó al worker, así que más abajo se prepara otra vez desde el lienzo
+      // La entrada se entregó al worker, así que se prepara otra vez desde el lienzo
+      if (probarSinHilos(error)) {
+        console.error('[dni_detector] El worker del detector ha fallado con varios hilos, se prueba con uno:', error);
+        continue;
+      }
       console.error('[dni_detector] El worker del detector ha fallado, se sigue en el hilo principal:', error);
       desactivarWorker();
     }
