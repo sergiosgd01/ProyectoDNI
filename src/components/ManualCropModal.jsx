@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import Aviso from './Aviso';
+import { cajaDeLasEsquinas, enderezar, invertir3x3, transformacionPerspectiva } from '../utils/enderezarRecorte';
 
 // Móvil tumbado, con la misma consulta que la cámara y la censura manual. La cabecera, las instrucciones y los
 // botones se comían casi todo el alto y la foto se quedaba en una tira en la que no se veía nada, así que en ese
@@ -356,162 +357,6 @@ function ManualCropModal({
     };
   }, [handleMouseDown, handleMouseMove, handleMouseUp]);
 
-  // Calcular matriz de transformación de perspectiva (homografía)
-  const getPerspectiveTransform = (src, dst) => {
-    const A = [];
-    const b = [];
-    
-    for (let i = 0; i < 4; i++) {
-      const sx = src[i].x;
-      const sy = src[i].y;
-      const dx = dst[i].x;
-      const dy = dst[i].y;
-      
-      A.push([sx, sy, 1, 0, 0, 0, -dx * sx, -dx * sy]);
-      A.push([0, 0, 0, sx, sy, 1, -dy * sx, -dy * sy]);
-      
-      b.push(dx);
-      b.push(dy);
-    }
-    
-    const h = gaussianElimination(A, b);
-    
-    return [
-      [h[0], h[1], h[2]],
-      [h[3], h[4], h[5]],
-      [h[6], h[7], 1]
-    ];
-  };
-
-  // Eliminación de Gauss para resolver sistema lineal
-  const gaussianElimination = (A, b) => {
-    const n = b.length;
-    const Ab = A.map((row, i) => [...row, b[i]]);
-    
-    for (let i = 0; i < n; i++) {
-      let maxRow = i;
-      for (let k = i + 1; k < n; k++) {
-        if (Math.abs(Ab[k][i]) > Math.abs(Ab[maxRow][i])) {
-          maxRow = k;
-        }
-      }
-      [Ab[i], Ab[maxRow]] = [Ab[maxRow], Ab[i]];
-      
-      for (let k = i + 1; k < n; k++) {
-        const factor = Ab[k][i] / Ab[i][i];
-        for (let j = i; j < n + 1; j++) {
-          Ab[k][j] -= factor * Ab[i][j];
-        }
-      }
-    }
-    
-    const x = new Array(n);
-    for (let i = n - 1; i >= 0; i--) {
-      x[i] = Ab[i][n];
-      for (let j = i + 1; j < n; j++) {
-        x[i] -= Ab[i][j] * x[j];
-      }
-      x[i] /= Ab[i][i];
-    }
-    
-    return x;
-  };
-
-  // Invertir matriz 3x3
-  const invertMatrix = (m) => {
-    const det = 
-      m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
-      m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
-      m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
-    
-    if (Math.abs(det) < 1e-10) {
-      throw new Error('Matriz singular, no se puede invertir');
-    }
-    
-    const inv = [
-      [
-        (m[1][1] * m[2][2] - m[1][2] * m[2][1]) / det,
-        (m[0][2] * m[2][1] - m[0][1] * m[2][2]) / det,
-        (m[0][1] * m[1][2] - m[0][2] * m[1][1]) / det
-      ],
-      [
-        (m[1][2] * m[2][0] - m[1][0] * m[2][2]) / det,
-        (m[0][0] * m[2][2] - m[0][2] * m[2][0]) / det,
-        (m[0][2] * m[1][0] - m[0][0] * m[1][2]) / det
-      ],
-      [
-        (m[1][0] * m[2][1] - m[1][1] * m[2][0]) / det,
-        (m[0][1] * m[2][0] - m[0][0] * m[2][1]) / det,
-        (m[0][0] * m[1][1] - m[0][1] * m[1][0]) / det
-      ]
-    ];
-    
-    return inv;
-  };
-
-  // Aplicar transformación de perspectiva a un punto
-  const applyPerspectiveTransform = (point, matrix, inverse = false) => {
-    if (inverse) {
-      matrix = invertMatrix(matrix);
-    }
-    
-    const x = point.x;
-    const y = point.y;
-    
-    const w = matrix[2][0] * x + matrix[2][1] * y + matrix[2][2];
-    
-    return {
-      x: (matrix[0][0] * x + matrix[0][1] * y + matrix[0][2]) / w,
-      y: (matrix[1][0] * x + matrix[1][1] * y + matrix[1][2]) / w
-    };
-  };
-
-  // Interpolación bilineal para mejor calidad de imagen
-  const bilinearInterpolation = (imageData, x, y) => {
-    const x1 = Math.floor(x);
-    const y1 = Math.floor(y);
-    const x2 = Math.min(x1 + 1, imageData.width - 1);
-    const y2 = Math.min(y1 + 1, imageData.height - 1);
-    
-    const dx = x - x1;
-    const dy = y - y1;
-    
-    const getPixel = (px, py) => {
-      const idx = (py * imageData.width + px) * 4;
-      return {
-        r: imageData.data[idx],
-        g: imageData.data[idx + 1],
-        b: imageData.data[idx + 2]
-      };
-    };
-    
-    const c1 = getPixel(x1, y1);
-    const c2 = getPixel(x2, y1);
-    const c3 = getPixel(x1, y2);
-    const c4 = getPixel(x2, y2);
-    
-    return {
-      r: Math.round(
-        c1.r * (1 - dx) * (1 - dy) +
-        c2.r * dx * (1 - dy) +
-        c3.r * (1 - dx) * dy +
-        c4.r * dx * dy
-      ),
-      g: Math.round(
-        c1.g * (1 - dx) * (1 - dy) +
-        c2.g * dx * (1 - dy) +
-        c3.g * (1 - dx) * dy +
-        c4.g * dx * dy
-      ),
-      b: Math.round(
-        c1.b * (1 - dx) * (1 - dy) +
-        c2.b * dx * (1 - dy) +
-        c3.b * (1 - dx) * dy +
-        c4.b * dx * dy
-      )
-    };
-  };
-
   // Recortar imagen con corrección de perspectiva
   const handleCrop = async () => {
     setAviso(null);
@@ -568,42 +413,27 @@ function ManualCropModal({
       { x: 0, y: outputHeight }
     ];
 
-    // Calcular matriz de transformación de perspectiva
-    const matrix = getPerspectiveTransform(src, dst);
+    // La homografía de la foto al rectángulo, y su inversa, que lleva cada píxel del resultado a la foto
+    const inversa = invertir3x3(transformacionPerspectiva(src, dst));
 
-    // Aplicar transformación píxel por píxel
-    const imageData = ctx.createImageData(outputWidth, outputHeight);
-    
-    // Crear un canvas temporal con la imagen original
+    // Solo se lee la parte de la foto que cubren las esquinas (UX-2, ver utils/enderezarRecorte.js). Se dibuja a
+    // tamaño real, así que sus píxeles son los mismos que los de la foto entera
+    const { x0, y0, x1, y1 } = cajaDeLasEsquinas(src, originalImage.width, originalImage.height);
+    const anchoTrozo = x1 - x0 + 1;
+    const altoTrozo = y1 - y0 + 1;
     const sourceCanvas = document.createElement('canvas');
     const sourceCtx = sourceCanvas.getContext('2d');
-    sourceCanvas.width = originalImage.width;
-    sourceCanvas.height = originalImage.height;
-    sourceCtx.drawImage(originalImage, 0, 0);
-    const sourceData = sourceCtx.getImageData(0, 0, originalImage.width, originalImage.height);
+    sourceCanvas.width = anchoTrozo;
+    sourceCanvas.height = altoTrozo;
+    sourceCtx.drawImage(originalImage, x0, y0, anchoTrozo, altoTrozo, 0, 0, anchoTrozo, altoTrozo);
+    const trozo = sourceCtx.getImageData(0, 0, anchoTrozo, altoTrozo);
+    // Libera la memoria del lienzo sin esperar al recolector
+    sourceCanvas.width = 0;
+    sourceCanvas.height = 0;
 
-    // Transformación inversa para cada píxel del destino
-    for (let y = 0; y < outputHeight; y++) {
-      for (let x = 0; x < outputWidth; x++) {
-        // Aplicar transformación inversa
-        const srcPoint = applyPerspectiveTransform({ x, y }, matrix, true);
-        
-        // Si el punto está dentro de la imagen original
-        if (srcPoint.x >= 0 && srcPoint.x < originalImage.width &&
-            srcPoint.y >= 0 && srcPoint.y < originalImage.height) {
-          
-          // Interpolación bilineal para mejor calidad
-          const color = bilinearInterpolation(sourceData, srcPoint.x, srcPoint.y);
-          
-          const dstIdx = (y * outputWidth + x) * 4;
-          imageData.data[dstIdx] = color.r;
-          imageData.data[dstIdx + 1] = color.g;
-          imageData.data[dstIdx + 2] = color.b;
-          imageData.data[dstIdx + 3] = 255;
-        }
-      }
-    }
-
+    const imageData = ctx.createImageData(outputWidth, outputHeight);
+    enderezar({ data: trozo.data, width: anchoTrozo, x0, y0 }, inversa, imageData.data, outputWidth, outputHeight,
+      originalImage.width, originalImage.height);
     ctx.putImageData(imageData, 0, 0);
 
     // Convertir a blob
