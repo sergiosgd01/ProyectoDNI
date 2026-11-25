@@ -39,9 +39,10 @@ function caja(label, [u0, v0, u1, v1], foto) {
   return { label, confidence: 0.9, x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
 }
 
-// Todas las detecciones de una cara, menos las clases que se quiten
-function detecciones(cara, { sin = [], foto = camara() } = {}) {
-  const todas = { ...Object.fromEntries(Object.entries(ANCLAS[cara]).map(([c, a]) => [c, a.caja])), ...OTRAS[cara] };
+// Todas las detecciones de una cara, menos las clases que se quiten y con las cajas que se cambien
+function detecciones(cara, { sin = [], foto = camara(), cambiar = {} } = {}) {
+  const todas = { ...Object.fromEntries(Object.entries(ANCLAS[cara]).map(([c, a]) => [c, a.caja])), ...OTRAS[cara],
+    ...cambiar };
   return Object.entries(todas).filter(([c]) => !sin.includes(c)).map(([c, z]) => caja(c, z, foto));
 }
 
@@ -396,4 +397,35 @@ test('sin nada marcado no se avisa de ninguna copia', () => {
   const nada = { anverso: {}, reverso: {} };
   assert.deepEqual(copiasDeLoMarcado('anverso', nada), []);
   assert.deepEqual(copiasDeLoMarcado('reverso', nada), []);
+});
+
+// Caja corta (C01). Con un reflejo sobre el número de DNI la caja del modelo solo cogía las cifras de la derecha
+const NUM_DNI_CORTO = [0.600, 0.175, 0.737, 0.255];
+
+test('una caja del número que se queda corta se tapa con su zona entera (C01)', () => {
+  const p = plan('anverso', TODO, { cambiar: { NUM_DNI: NUM_DNI_CORTO } });
+  assert.equal(p.modo, 'auto', p.motivo);
+  assert.deepEqual(p.ampliadas, ['NUM_DNI']);
+  // El número entero, con el tamaño que le da normalmente el modelo, queda dentro de lo que se tapa
+  const entero = caja('NUM_DNI', OTRAS.anverso.NUM_DNI, camara());
+  assert.ok(p.cajas.some((c) => c.clase === 'NUM_DNI' && c.plantilla && dentro(entero, c)));
+});
+
+test('con las cajas de siempre no se amplía ninguna', () => {
+  for (const cara of ['anverso', 'reverso']) {
+    assert.deepEqual(plan(cara, TODO).ampliadas, [], cara);
+    assert.deepEqual(plan(cara, VIAJES).ampliadas, [], cara);
+  }
+});
+
+test('un número corto que se deja a la vista, como con Viajes, no se tapa', () => {
+  const p = plan('anverso', VIAJES, { cambiar: { NUM_DNI: NUM_DNI_CORTO } });
+  assert.deepEqual(p.ampliadas, []);
+  assert.ok(!p.cajas.some((c) => c.clase === 'NUM_DNI'));
+});
+
+test('sin la plantilla una caja corta se tapa como la da el modelo, como antes', () => {
+  const p = plan('anverso', TODO, { cambiar: { NUM_DNI: NUM_DNI_CORTO }, sinPlantilla: true });
+  assert.deepEqual(p.ampliadas, []);
+  assert.equal(p.cajas.filter((c) => c.clase === 'NUM_DNI').length, 1);
 });

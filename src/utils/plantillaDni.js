@@ -67,6 +67,21 @@ export const ZONAS = {
   },
 };
 
+// Parte del ancho de su zona que cubre normalmente la caja del modelo en cada clase, en el carné (mediana en 108 recortes
+// del banco con la plantilla colocada, 25/11/2026). Las zonas juntan el sitio del dato en varios DNI y son más anchas que
+// una caja. Si una caja encontrada en su sitio cubre menos de CAJA_CORTA de lo normal en su clase, se ha dejado parte del
+// dato. Pasó en C01, con un reflejo sobre el número de DNI: la caja solo cogía las cifras de la derecha y con «Censurar
+// todo» se leían las cuatro primeras. En el banco solo salen así ese número y una firma real con poca confianza. El CLI
+// no está porque ya se tapa entero a partir de su caja. Con otro modelo hay que repetir la medida
+export const ANCHO_TIPICO = {
+  anverso: {
+    CAN: 0.94, EMISIÓN: 0.89, FIRMA: 0.95, FOTOGRAFIA: 0.94, NACIMIENTO: 0.89, NACIONALIDAD: 0.82, NUM_DNI: 0.86,
+    NUM_DNI_MIN: 0.70, SEXO: 0.70, SOPORTE: 0.89, SOPORTE_MIN: 0.81, VALIDEZ: 0.92,
+  },
+  reverso: { EQUIPO: 0.70, SOPORTE_MIN: 0.71 },
+};
+export const CAJA_CORTA = 0.75;
+
 // Zonas de los datos de largo variable del anverso. No se tapan nunca sin haberlos encontrado, solo sirven para saber
 // si su caja está en su sitio
 export const ZONAS_SOLO_PARA_COMPROBAR = {
@@ -363,6 +378,22 @@ export function ajustarPlantilla(detecciones, cara, tamano) {
     apoyo,
     extrapolacion,
   };
+}
+
+/**
+ * Si una caja del modelo se ha quedado corta para su clase (ver ANCHO_TIPICO). Se mide qué parte del ancho de su zona
+ * cubre en el carné, que es la dirección en la que se lee el dato.
+ * @param {Object} ajuste - Lo que devuelve ajustarPlantilla, fiable
+ * @param {{label: string, x: number, y: number, width: number, height: number}} d - Caja del modelo en la foto
+ * @returns {boolean}
+ */
+export function cajaCorta(ajuste, d) {
+  const zona = ZONAS[ajuste.cara]?.[d.label];
+  const tipico = ANCHO_TIPICO[ajuste.cara]?.[d.label];
+  if (!zona || !tipico) return false;
+  const us = esquinasDeCaja(d).map(([x, y]) => ajuste.aCarne(x, y)[0]);
+  const cubierto = Math.max(0, Math.min(Math.max(...us), zona[2]) - Math.max(Math.min(...us), zona[0]));
+  return cubierto / (zona[2] - zona[0]) < CAJA_CORTA * tipico;
 }
 
 /**

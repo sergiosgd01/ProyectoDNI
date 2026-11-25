@@ -14,7 +14,7 @@
  * líneas (lineasDomicilio.js) para tapar la calle y dejar a la vista el municipio y la provincia (CEN-2).
  */
 import { CLASES_POR_CARA, DOCUMENTO_POR_CARA, MIN_DETECCIONES, SIEMPRE_A_MANO } from './camposSinDetectar.js';
-import { ZONAS, margenDeZona, zonaEnFoto, zonaExtrapolada } from './plantillaDni.js';
+import { ZONAS, cajaCorta, margenDeZona, zonaEnFoto, zonaExtrapolada } from './plantillaDni.js';
 
 const A = (clase, copia = false) => ({ cara: 'anverso', clase, copia });
 const R = (clase, copia = false) => ({ cara: 'reverso', clase, copia });
@@ -159,19 +159,20 @@ export function recortarContraVisibles(zona, nucleo, visibles) {
  * @param {{calle: Array}|null} opciones.lineasDomicilio - Las tiras que tapan la calle (lineasDelDomicilio), o null si
  *   no se ha podido separar del municipio y la provincia. Solo se usan para dejar a la vista esos dos
  * @returns {{modo: 'auto'|'parcial'|'manual', faltan: Array<{campo: string, nombre?: string}>, motivo: string,
- *   cajas: Array, rellenadas: string[], fueraDeSitio: string[]}} cajas son los rectángulos que se tapan,
- *   rellenadas las clases tapadas con la plantilla y fueraDeSitio las que el modelo puso donde no van
+ *   cajas: Array, rellenadas: string[], ampliadas: string[], fueraDeSitio: string[]}} cajas son los rectángulos que
+ *   se tapan, rellenadas las clases tapadas con la plantilla, ampliadas las encontradas con una caja corta que se han
+ *   tapado además con su zona (cajaCorta) y fueraDeSitio las que el modelo puso donde no van
  */
 export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = null, lineasDomicilio = null }) {
   const documento = DOCUMENTO_POR_CARA[cara];
   if (!detecciones.some((d) => d.label === documento)) {
     return { modo: 'manual', faltan: [], motivo: `no se detectó el documento ${documento}`, cajas: [],
-      rellenadas: [], fueraDeSitio: [] };
+      rellenadas: [], ampliadas: [], fueraDeSitio: [] };
   }
   const minimo = MIN_DETECCIONES[cara];
   if (detecciones.length < minimo) {
     return { modo: 'manual', faltan: [], motivo: `solo ${detecciones.length} detecciones, mínimo ${minimo}`,
-      cajas: [], rellenadas: [], fueraDeSitio: [] };
+      cajas: [], rellenadas: [], ampliadas: [], fueraDeSitio: [] };
   }
 
   const requisitos = requisitosDeCara(cara, campos);
@@ -209,6 +210,8 @@ export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = 
   const cajas = [];
   const rellenadas = [];
   const fueraDeSitio = new Set();
+  // Clases encontradas con una caja corta que se han tapado además con su zona
+  const ampliadas = [];
   const sinTapar = [];
   let domicilioTapado = false;
   for (const { campo, clase, copia } of requisitos.values()) {
@@ -237,6 +240,17 @@ export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = 
       }
     } else {
       encontradas.forEach((d) => cajas.push({ ...conMargen(d), clase }));
+      // Una caja en su sitio pero corta se ha dejado parte del dato, por ejemplo con un reflejo encima (C01). Con la
+      // plantilla colocada se tapa además su zona entera, igual que cuando no se encuentra. Mejor tapar de más
+      const zonaCorta = fiable ? ZONAS[cara]?.[clase] : null;
+      if (zonaCorta && enSitio.some((d) => cajaCorta(ajuste, d))) {
+        const margenCorta = margenDeZona(ajuste, zonaCorta);
+        if (margenCorta !== null) {
+          const tapa = recortarContraVisibles(zonaEnFoto(ajuste, zonaCorta, margenCorta), zonaEnFoto(ajuste, zonaCorta), visibles);
+          cajas.push({ ...tapa, clase, plantilla: true });
+          ampliadas.push(clase);
+        }
+      }
     }
     if (enSitio.length > 0) continue;
 
@@ -270,7 +284,7 @@ export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = 
     .filter((f, i) => lista.findIndex((g) => g.campo === f.campo && g.nombre === f.nombre) === i)
     .map(({ campo, nombre }) => (nombre ? { campo, nombre } : { campo }));
   const bloqueantes = sinTapar.filter((f) => f.bloquea);
-  const comun = { cajas, rellenadas, fueraDeSitio: [...fueraDeSitio] };
+  const comun = { cajas, rellenadas, ampliadas, fueraDeSitio: [...fueraDeSitio] };
   if (bloqueantes.length > 0) {
     return {
       modo: 'parcial',
@@ -281,6 +295,7 @@ export function planDeCara({ cara, campos, detecciones, ajuste = null, tamano = 
   }
   const notas = [
     rellenadas.length ? `tapado con la plantilla: ${rellenadas.join(', ')}` : '',
+    ampliadas.length ? `caja corta ampliada con la plantilla: ${ampliadas.join(', ')}` : '',
     sinTapar.length ? `copias sin encontrar: ${sinTapar.map((f) => f.clase).join(', ')}` : '',
     fueraDeSitio.size ? `fuera de sitio: ${[...fueraDeSitio].join(', ')}` : '',
   ].filter(Boolean);
