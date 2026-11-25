@@ -1,9 +1,9 @@
 // Perfiles predefinidos del editor.
 // Cada campo dice si el perfil lo tapa (true) o lo deja a la vista (false). Es el mismo criterio que siguen
 // las casillas del editor («marcada = censurar»), censorDniComplete y hiddenFields en las métricas.
-// CLI, lugar de nacimiento y ventana del soporte no aparecen en ningún perfil. Aun así, desde el 23/11/2026 el CLI y
-// la ventana se tapan solos cuando se tapa el dato que repiten (ver DONDE_SALE en src/utils/planCensura.js). Falta
-// decidir qué hace cada perfil con el lugar de nacimiento (DEC-1).
+// El lugar de nacimiento se tapa en los cuatro perfiles (DEC-1, decidido por Sergio el 25/11/2026). Ninguno de estos usos
+// suele necesitarlo y quien lo necesite desmarca su casilla. El CLI y la ventana del soporte no aparecen en ningún perfil,
+// porque desde el 23/11/2026 se tapan solos cuando se tapa el dato que repiten (ver DONDE_SALE en src/utils/planCensura.js).
 // La fotografía va a false en todos los perfiles, porque muchos sitios necesitan ver la cara para comprobar que el DNI
 // es de quien lo enseña. Solo se tapa marcando su casilla o con «Censurar todo».
 const DNI_PROFILES_DATA = {
@@ -36,6 +36,7 @@ const DNI_PROFILES_DATA = {
       domicilio: true,
       municipio: false,
       provincia: false,
+      lugarNacimiento: true,
       equipoExpedidor: true,
       progenitores: true,
     },
@@ -66,6 +67,7 @@ const DNI_PROFILES_DATA = {
       domicilio: true,
       municipio: true,
       provincia: true,
+      lugarNacimiento: true,
       equipoExpedidor: true,
       progenitores: true,
     },
@@ -96,6 +98,7 @@ const DNI_PROFILES_DATA = {
       domicilio: false,
       municipio: false,
       provincia: false,
+      lugarNacimiento: true,
       equipoExpedidor: true,
       progenitores: true,
     },
@@ -126,6 +129,7 @@ const DNI_PROFILES_DATA = {
       domicilio: true,
       municipio: true,
       provincia: true,
+      lugarNacimiento: true,
       equipoExpedidor: true,
       progenitores: true,
     },
